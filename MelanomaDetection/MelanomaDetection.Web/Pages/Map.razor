@@ -1,0 +1,33 @@
+@page "/map"
+@rendermode InteractiveServer
+@using Microsoft.AspNetCore.Components.Web
+@using static Microsoft.AspNetCore.Components.Web.RenderMode
+@inject IConfiguration Configuration
+
+<PageTitle>Map - Skin Check</PageTitle>
+
+<div class="map-page">
+    <h1 class="map-title">Find Care</h1>
+    <p class="map-subtitle">Dermatology providers near you.</p>
+
+    @if (string.IsNullOrWhiteSpace(ApiKey))
+    {
+        <div class="card-panel map-fallback">
+            <p>
+                Google Maps API key isn't configured. From the
+                <code>MelanomaDetection.Web</code> project folder, run:
+            </p>
+            <p><code>dotnet user-secrets set "GoogleMaps:ApiKey" "your-key-here"</code></p>
+            <p>then restart the app.</p>
+        </div>
+    }
+    else
+    {
+        <div id="skin-check-map" class="map-canvas" data-api-key="@ApiKey"></div>
+        <script type="module" src="@Assets["Pages/Map.razor.js"]"></script>
+    }
+</div>
+
+@code {
+    private string? ApiKey => Configuration["GoogleMaps:ApiKey"];
+}
