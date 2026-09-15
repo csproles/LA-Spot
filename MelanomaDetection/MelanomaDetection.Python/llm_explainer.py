@@ -20,8 +20,15 @@ from pathlib import Path
 from dotenv import load_dotenv
 from openai import OpenAI
 
-_REPO_ROOT_ENV = Path(__file__).resolve().parents[2] / ".env"
-load_dotenv(dotenv_path=_REPO_ROOT_ENV)
+_ANCESTORS = Path(__file__).resolve().parents
+_REPO_ROOT_ENV = _ANCESTORS[2] / ".env" if len(_ANCESTORS) > 2 else None
+if _REPO_ROOT_ENV and _REPO_ROOT_ENV.exists():
+    load_dotenv(dotenv_path=_REPO_ROOT_ENV)
+else:
+    # No repo-root .env to find (e.g. running inside a container where this
+    # file sits at /app) -- OPENAI_API_KEY is expected to already be in the
+    # environment in that case.
+    load_dotenv()
 
 MODEL = "gpt-4o"
 
