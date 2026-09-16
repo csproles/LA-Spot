@@ -1,0 +1,460 @@
+@page "/"
+@rendermode InteractiveServer
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Components.Web
+@using static Microsoft.AspNetCore.Components.Web.RenderMode
+@using MelanomaDetection.Web.Components
+@using MelanomaDetection.Web.Models
+@using MelanomaDetection.Web.Services
+@inject ImageProcessingService ImageProcessingService
+
+<PageTitle>New Skin Check - Skin Check</PageTitle>
+
+<div class="check-page">
+    <p class="check-date">@Today.ToString("dddd, MMMM d, yyyy").ToUpperInvariant()</p>
+    <h1 class="check-title">New skin check</h1>
+    <p class="check-subtitle">Photograph a spot, tell us a bit about it, and get a preliminary read in under a minute.</p>
+
+    <div class="disclaimer-banner" role="alert">
+        <svg class="disclaimer-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="9.25" />
+            <path d="M12 8v4.5" />
+            <circle cx="12" cy="15.8" r="0.6" fill="currentColor" stroke="none" />
+        </svg>
+        <p>This tool gives a preliminary read, not a diagnosis. See a dermatologist about any lesion that concerns you.</p>
+    </div>
+
+    @if (!string.IsNullOrEmpty(ErrorMessage))
+    {
+        <div class="alert alert-danger" role="alert">@ErrorMessage</div>
+    }
+
+    @if (PreviewDataUrl is null)
+    {
+        <div class="upload-cards">
+            <div class="upload-card upload-card-primary">
+                <div class="upload-placeholder">
+                    <span>lesion photo</span>
+                </div>
+                <div class="upload-card-label">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M4 8a2 2 0 0 1 2-2h1.2a2 2 0 0 0 1.66-.9L9.6 4a2 2 0 0 1 1.66-.9h1.48A2 2 0 0 1 14.4 4l.74 1.1A2 2 0 0 0 16.8 6H18a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z" />
+                        <circle cx="12" cy="12.5" r="3.3" />
+                    </svg>
+                    Take a photo
+                </div>
+                <InputFile OnChange="HandleFileSelected" accept="image/*" capture="environment" class="upload-card-input" aria-label="Take a photo" />
+            </div>
+
+            <div class="upload-card upload-card-outline">
+                <div class="upload-placeholder upload-placeholder-outline">
+                    <span>lesion photo</span>
+                </div>
+                <div class="upload-card-label upload-card-label-outline">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M12 16V4M12 4 7.5 8.5M12 4l4.5 4.5" />
+                        <path d="M4 16.5v2A1.5 1.5 0 0 0 5.5 20h13a1.5 1.5 0 0 0 1.5-1.5v-2" />
+                    </svg>
+                    Upload a photo
+                </div>
+                <InputFile OnChange="HandleFileSelected" accept="image/*" class="upload-card-input" aria-label="Upload a photo" />
+            </div>
+        </div>
+    }
+    else if (!IsPhotoConfirmed)
+    {
+        <div class="card-panel confirm-panel">
+            <h2 class="panel-title">Use this photo?</h2>
+            <img src="@PreviewDataUrl" alt="Captured lesion preview" class="confirm-preview" />
+            <p class="preview-filename">@SelectedFileName <span class="preview-filesize">(@FormattedFileSize)</span></p>
+            <div class="result-actions">
+                <button type="button" class="btn btn-primary" @onclick="ConfirmPhoto">Use this photo</button>
+                <button type="button" class="btn btn-outline-primary" @onclick="StartNewCheck">Retake</button>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="card-panel preview-panel">
+            <img src="@PreviewDataUrl" alt="Selected lesion preview" class="preview-thumb" />
+            <div class="preview-meta">
+                <p class="preview-filename">@SelectedFileName</p>
+                <p class="preview-filesize">@FormattedFileSize</p>
+                <button type="button" class="link-button" @onclick="StartNewCheck">Retake / choose another</button>
+            </div>
+        </div>
+
+        @if (AnalysisResults is null)
+        {
+            <div class="card-panel">
+                <h2 class="panel-title">Add details</h2>
+
+                <p class="field-label">Body location</p>
+                <div class="body-location-row">
+                    <div class="body-diagram-wrap">
+                        <div class="body-diagram @(IsBackView ? "is-back" : "")">
+                            <div class="body-head">
+                                @if (!IsBackView)
+                                {
+                                    <svg class="body-face" viewBox="0 0 34 34" aria-hidden="true">
+                                        <circle cx="12" cy="14" r="2" fill="var(--color-navy)" />
+                                        <circle cx="22" cy="14" r="2" fill="var(--color-navy)" />
+                                        <path d="M10 20c1.8 2.6 4.4 3.6 7 3.6s5.2-1 7-3.6" stroke="var(--color-navy)" stroke-width="2" fill="none" stroke-linecap="round" />
+                                    </svg>
+                                }
+                            </div>
+                            <div class="body-torso"></div>
+                            <div class="body-arm body-arm-left"></div>
+                            <div class="body-arm body-arm-right"></div>
+                            <div class="body-leg body-leg-left"></div>
+                            <div class="body-leg body-leg-right"></div>
+
+                            <button type="button" class="body-dot @(IsSelectedLocation("Head/Neck") ? "active" : "")" style="top:7.7%;left:50%;" @onclick='() => SelectLocation("Head/Neck")' aria-label="Head/Neck"></button>
+                            <button type="button" class="body-dot @(IsSelectedLocation("Chest/Upper Back") ? "active" : "")" style="top:25.5%;left:50%;" @onclick='() => SelectLocation("Chest/Upper Back")' aria-label="Chest/Upper Back"></button>
+                            <button type="button" class="body-dot @(IsSelectedLocation("Abdomen/Lower Back") ? "active" : "")" style="top:49%;left:50%;" @onclick='() => SelectLocation("Abdomen/Lower Back")' aria-label="Abdomen/Lower Back"></button>
+                            <button type="button" class="body-dot @(IsSelectedLocation("Left Arm") ? "active" : "")" style="top:37.7%;left:15.7%;" @onclick='() => SelectLocation("Left Arm")' aria-label="Left Arm"></button>
+                            <button type="button" class="body-dot @(IsSelectedLocation("Right Arm") ? "active" : "")" style="top:37.7%;left:84.3%;" @onclick='() => SelectLocation("Right Arm")' aria-label="Right Arm"></button>
+                            <button type="button" class="body-dot @(IsSelectedLocation("Left Leg") ? "active" : "")" style="top:79%;left:35.7%;" @onclick='() => SelectLocation("Left Leg")' aria-label="Left Leg"></button>
+                            <button type="button" class="body-dot @(IsSelectedLocation("Right Leg") ? "active" : "")" style="top:79%;left:64.3%;" @onclick='() => SelectLocation("Right Leg")' aria-label="Right Leg"></button>
+                        </div>
+                        <p class="switch-label">Switch</p>
+                        <button type="button" class="btn btn-outline-primary btn-sm body-toggle" @onclick="ToggleBodyView">
+                            @(IsBackView ? "Back view" : "Front view")
+                        </button>
+                    </div>
+
+                    <div class="body-location-list">
+                        @foreach (var region in BodyRegions)
+                        {
+                            <button type="button" class="region-button @(IsSelectedLocation(region) ? "region-button-selected" : "")" @onclick="() => SelectLocation(region)">
+                                @region
+                            </button>
+                        }
+                    </div>
+                </div>
+
+                <p class="field-label">Symptoms</p>
+                <div class="chip-row">
+                    @foreach (var symptom in AvailableSymptoms)
+                    {
+                        <button type="button" class="chip @(SelectedSymptoms.Contains(symptom) ? "chip-selected" : "")" @onclick="() => ToggleSymptom(symptom)">
+                            @symptom
+                        </button>
+                    }
+                </div>
+
+                <p class="field-label">Notes</p>
+                <textarea class="form-control notes-textarea" rows="3" placeholder="Anything else worth mentioning? (optional)" @bind="Notes"></textarea>
+
+                <button type="button" class="btn btn-primary analyze-button" disabled="@(!CanAnalyze)" @onclick="AnalyzeImage">
+                    @(IsAnalyzing ? "Analyzing…" : "Analyze photo")
+                </button>
+            </div>
+        }
+        else
+        {
+            <div class="card-panel">
+                <h2 class="panel-title">Does this look right?</h2>
+                <p class="text-muted-small">We outlined what we think is the lesion. Confirm the highlighted border closely follows the edges of your spot.</p>
+                @if (HasImage(AnalysisResults.BorderVisual))
+                {
+                    <img src="@ToDataUrl(AnalysisResults.BorderVisual)" alt="Detected lesion border overlay" class="segmentation-preview" />
+                }
+                <div class="result-actions">
+                    <button type="button" class="btn @(SegmentationFeedback == "yes" ? "btn-primary" : "btn-outline-primary")" @onclick='() => SegmentationFeedback = "yes"'>
+                        Yes, that matches
+                    </button>
+                    <button type="button" class="btn @(SegmentationFeedback == "no" ? "btn-primary" : "btn-outline-primary")" @onclick='() => SegmentationFeedback = "no"'>
+                        No, that's off
+                    </button>
+                </div>
+                @if (SegmentationFeedback == "no")
+                {
+                    <p class="text-muted-small mt-2">
+                        Thanks for the flag — the outline isn't always exact. Consider retaking with the spot
+                        centered and in focus, or treat the score below as a rough estimate.
+                    </p>
+                }
+            </div>
+
+            <div class="card-panel risk-band risk-band-@RiskBand">
+                <p class="risk-band-label">@RiskLevelLabel</p>
+                <p class="risk-band-score">@AnalysisResults.RiskScore.ToString("F0") <span>/100</span></p>
+                <p class="risk-band-recommendation">@ClinicalRecommendation</p>
+            </div>
+
+            <div class="card-panel">
+                <h2 class="panel-title">What we looked at</h2>
+                @foreach (var factor in Factors)
+                {
+                    <div class="factor-row">
+                        <div class="factor-row-header">
+                            <span>@factor.Label</span>
+                            <span>@(factor.Score is null ? "N/A" : $"{factor.Score:F1} / 10")</span>
+                        </div>
+                        @if (factor.Score is not null)
+                        {
+                            <div class="factor-bar-track">
+                                <div class="factor-bar-fill factor-bar-@GetFactorBand(factor.Score.Value)" style="width:@((factor.Score.Value / 10 * 100).ToString("F0"))%"></div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+
+            <div class="result-actions">
+                <button type="button" class="btn btn-primary" disabled="@(IsSaving || IsSaved)" @onclick="SaveToHistory">
+                    @(IsSaved ? "Saved ✓" : IsSaving ? "Saving…" : "Save to history")
+                </button>
+                <button type="button" class="btn btn-outline-primary" @onclick="StartNewCheck">Start new check</button>
+            </div>
+
+            @if (ShowBreakdown)
+            {
+                <div class="card-panel">
+                    <button type="button" class="link-button mb-3" @onclick="() => ShowBreakdown = false">Hide full breakdown ▲</button>
+                    <AnalysisBreakdown Results="AnalysisResults" ProcessingId="@CurrentProcessingId" />
+                </div>
+            }
+            else
+            {
+                <button type="button" class="card-panel detail-link" @onclick="() => ShowBreakdown = true">
+                    <svg class="detail-link-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <rect x="3.5" y="4.5" width="17" height="15" rx="2.2" />
+                        <circle cx="8.5" cy="9.5" r="1.6" />
+                        <path d="M20 15.5 15 11l-8.5 8" />
+                    </svg>
+                    <span class="detail-link-text">
+                        <span class="detail-link-title">See the full breakdown</span>
+                        <span class="detail-link-subtitle">Every processed image, the ABCD visual evidence, and an optional AI-generated explanation.</span>
+                    </span>
+                    <svg class="detail-link-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M9.5 5.5 16 12l-6.5 6.5" />
+                    </svg>
+                </button>
+            }
+        }
+    }
+</div>
+
+@code {
+    private static readonly string[] BodyRegions =
+    {
+        "Head/Neck", "Chest/Upper Back", "Abdomen/Lower Back",
+        "Left Arm", "Right Arm", "Left Leg", "Right Leg",
+    };
+
+    private static readonly string[] AvailableSymptoms =
+    {
+        "Itchy", "Growing", "Bleeding", "Painful", "Changed color", "New",
+    };
+
+    private const long MaxFileSizeBytes = 5 * 1024 * 1024;
+
+    private static readonly HashSet<string> AllowedContentTypes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "image/jpeg", "image/jpg", "image/png", "image/bmp", "image/webp"
+    };
+
+    private readonly DateTime Today = DateTime.Now;
+
+    private string? ErrorMessage;
+    private string? PreviewDataUrl;
+    private string? SelectedFileName;
+    private long SelectedFileSize;
+    private byte[]? SelectedFileBytes;
+    private bool IsPhotoConfirmed;
+
+    private string? SelectedLocation;
+    private readonly HashSet<string> SelectedSymptoms = new();
+    private string Notes = string.Empty;
+    private bool IsBackView;
+
+    private bool IsAnalyzing;
+    private bool IsSaving;
+    private bool IsSaved;
+    private string? CurrentProcessingId;
+    private ImageProcessingResults? AnalysisResults;
+    private string? SegmentationFeedback;
+    private bool ShowBreakdown;
+
+    private bool CanAnalyze => PreviewDataUrl is not null && !IsAnalyzing;
+
+    private string FormattedFileSize => SelectedFileSize < 1024 * 1024
+        ? $"{SelectedFileSize / 1024.0:F1} KB"
+        : $"{SelectedFileSize / (1024.0 * 1024.0):F2} MB";
+
+    private bool IsSelectedLocation(string region) => SelectedLocation == region;
+
+    private void SelectLocation(string region) => SelectedLocation = region;
+
+    private void ToggleBodyView() => IsBackView = !IsBackView;
+
+    private void ToggleSymptom(string symptom)
+    {
+        if (!SelectedSymptoms.Remove(symptom))
+        {
+            SelectedSymptoms.Add(symptom);
+        }
+    }
+
+    private void ConfirmPhoto() => IsPhotoConfirmed = true;
+
+    private async Task HandleFileSelected(InputFileChangeEventArgs e)
+    {
+        ErrorMessage = null;
+        PreviewDataUrl = null;
+        IsPhotoConfirmed = false;
+
+        var file = e.File;
+
+        if (!AllowedContentTypes.Contains(file.ContentType))
+        {
+            ErrorMessage = $"Unsupported file type '{file.ContentType}'. Please upload a JPEG, PNG, BMP, or WebP image.";
+            return;
+        }
+
+        if (file.Size == 0)
+        {
+            ErrorMessage = "The selected file is empty.";
+            return;
+        }
+
+        if (file.Size > MaxFileSizeBytes)
+        {
+            ErrorMessage = $"File is too large ({file.Size / (1024.0 * 1024.0):F2} MB). Maximum allowed size is 5 MB.";
+            return;
+        }
+
+        try
+        {
+            using var stream = file.OpenReadStream(MaxFileSizeBytes);
+            using var memoryStream = new MemoryStream();
+            await stream.CopyToAsync(memoryStream);
+
+            SelectedFileBytes = memoryStream.ToArray();
+            PreviewDataUrl = $"data:{file.ContentType};base64,{Convert.ToBase64String(SelectedFileBytes)}";
+            SelectedFileName = file.Name;
+            SelectedFileSize = file.Size;
+        }
+        catch (IOException)
+        {
+            ErrorMessage = "File is too large to read. Maximum allowed size is 5 MB.";
+        }
+    }
+
+    private async Task AnalyzeImage()
+    {
+        if (SelectedFileBytes is null || SelectedFileName is null)
+        {
+            return;
+        }
+
+        IsAnalyzing = true;
+        ErrorMessage = null;
+        StateHasChanged();
+
+        try
+        {
+            var response = await ImageProcessingService.ProcessImageAsync(
+                SelectedFileBytes, SelectedFileName, SelectedLocation, SelectedSymptoms, Notes);
+            CurrentProcessingId = response.ProcessingId;
+            AnalysisResults = await ImageProcessingService.GetResultsAsync(response.ProcessingId);
+        }
+        catch (ImageProcessingApiException ex)
+        {
+            ErrorMessage = ex.Message;
+        }
+        finally
+        {
+            IsAnalyzing = false;
+        }
+    }
+
+    private async Task SaveToHistory()
+    {
+        if (CurrentProcessingId is null)
+        {
+            return;
+        }
+
+        IsSaving = true;
+        ErrorMessage = null;
+        StateHasChanged();
+
+        try
+        {
+            await ImageProcessingService.SaveToHistoryAsync(CurrentProcessingId);
+            IsSaved = true;
+        }
+        catch (ImageProcessingApiException ex)
+        {
+            ErrorMessage = ex.Message;
+        }
+        finally
+        {
+            IsSaving = false;
+        }
+    }
+
+    private void StartNewCheck()
+    {
+        ErrorMessage = null;
+        PreviewDataUrl = null;
+        SelectedFileName = null;
+        SelectedFileBytes = null;
+        IsPhotoConfirmed = false;
+        SelectedLocation = null;
+        SelectedSymptoms.Clear();
+        Notes = string.Empty;
+        IsBackView = false;
+        AnalysisResults = null;
+        CurrentProcessingId = null;
+        IsSaved = false;
+        SegmentationFeedback = null;
+        ShowBreakdown = false;
+    }
+
+    private IEnumerable<(string Label, double? Score)> Factors => AnalysisResults is null
+        ? Enumerable.Empty<(string, double?)>()
+        : new (string, double?)[]
+        {
+            ("Shape symmetry", AnalysisResults.AbcdeScores.Asymmetry.Score),
+            ("Border regularity", AnalysisResults.AbcdeScores.Border.Score),
+            ("Color variation", AnalysisResults.AbcdeScores.Color.Score),
+            ("Diameter", AnalysisResults.AbcdeScores.Diameter.Score),
+        };
+
+    private string RiskBand => AnalysisResults is null ? "low" : AnalysisResults.RiskScore switch
+    {
+        < 35 => "low",
+        < 65 => "moderate",
+        _ => "high",
+    };
+
+    private string RiskLevelLabel => RiskBand switch
+    {
+        "low" => "Low risk indicators",
+        "moderate" => "Some risk indicators present",
+        _ => "High risk indicators",
+    };
+
+    private string ClinicalRecommendation => RiskBand switch
+    {
+        "low" => "No immediate action needed. Continue routine skin self-exams and keep up with annual dermatologist checkups.",
+        "moderate" => "Consider scheduling a dermatologist visit in the coming months to have this spot evaluated.",
+        _ => "See a dermatologist as soon as possible for a professional evaluation of this spot.",
+    };
+
+    private static string GetFactorBand(double score) => score switch
+    {
+        < 3.3 => "low",
+        < 6.6 => "moderate",
+        _ => "high",
+    };
+
+    private static bool HasImage(string? base64) => !string.IsNullOrEmpty(base64);
+
+    private static string ToDataUrl(string base64Png) => $"data:image/png;base64,{base64Png}";
+}

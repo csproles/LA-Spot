@@ -1,0 +1,123 @@
+@page "/results/{ProcessingId}"
+@rendermode InteractiveServer
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Web
+@using static Microsoft.AspNetCore.Components.Web.RenderMode
+@using MelanomaDetection.Web.Components
+@using MelanomaDetection.Web.Models
+@using MelanomaDetection.Web.Services
+@inject ImageProcessingService ImageProcessingService
+@inject NavigationManager NavigationManager
+
+<PageTitle>Analysis Results - Melanoma Detection</PageTitle>
+
+<div class="container my-4" style="max-width: 960px;">
+    <h1>Analysis Results</h1>
+
+    <div class="alert alert-danger" role="alert">
+        <strong>DISCLAIMER:</strong> Educational use only.
+        NOT a substitute for professional medical diagnosis.
+        Consult a dermatologist.
+    </div>
+
+    @if (IsLoading)
+    {
+        <div class="d-flex align-items-center gap-2 text-muted">
+            <div class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></div>
+            <span>Loading results...</span>
+        </div>
+    }
+    else if (LoadError is not null)
+    {
+        <div class="alert alert-danger" role="alert">@LoadError</div>
+        <button type="button" class="btn btn-primary" @onclick="GoToUpload">Analyze Another Image</button>
+    }
+    else if (AnalysisResults is not null)
+    {
+        <div class="alert @RiskAlertClass" role="alert">
+            <strong>Risk Score: @AnalysisResults.RiskScore.ToString("F1") / 100</strong>
+            <div>@RiskLevelLabel</div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header fw-semibold">Clinical Recommendation</div>
+            <div class="card-body">
+                <p class="mb-0">@ClinicalRecommendation</p>
+            </div>
+        </div>
+
+        <AnalysisBreakdown Results="AnalysisResults" ProcessingId="ProcessingId" />
+
+        <button type="button" class="btn btn-primary" @onclick="GoToUpload">Analyze Another Image</button>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public string ProcessingId { get; set; } = string.Empty;
+
+    private ImageProcessingResults? AnalysisResults;
+    private bool IsLoading = true;
+    private string? LoadError;
+    private string? LoadedForId;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (string.IsNullOrWhiteSpace(ProcessingId) || ProcessingId == LoadedForId)
+        {
+            return;
+        }
+
+        IsLoading = true;
+        LoadError = null;
+        AnalysisResults = null;
+
+        try
+        {
+            AnalysisResults = await ImageProcessingService.GetResultsAsync(ProcessingId);
+            LoadedForId = ProcessingId;
+        }
+        catch (ImageProcessingApiException ex)
+        {
+            LoadError = ex.Message;
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private string RiskBand => AnalysisResults is null ? "low" : AnalysisResults.RiskScore switch
+    {
+        < 25 => "low",
+        < 50 => "moderate",
+        < 75 => "elevated",
+        _ => "high",
+    };
+
+    private string RiskAlertClass => RiskBand switch
+    {
+        "low" => "alert-success",
+        "moderate" => "alert-warning",
+        "elevated" => "alert-elevated",
+        _ => "alert-danger",
+    };
+
+    private string RiskLevelLabel => RiskBand switch
+    {
+        "low" => "Low risk indicators",
+        "moderate" => "Some risk indicators present",
+        "elevated" => "Multiple risk indicators",
+        _ => "High risk indicators",
+    };
+
+    private string ClinicalRecommendation => RiskBand switch
+    {
+        "low" => "No immediate action needed. Continue routine skin self-exams and keep up with your annual dermatologist checkups.",
+        "moderate" => "Consider scheduling a dermatologist visit in the coming months to have this lesion evaluated.",
+        "elevated" => "Schedule a dermatologist appointment soon to have this lesion professionally evaluated.",
+        _ => "See a dermatologist as soon as possible for a professional evaluation of this lesion.",
+    };
+
+    private void GoToUpload() => NavigationManager.NavigateTo("/");
+}

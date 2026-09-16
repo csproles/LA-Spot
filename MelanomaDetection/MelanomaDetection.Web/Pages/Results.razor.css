@@ -1,0 +1,9 @@
+.alert-elevated {
+    color: #7a3d00;
+    background-color: #ffe5d0;
+    border-color: #ffd1a8;
+}
+
+.bg-elevated {
+    background-color: #fd7e14 !important;
+}

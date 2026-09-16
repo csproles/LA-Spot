@@ -1,0 +1,120 @@
+@page "/profile"
+@rendermode InteractiveServer
+@using Microsoft.AspNetCore.Components.Web
+@using static Microsoft.AspNetCore.Components.Web.RenderMode
+
+<PageTitle>Profile - Skin Check</PageTitle>
+
+<div class="profile-page">
+    <h1 class="profile-title">Profile</h1>
+
+    <div class="card-panel">
+        <p class="panel-title">Account</p>
+        <div class="account-fields">
+            <div class="field-group">
+                <label class="field-label" for="fullName">Full name</label>
+                <input id="fullName" type="text" class="form-control" placeholder="Jane Doe" @bind="FullName" />
+            </div>
+        </div>
+    </div>
+
+    <div class="card-panel">
+        <p class="panel-title">Privacy &amp; data</p>
+        <div class="toggle-row">
+            <div>
+                <p class="toggle-label">Share with my dermatologist</p>
+                <p class="toggle-description">Let a linked provider view your saved checks.</p>
+            </div>
+            <label class="switch">
+                <input type="checkbox" @bind="ShareWithDermatologist" />
+                <span class="switch-track"></span>
+            </label>
+        </div>
+        <div class="toggle-row">
+            <div>
+                <p class="toggle-label">Anonymous usage analytics</p>
+                <p class="toggle-description">Help improve the app with anonymized usage data.</p>
+            </div>
+            <label class="switch">
+                <input type="checkbox" @bind="AnonymousAnalytics" />
+                <span class="switch-track"></span>
+            </label>
+        </div>
+    </div>
+
+    <div class="card-panel">
+        <p class="panel-title">Notifications</p>
+        <div class="toggle-row">
+            <div>
+                <p class="toggle-label">Recheck reminders</p>
+                <p class="toggle-description">Get reminded to re-photograph a tracked spot.</p>
+            </div>
+            <label class="switch">
+                <input type="checkbox" @bind="RecheckReminders" />
+                <span class="switch-track"></span>
+            </label>
+        </div>
+        <div class="toggle-row">
+            <div>
+                <p class="toggle-label">High-risk alerts</p>
+                <p class="toggle-description">Get notified right away for a high-risk result.</p>
+            </div>
+            <label class="switch">
+                <input type="checkbox" @bind="HighRiskAlerts" />
+                <span class="switch-track"></span>
+            </label>
+        </div>
+    </div>
+
+    <div class="card-panel">
+        <p class="panel-title">App preferences</p>
+        <div class="preference-row">
+            <span class="toggle-label">Units</span>
+            <div class="segmented">
+                <button type="button" class="segmented-option @(Units == "cm" ? "active" : "")" @onclick='() => Units = "cm"'>cm</button>
+                <button type="button" class="segmented-option @(Units == "in" ? "active" : "")" @onclick='() => Units = "in"'>inches</button>
+            </div>
+        </div>
+        <div class="preference-row">
+            <span class="toggle-label">Theme</span>
+            <div class="segmented">
+                <button type="button" class="segmented-option @(Theme == "Light" ? "active" : "")" @onclick='() => Theme = "Light"'>Light</button>
+                <button type="button" class="segmented-option @(Theme == "Dark" ? "active" : "")" @onclick='() => Theme = "Dark"'>Dark</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="card-panel danger-card">
+        <p class="panel-title">Data &amp; account</p>
+        <div class="danger-actions">
+            <button type="button" class="btn btn-outline-primary" @onclick="ShowExportInfo">
+                Export my data
+            </button>
+            <button type="button" class="btn btn-outline-danger" @onclick="ShowDeleteInfo">
+                Delete account
+            </button>
+        </div>
+        @if (InfoMessage is not null)
+        {
+            <p class="danger-info">@InfoMessage</p>
+        }
+    </div>
+</div>
+
+@code {
+    private string FullName = string.Empty;
+
+    private bool ShareWithDermatologist = true;
+    private bool AnonymousAnalytics;
+    private bool RecheckReminders = true;
+    private bool HighRiskAlerts = true;
+
+    private string Units = "cm";
+    private string Theme = "Light";
+
+    private string? InfoMessage;
+
+    private void ShowExportInfo() => InfoMessage = "Data export isn't wired up in this demo yet.";
+
+    private void ShowDeleteInfo() => InfoMessage = "Account deletion isn't wired up in this demo yet.";
+}

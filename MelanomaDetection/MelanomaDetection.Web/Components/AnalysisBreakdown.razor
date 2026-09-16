@@ -1,0 +1,220 @@
+@using System.Text.Json
+@using MelanomaDetection.Web.Models
+@using MelanomaDetection.Web.Services
+@inject ImageProcessingService ImageProcessingService
+
+<h2 class="h4">Pipeline Stages</h2>
+<p class="text-muted small">Every transformation the photo passes through before scoring.</p>
+<div class="row row-cols-2 row-cols-md-3 g-3 mb-4">
+    @foreach (var tile in ImageTiles)
+    {
+        <div class="col">
+            <div class="card h-100">
+                @if (HasImage(tile.Base64))
+                {
+                    <img src="@ToDataUrl(tile.Base64!)" class="card-img-top" alt="@tile.Label" />
+                }
+                else
+                {
+                    <div class="bg-light text-muted d-flex align-items-center justify-content-center" style="height:150px;">
+                        Image not cached
+                    </div>
+                }
+                <div class="card-body py-2">
+                    <p class="card-text small mb-0">@tile.Label</p>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<h2 class="h4">ABCDE Scores &amp; Visual Evidence</h2>
+<p class="text-muted small">What each score is actually based on, not just the number.</p>
+<div class="row row-cols-1 row-cols-md-2 g-3 mb-4">
+    @foreach (var row in ScoreRows)
+    {
+        <div class="col">
+            <div class="card h-100">
+                @if (HasImage(row.VisualBase64))
+                {
+                    <img src="@ToDataUrl(row.VisualBase64!)" class="card-img-top" alt="@row.Label visualization" />
+                }
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <span class="fw-semibold">@row.Label</span>
+                        <span>@(row.Score is null ? "N/A" : $"{row.Score:F1} / 10")</span>
+                    </div>
+                    @if (row.Score is not null)
+                    {
+                        <div class="progress my-2" role="progressbar" aria-valuenow="@row.Score" aria-valuemin="0" aria-valuemax="10">
+                            <div class="progress-bar @GetScoreBarClass(row.Score.Value)" style="width:@((row.Score.Value / 10 * 100).ToString("F0"))%"></div>
+                        </div>
+                    }
+                    @if (!string.IsNullOrEmpty(row.Detail))
+                    {
+                        <p class="text-muted small mb-0 mt-1">@row.Detail</p>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<h2 class="h4">Plain-Language Explanation</h2>
+<div class="card mb-2">
+    <div class="card-body">
+        @if (Explanation is not null)
+        {
+            <p class="mb-0" style="white-space: pre-line;">@Explanation</p>
+        }
+        else if (ExplanationError is not null)
+        {
+            <div class="alert alert-danger mb-0">@ExplanationError</div>
+        }
+        else
+        {
+            <p class="text-muted small">
+                Get an AI-generated, plain-language summary of these findings. This calls
+                an external AI service and is not itself a diagnosis.
+            </p>
+            <button type="button" class="btn btn-outline-primary" disabled="@IsExplaining" @onclick="GetExplanation">
+                @(IsExplaining ? "Generating..." : "Get AI Explanation")
+            </button>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public ImageProcessingResults Results { get; set; } = null!;
+
+    [Parameter, EditorRequired]
+    public string ProcessingId { get; set; } = string.Empty;
+
+    private string? Explanation;
+    private string? ExplanationError;
+    private bool IsExplaining;
+
+    private IEnumerable<(string Label, string? Base64)> ImageTiles => new (string, string?)[]
+    {
+        ("Original", Results.Original),
+        ("Median Filter", Results.NoiseRemoved),
+        ("Bilateral Filter", Results.BilateralFiltered),
+        ("Hair Removal", Results.HairRemoved),
+        ("Segmentation", Results.Segmentation),
+        ("Edge Detection", Results.Edges),
+    };
+
+    private IEnumerable<(string Label, double? Score, string? VisualBase64, string Detail)> ScoreRows => new (string, double?, string?, string)[]
+    {
+        ("Asymmetry", Results.AbcdeScores.Asymmetry.Score, Results.AsymmetryVisual,
+            GetDetailLine("asymmetry", Results.AbcdeScores.Asymmetry)),
+        ("Border Irregularity", Results.AbcdeScores.Border.Score, Results.BorderVisual,
+            GetDetailLine("border", Results.AbcdeScores.Border)),
+        ("Color Variation", Results.AbcdeScores.Color.Score, Results.ColorVisual,
+            GetDetailLine("color", Results.AbcdeScores.Color)),
+        ("Diameter", Results.AbcdeScores.Diameter.Score, Results.DiameterVisual,
+            GetDetailLine("diameter", Results.AbcdeScores.Diameter)),
+        ("Evolving", Results.AbcdeScores.Evolving.Score, null,
+            "Not assessable from a single static image."),
+    };
+
+    /// <summary>Turns a score's raw "details" JSON into a short, readable caption.</summary>
+    private static string GetDetailLine(string criterion, AbcdeScore score)
+    {
+        var details = score.Details;
+        if (details.ValueKind != JsonValueKind.Object)
+        {
+            return string.Empty;
+        }
+
+        switch (criterion)
+        {
+            case "asymmetry":
+                if (details.TryGetProperty("raw_asymmetry_ratio", out var asymRatio))
+                {
+                    var threshold = details.TryGetProperty("concern_threshold", out var t1) ? t1.GetDouble() : 0.20;
+                    return $"Mirror-overlap mismatch ratio: {asymRatio.GetDouble():F2} (concern threshold: {threshold:F2})";
+                }
+                return string.Empty;
+
+            case "border":
+                if (details.TryGetProperty("raw_border_irregularity", out var borderRaw))
+                {
+                    var threshold = details.TryGetProperty("concern_threshold", out var t2) ? t2.GetDouble() : 0.50;
+                    return $"Border irregularity: {borderRaw.GetDouble():F2} (concern threshold: {threshold:F2})";
+                }
+                return string.Empty;
+
+            case "color":
+                var line = string.Empty;
+                if (details.TryGetProperty("color_cv", out var cv))
+                {
+                    line = $"Color variation (CV): {cv.GetDouble():F2}";
+                }
+                if (details.TryGetProperty("dangerous_colors_pct", out var dangerous) && dangerous.ValueKind == JsonValueKind.Object)
+                {
+                    var parts = dangerous.EnumerateObject()
+                        .Select(p => $"{p.Name.Replace('_', '-')} ({p.Value.GetDouble():P0})")
+                        .ToList();
+                    if (parts.Count > 0)
+                    {
+                        line += (line.Length > 0 ? " | " : string.Empty) + $"Dangerous colors detected: {string.Join(", ", parts)}";
+                    }
+                }
+                return line;
+
+            case "diameter":
+                if (details.TryGetProperty("diameter_mm", out var mm))
+                {
+                    return $"≈{mm.GetDouble():F1}mm (hair-calibrated measurement)";
+                }
+                if (details.TryGetProperty("reason", out var reason))
+                {
+                    return $"Not measurable: {reason.GetString()}";
+                }
+                return string.Empty;
+
+            default:
+                return string.Empty;
+        }
+    }
+
+    private static string GetScoreBarClass(double score) => score switch
+    {
+        < 2.5 => "bg-success",
+        < 5 => "bg-warning",
+        < 7.5 => "bg-elevated",
+        _ => "bg-danger",
+    };
+
+    private static bool HasImage(string? base64) => !string.IsNullOrEmpty(base64);
+
+    private static string ToDataUrl(string base64Png) => $"data:image/png;base64,{base64Png}";
+
+    /// <summary>
+    /// Triggered only by the "Get AI Explanation" button click -- never called
+    /// automatically -- since each first request for a given ProcessingId costs a
+    /// real OpenAI API call on the Flask side (subsequent clicks for the same id
+    /// are served from Flask's server-side cache).
+    /// </summary>
+    private async Task GetExplanation()
+    {
+        IsExplaining = true;
+        ExplanationError = null;
+        StateHasChanged();
+
+        try
+        {
+            Explanation = await ImageProcessingService.ExplainAsync(ProcessingId);
+        }
+        catch (ImageProcessingApiException ex)
+        {
+            ExplanationError = ex.Message;
+        }
+        finally
+        {
+            IsExplaining = false;
+        }
+    }
+}

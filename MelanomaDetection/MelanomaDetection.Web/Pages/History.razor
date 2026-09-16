@@ -1,0 +1,202 @@
+@page "/history"
+@rendermode InteractiveServer
+@using Microsoft.AspNetCore.Components.Web
+@using static Microsoft.AspNetCore.Components.Web.RenderMode
+@using MelanomaDetection.Web.Models
+@using MelanomaDetection.Web.Services
+@inject ImageProcessingService ImageProcessingService
+@inject NavigationManager NavigationManager
+
+<PageTitle>History - Skin Check</PageTitle>
+
+<div class="history-page">
+    <div class="history-header">
+        <div>
+            <h1 class="history-title">History</h1>
+            <p class="history-count">@Entries.Count saved check@(Entries.Count == 1 ? "" : "s")</p>
+        </div>
+        @if (Entries.Count > 0)
+        {
+            <button type="button" class="btn @(IsCompareMode ? "btn-primary" : "btn-outline-primary")" @onclick="ToggleCompareMode">
+                @(IsCompareMode ? "Done comparing" : "Compare")
+            </button>
+        }
+    </div>
+
+    @if (IsLoading)
+    {
+        <div class="d-flex align-items-center gap-2 text-muted">
+            <div class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></div>
+            <span>Loading history...</span>
+        </div>
+    }
+    else if (LoadError is not null)
+    {
+        <div class="alert alert-danger" role="alert">@LoadError</div>
+    }
+    else if (Entries.Count == 0)
+    {
+        <div class="card-panel empty-state">
+            <p>No saved checks yet. Analyze a photo and save it to see it here.</p>
+            <a href="/" class="btn btn-primary">New skin check</a>
+        </div>
+    }
+    else
+    {
+        <div class="sort-row">
+            <span class="sort-label">Sort by</span>
+            <div class="segmented">
+                <button type="button" class="segmented-option @(SortField == "Date" ? "active" : "")" @onclick='() => SortField = "Date"'>Date</button>
+                <button type="button" class="segmented-option @(SortField == "Location" ? "active" : "")" @onclick='() => SortField = "Location"'>Location</button>
+            </div>
+            <button type="button" class="direction-toggle" title="Reverse sort direction" @onclick="() => SortDescending = !SortDescending">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="@(SortDescending ? "" : "transform: scaleY(-1);")" aria-hidden="true">
+                    <path d="M7 4v16M7 20l-3-3M7 20l3-3M17 20V4M17 4l-3 3M17 4l3 3" />
+                </svg>
+            </button>
+        </div>
+
+        @if (IsCompareMode)
+        {
+            <p class="compare-hint">Select up to 2 checks to compare. Selecting a 3rd drops the oldest selection.</p>
+        }
+
+        <div class="history-grid">
+            @foreach (var entry in SortedEntries)
+            {
+                var isSelected = SelectedForCompare.Contains(entry.ProcessingId);
+                <div class="history-card @(isSelected ? "history-card-selected" : "")" @onclick="() => HandleCardClick(entry)">
+                    <div class="history-thumb-wrap">
+                        <img src="@ToDataUrl(entry.Thumbnail)" alt="Saved check thumbnail" class="history-thumb" />
+                        @if (IsCompareMode && isSelected)
+                        {
+                            <span class="history-check-overlay">✓</span>
+                        }
+                    </div>
+                    <div class="history-card-body">
+                        <div class="history-card-top">
+                            <span class="history-location">@(string.IsNullOrEmpty(entry.Location) ? "Unspecified" : entry.Location)</span>
+                            <span class="risk-badge risk-badge-@GetRiskBand(entry.RiskScore)">@GetRiskLabel(entry.RiskScore)</span>
+                        </div>
+                        <p class="history-date">@FormatDate(entry.ProcessedAt)</p>
+                        @if (!string.IsNullOrWhiteSpace(entry.Notes))
+                        {
+                            <p class="history-note">@entry.Notes</p>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+
+        @if (IsCompareMode && CompareEntries.Count > 0)
+        {
+            <div class="card-panel compare-panel">
+                <h2 class="panel-title">Comparing @CompareEntries.Count entr@(CompareEntries.Count == 1 ? "y" : "ies")</h2>
+                <div class="compare-grid">
+                    @foreach (var entry in CompareEntries)
+                    {
+                        <div class="compare-item">
+                            <img src="@ToDataUrl(entry.Thumbnail)" alt="Comparison thumbnail" class="compare-thumb" />
+                            <p class="history-location">@(string.IsNullOrEmpty(entry.Location) ? "Unspecified" : entry.Location)</p>
+                            <span class="risk-badge risk-badge-@GetRiskBand(entry.RiskScore)">@GetRiskLabel(entry.RiskScore)</span>
+                            <p class="history-date">@FormatDate(entry.ProcessedAt)</p>
+                            <p class="compare-score">Risk score: @entry.RiskScore.ToString("F0")/100</p>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    }
+</div>
+
+@code {
+    private List<HistoryEntry> Entries = new();
+    private bool IsLoading = true;
+    private string? LoadError;
+    private string SortField = "Date";
+    private bool SortDescending = true;
+    private bool IsCompareMode;
+    private readonly List<string> SelectedForCompare = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            Entries = await ImageProcessingService.GetHistoryAsync();
+        }
+        catch (ImageProcessingApiException ex)
+        {
+            LoadError = ex.Message;
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private IEnumerable<HistoryEntry> SortedEntries
+    {
+        get
+        {
+            IEnumerable<HistoryEntry> sorted = SortField == "Location"
+                ? Entries.OrderBy(e => e.Location, StringComparer.OrdinalIgnoreCase)
+                : Entries.OrderBy(e => e.ProcessedAt);
+            return SortDescending ? sorted.Reverse() : sorted;
+        }
+    }
+
+    private List<HistoryEntry> CompareEntries =>
+        Entries.Where(e => SelectedForCompare.Contains(e.ProcessingId)).ToList();
+
+    private void ToggleCompareMode()
+    {
+        IsCompareMode = !IsCompareMode;
+        if (!IsCompareMode)
+        {
+            SelectedForCompare.Clear();
+        }
+    }
+
+    private void ToggleCompareSelection(string processingId)
+    {
+        if (!SelectedForCompare.Remove(processingId))
+        {
+            if (SelectedForCompare.Count >= 2)
+            {
+                SelectedForCompare.RemoveAt(0);
+            }
+            SelectedForCompare.Add(processingId);
+        }
+    }
+
+    private void HandleCardClick(HistoryEntry entry)
+    {
+        if (IsCompareMode)
+        {
+            ToggleCompareSelection(entry.ProcessingId);
+        }
+        else
+        {
+            NavigationManager.NavigateTo($"/results/{entry.ProcessingId}");
+        }
+    }
+
+    private static string FormatDate(DateTimeOffset? dt) =>
+        dt?.ToLocalTime().ToString("MMM d, yyyy") ?? "Unknown date";
+
+    private static string GetRiskBand(double riskScore) => riskScore switch
+    {
+        < 35 => "low",
+        < 65 => "moderate",
+        _ => "high",
+    };
+
+    private static string GetRiskLabel(double riskScore) => GetRiskBand(riskScore) switch
+    {
+        "low" => "Low",
+        "moderate" => "Moderate",
+        _ => "High",
+    };
+
+    private static string ToDataUrl(string base64Png) => $"data:image/png;base64,{base64Png}";
+}

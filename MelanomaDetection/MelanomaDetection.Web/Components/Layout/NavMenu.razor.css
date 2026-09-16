@@ -1,0 +1,122 @@
+.app-nav {
+    background: var(--color-navy, #1B3E6F);
+    position: sticky;
+    top: 0;
+    z-index: 20;
+}
+
+.app-nav-brand {
+    display: none;
+}
+
+.app-nav-links {
+    display: flex;
+    align-items: center;
+    padding: 4px 4px;
+}
+
+/* ::deep is required here: these classes are applied to <NavLink>, a child
+   component from the framework -- Blazor only auto-scopes elements this
+   component's own markup renders directly, not a child component's
+   internal output, so a plain (non-::deep) selector silently never matches
+   the <a> NavLink renders and these rules would never apply at all. */
+::deep .app-nav-link {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1px;
+    padding: 6px 4px;
+    border-radius: var(--radius-control);
+    color: #EAF1FA !important;
+    text-decoration: none !important;
+    font-family: var(--font-body);
+    font-size: 11px;
+    font-weight: 600;
+    min-width: 0;
+}
+
+::deep .app-nav-link:hover {
+    color: #ffffff !important;
+}
+
+::deep .app-nav-link.active {
+    background-color: #EAF1FA;
+    color: var(--color-navy, #1B3E6F) !important;
+    font-weight: 700;
+}
+
+.app-nav-icon {
+    width: 18px;
+    height: 18px;
+}
+
+@media (min-width: 860px) {
+    .app-nav {
+        width: 168px;
+        flex-shrink: 0;
+        height: 100vh;
+        position: sticky;
+        top: 0;
+        display: flex;
+        flex-direction: column;
+        padding: 16px 10px;
+    }
+
+    .app-nav-brand {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 0 6px 18px;
+    }
+
+        .app-nav-brand a {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+        }
+
+    .app-nav-brand-mark {
+        width: 28px;
+        height: 28px;
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.14);
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: var(--font-heading);
+        font-weight: 800;
+        font-size: 11px;
+    }
+
+    .app-nav-brand-text {
+        font-family: var(--font-heading);
+        font-weight: 700;
+        color: #fff;
+        font-size: 13.5px;
+    }
+
+    .app-nav-links {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 2px;
+        padding: 0;
+    }
+
+    ::deep .app-nav-link {
+        flex: none;
+        flex-direction: row;
+        justify-content: flex-start;
+        gap: 10px;
+        padding: 8px 10px;
+        font-size: 13px;
+    }
+
+    .app-nav-icon {
+        width: 17px;
+        height: 17px;
+    }
+}
