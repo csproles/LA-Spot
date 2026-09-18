@@ -15,6 +15,14 @@ builder.Services.AddHttpClient<ImageProcessingService>(client =>
     client.Timeout = TimeSpan.FromSeconds(30);
 });
 
+// NPI Registry + Census geocoder (both free, keyless government APIs) for the Map page's
+// "nearby dermatologists" lookup.
+builder.Services.AddMemoryCache();
+builder.Services.AddHttpClient<NpiProviderService>(client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(15);
+});
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
