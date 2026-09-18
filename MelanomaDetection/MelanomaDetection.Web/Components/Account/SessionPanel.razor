@@ -1,0 +1,44 @@
+@* Who is signed in and how, with the way out. Reads the cookie's claims
+   rather than the database: everything shown here was put in the cookie at
+   sign-in for exactly this purpose. *@
+@using System.Security.Claims
+
+<AuthorizeView>
+    <div class="card-panel session-panel">
+        <p class="panel-title">Signed in</p>
+        <div class="session-identity">
+            <UserAvatar DisplayName="@Name(context.User)" PictureUrl="@Picture(context.User)" Size="lg" />
+            <div class="session-details">
+                <p class="session-name">@Name(context.User)</p>
+                @if (CurrentUser.IsDemo(context.User))
+                {
+                    <p class="session-provider">
+                        <span class="session-provider-icon"><AppIcon Name="info" Size="inherit" /></span>
+                        Demo session. Ending it erases this account and everything in it.
+                    </p>
+                }
+                else
+                {
+                    <p class="session-email">@Email(context.User)</p>
+                    <p class="session-provider">
+                        <span class="session-provider-icon"><AppIcon Name="shield" Size="inherit" /></span>
+                        Signed in with Google. We never see or store a password.
+                    </p>
+                }
+            </div>
+        </div>
+        <div class="session-actions">
+            <SignOutForm Label="@SignOutLabel(context.User)" />
+        </div>
+    </div>
+</AuthorizeView>
+
+@code {
+    private static string Name(ClaimsPrincipal user) => user.Identity?.Name ?? "Your account";
+
+    private static string? Email(ClaimsPrincipal user) => user.FindFirstValue(ClaimTypes.Email);
+
+    private static string? Picture(ClaimsPrincipal user) => user.FindFirstValue(AppClaimTypes.Picture);
+
+    private static string SignOutLabel(ClaimsPrincipal user) => CurrentUser.IsDemo(user) ? "End demo" : "Sign out";
+}

@@ -1,4 +1,8 @@
-"""SQLite persistence for tracked spots, saved checks, and the user's risk profile.
+"""SQLite persistence for tracked spots, saved checks, and each user's risk profile.
+
+Every row belongs to one user_id -- the account id the web app sends with each
+request -- and every read here is filtered by it, so one person's data is
+never reachable through another person's session even by guessing an id.
 
 Why this exists:
     main.py's _results_store is an in-memory dict, so every saved check and any
@@ -15,6 +19,8 @@ What is deliberately NOT stored here:
     processed during the current server session.
 """
 
+import base64
+import contextlib
 import datetime
 import json
 import os
@@ -28,6 +34,7 @@ DB_PATH = os.environ.get("SKINCHECK_DB") or os.path.join(
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS spots (
     id           TEXT PRIMARY KEY,
+    user_id      TEXT NOT NULL,
     label        TEXT NOT NULL,
     body_region  TEXT NOT NULL,
     created_at   TEXT NOT NULL,
@@ -38,6 +45,7 @@ CREATE TABLE IF NOT EXISTS spots (
 -- pre-spots client shape), and an unfiled check is better than a failed save.
 CREATE TABLE IF NOT EXISTS checks (
     processing_id TEXT PRIMARY KEY,
+    user_id       TEXT NOT NULL,
     spot_id       TEXT REFERENCES spots(id),
     risk_score    REAL NOT NULL,
     diameter_mm   REAL,
@@ -61,10 +69,13 @@ CREATE TABLE IF NOT EXISTS checks (
     mask          BLOB
 );
 
+CREATE INDEX IF NOT EXISTS idx_spots_user ON spots(user_id);
+CREATE INDEX IF NOT EXISTS idx_checks_user ON checks(user_id, processed_at);
 CREATE INDEX IF NOT EXISTS idx_checks_spot ON checks(spot_id, processed_at);
 
+-- One row per user (the web app's account id), not a singleton.
 CREATE TABLE IF NOT EXISTS profile (
-    id                  INTEGER PRIMARY KEY CHECK (id = 1),
+    user_id             TEXT PRIMARY KEY,
     full_name           TEXT NOT NULL DEFAULT '',
     location            TEXT NOT NULL DEFAULT '',
     sun_exposure        TEXT NOT NULL DEFAULT '',
@@ -77,47 +88,75 @@ CREATE TABLE IF NOT EXISTS profile (
 """
 
 
+@contextlib.contextmanager
 def _connect():
-    """Open a fresh connection.
+    """Open a fresh connection for one unit of work, committing and closing it after.
 
     A connection per call rather than one shared handle, because Flask's dev
     server serves requests on multiple threads and sqlite3 connections are not
-    safe to share across them.
+    safe to share across them. sqlite3's own context manager only commits; it
+    never closes, and an unclosed handle keeps the file locked on Windows, so
+    the close is explicit here.
     """
     connection = sqlite3.connect(DB_PATH)
-    connection.row_factory = sqlite3.Row
-    connection.execute("PRAGMA foreign_keys = ON")
-    return connection
+    try:
+        connection.row_factory = sqlite3.Row
+        connection.execute("PRAGMA foreign_keys = ON")
+        with connection:
+            yield connection
+    finally:
+        connection.close()
+
+
+# Bumped whenever _SCHEMA changes shape. Stored in the database's user_version
+# pragma so init_db can tell an old file from a current one.
+SCHEMA_VERSION = 2
 
 
 def init_db():
-    """Wipe and recreate the schema, so every server start is a clean slate.
+    """Create the schema if it is missing and bring an older file up to date.
 
-    Called once at process startup (main.py), not per-request. Tracked spots,
-    checks and the risk profile are meant to survive within a running session
-    but deliberately NOT across restarts -- that keeps the onboarding flow
-    (empty state -> risk profile -> first spot) demoable on demand instead of
-    accumulating leftover data from earlier runs.
+    Called once at process startup (main.py), not per-request. People's spots
+    and checks are real records now that every row belongs to a signed-in
+    account, so this never discards a current-version database. (Until
+    2026-09-18 it wiped the file on every start to keep demos fresh; the demo
+    account in the web app now serves that purpose instead.)
+
+    Version 1 files -- the single-user schema with no user_id columns -- are
+    recreated rather than migrated: that schema was always wiped at startup,
+    so there was never anything in one worth keeping.
     """
     os.makedirs(os.path.dirname(os.path.abspath(DB_PATH)), exist_ok=True)
-    if os.path.exists(DB_PATH):
-        os.remove(DB_PATH)
     with _connect() as connection:
+        version = connection.execute("PRAGMA user_version").fetchone()[0]
+        if 0 < version < SCHEMA_VERSION:
+            _drop_all(connection)
+        elif version == 0 and _has_tables(connection):
+            # Pre-versioning file (the wiped-on-start era): same treatment.
+            _drop_all(connection)
         connection.executescript(_SCHEMA)
-        _migrate_profile_columns(connection)
+        connection.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
 
 
-def _migrate_profile_columns(connection):
-    """Add profile columns introduced after a DB already existed.
+def reset_db():
+    """Drop every table and recreate the schema. For tests; production never calls this."""
+    os.makedirs(os.path.dirname(os.path.abspath(DB_PATH)), exist_ok=True)
+    with _connect() as connection:
+        _drop_all(connection)
+        connection.executescript(_SCHEMA)
+        connection.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
 
-    CREATE TABLE IF NOT EXISTS in _SCHEMA only helps a brand-new database --
-    an existing skincheck.db from before these columns were added needs them
-    backfilled by hand.
-    """
-    existing = {row["name"] for row in connection.execute("PRAGMA table_info(profile)")}
-    for column in ("location", "sun_exposure"):
-        if column not in existing:
-            connection.execute(f"ALTER TABLE profile ADD COLUMN {column} TEXT NOT NULL DEFAULT ''")
+
+def _has_tables(connection) -> bool:
+    return connection.execute(
+        "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name IN ('spots', 'checks', 'profile')"
+    ).fetchone()[0] > 0
+
+
+def _drop_all(connection):
+    connection.executescript(
+        "DROP TABLE IF EXISTS checks; DROP TABLE IF EXISTS spots; DROP TABLE IF EXISTS profile;"
+    )
 
 
 def _utc_now_iso():
@@ -127,14 +166,14 @@ def _utc_now_iso():
 # --- spots ---------------------------------------------------------------
 
 
-def create_spot(label: str, body_region: str) -> dict:
-    """Register a new tracked spot and return it."""
+def create_spot(user_id: str, label: str, body_region: str) -> dict:
+    """Register a new tracked spot for a user and return it."""
     spot_id = f"spot_{uuid.uuid4().hex[:12]}"
     created_at = _utc_now_iso()
     with _connect() as connection:
         connection.execute(
-            "INSERT INTO spots (id, label, body_region, created_at) VALUES (?, ?, ?, ?)",
-            (spot_id, label, body_region, created_at),
+            "INSERT INTO spots (id, user_id, label, body_region, created_at) VALUES (?, ?, ?, ?, ?)",
+            (spot_id, user_id, label, body_region, created_at),
         )
     return {
         "id": spot_id,
@@ -145,15 +184,17 @@ def create_spot(label: str, body_region: str) -> dict:
     }
 
 
-def get_spot(spot_id: str):
-    """Return one spot as a dict, or None if it doesn't exist."""
+def get_spot(user_id: str, spot_id: str):
+    """Return one of the user's spots as a dict, or None if it doesn't exist (for them)."""
     with _connect() as connection:
-        row = connection.execute("SELECT * FROM spots WHERE id = ?", (spot_id,)).fetchone()
+        row = connection.execute(
+            "SELECT * FROM spots WHERE id = ? AND user_id = ?", (spot_id, user_id)
+        ).fetchone()
     return _spot_row_to_dict(row) if row else None
 
 
-def update_spot(spot_id: str, label=None, archived=None):
-    """Rename and/or archive a spot. Returns the updated spot, or None if missing."""
+def update_spot(user_id: str, spot_id: str, label=None, archived=None):
+    """Rename and/or archive one of the user's spots. Returns the updated spot, or None if missing."""
     assignments = []
     values = []
     if label is not None:
@@ -164,16 +205,16 @@ def update_spot(spot_id: str, label=None, archived=None):
         values.append(1 if archived else 0)
 
     if assignments:
-        values.append(spot_id)
+        values.extend([spot_id, user_id])
         with _connect() as connection:
             connection.execute(
-                f"UPDATE spots SET {', '.join(assignments)} WHERE id = ?", values
+                f"UPDATE spots SET {', '.join(assignments)} WHERE id = ? AND user_id = ?", values
             )
-    return get_spot(spot_id)
+    return get_spot(user_id, spot_id)
 
 
-def list_spots(include_archived: bool = False) -> list:
-    """All spots, each with its aggregates (check count, latest risk, trend).
+def list_spots(user_id: str, include_archived: bool = False) -> list:
+    """All of a user's spots, each with its aggregates (check count, latest risk, trend).
 
     Returns:
         A list of spot dicts ordered by most recently checked first, each with
@@ -181,15 +222,16 @@ def list_spots(include_archived: bool = False) -> list:
         "trend" ("up" | "down" | "flat" | None). Callers layer policy-derived
         fields such as the next-due date on top -- see policy.next_due_at.
     """
-    query = "SELECT * FROM spots"
+    query = "SELECT * FROM spots WHERE user_id = ?"
     if not include_archived:
-        query += " WHERE archived = 0"
+        query += " AND archived = 0"
 
     with _connect() as connection:
-        spot_rows = connection.execute(query).fetchall()
+        spot_rows = connection.execute(query, (user_id,)).fetchall()
         check_rows = connection.execute(
             "SELECT spot_id, risk_score, processed_at FROM checks "
-            "WHERE spot_id IS NOT NULL ORDER BY processed_at ASC"
+            "WHERE user_id = ? AND spot_id IS NOT NULL ORDER BY processed_at ASC",
+            (user_id,),
         ).fetchall()
 
     by_spot = {}
@@ -255,6 +297,7 @@ def _spot_row_to_dict(row) -> dict:
 
 
 def save_check(
+    user_id: str,
     processing_id: str,
     spot_id,
     risk_score: float,
@@ -277,18 +320,20 @@ def save_check(
     with _connect() as connection:
         connection.execute(
             """
-            INSERT INTO checks (processing_id, spot_id, risk_score, diameter_mm, mm_per_px,
+            INSERT INTO checks (processing_id, user_id, spot_id, risk_score, diameter_mm, mm_per_px,
                                 asymmetry, border, color, area_px, lab_l, lab_a, lab_b,
                                 location, symptoms, notes, processed_at, thumbnail, mask)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(processing_id) DO UPDATE SET
                 spot_id = excluded.spot_id,
                 location = excluded.location,
                 symptoms = excluded.symptoms,
                 notes = excluded.notes
+            WHERE checks.user_id = excluded.user_id
             """,
             (
                 processing_id,
+                user_id,
                 spot_id,
                 risk_score,
                 diameter_mm,
@@ -314,48 +359,50 @@ def _score_of(abcde_scores: dict, key: str):
     return abcde_scores.get(key, {}).get("score")
 
 
-def get_last_check(spot_id: str):
-    """The most recent stored check for a spot, or None.
+def get_last_check(user_id: str, spot_id: str):
+    """The most recent stored check for one of the user's spots, or None.
 
     Called while processing a new photo -- before that photo is saved -- so this
     returns the prior check the new one should be compared against.
     """
     with _connect() as connection:
         row = connection.execute(
-            "SELECT * FROM checks WHERE spot_id = ? ORDER BY processed_at DESC LIMIT 1",
-            (spot_id,),
+            "SELECT * FROM checks WHERE user_id = ? AND spot_id = ? ORDER BY processed_at DESC LIMIT 1",
+            (user_id, spot_id),
         ).fetchone()
     return _check_row_to_dict(row) if row else None
 
 
-def get_check(processing_id: str):
-    """One stored check by its processing id, or None."""
+def get_check(user_id: str, processing_id: str):
+    """One of the user's stored checks by its processing id, or None."""
     with _connect() as connection:
         row = connection.execute(
-            "SELECT * FROM checks WHERE processing_id = ?", (processing_id,)
+            "SELECT * FROM checks WHERE processing_id = ? AND user_id = ?", (processing_id, user_id)
         ).fetchone()
     return _check_row_to_dict(row) if row else None
 
 
-def get_checks_for_spot(spot_id: str) -> list:
-    """Every stored check for one spot, oldest first (timeline order)."""
+def get_checks_for_spot(user_id: str, spot_id: str) -> list:
+    """Every stored check for one of the user's spots, oldest first (timeline order)."""
     with _connect() as connection:
         rows = connection.execute(
-            "SELECT * FROM checks WHERE spot_id = ? ORDER BY processed_at ASC",
-            (spot_id,),
+            "SELECT * FROM checks WHERE user_id = ? AND spot_id = ? ORDER BY processed_at ASC",
+            (user_id, spot_id),
         ).fetchall()
     return [_check_row_to_dict(row) for row in rows]
 
 
-def list_checks() -> list:
-    """Every stored check across all spots, newest first (the "All checks" list)."""
+def list_checks(user_id: str) -> list:
+    """Every stored check of the user's across all spots, newest first (the "All checks" list)."""
     with _connect() as connection:
         rows = connection.execute(
             """
             SELECT checks.*, spots.label AS spot_label, spots.body_region AS spot_region
             FROM checks LEFT JOIN spots ON spots.id = checks.spot_id
+            WHERE checks.user_id = ?
             ORDER BY checks.processed_at DESC
-            """
+            """,
+            (user_id,),
         ).fetchall()
 
     checks = []
@@ -398,10 +445,10 @@ def _check_row_to_dict(row) -> dict:
 # --- profile -------------------------------------------------------------
 
 
-def get_profile():
-    """The single risk-profile row, or None if the user hasn't filled it in yet."""
+def get_profile(user_id: str):
+    """The user's risk-profile row, or None if they haven't filled it in yet."""
     with _connect() as connection:
-        row = connection.execute("SELECT * FROM profile WHERE id = 1").fetchone()
+        row = connection.execute("SELECT * FROM profile WHERE user_id = ?", (user_id,)).fetchone()
     if row is None:
         return None
     return {
@@ -417,6 +464,7 @@ def get_profile():
 
 
 def save_profile(
+    user_id: str,
     full_name: str = "",
     location: str = "",
     sun_exposure: str = "",
@@ -425,14 +473,14 @@ def save_profile(
     blistering_sunburns: bool = False,
     many_moles: bool = False,
 ) -> dict:
-    """Insert or replace the risk profile, and return it."""
+    """Insert or replace the user's risk profile, and return it."""
     with _connect() as connection:
         connection.execute(
             """
-            INSERT INTO profile (id, full_name, location, sun_exposure, fitzpatrick,
+            INSERT INTO profile (user_id, full_name, location, sun_exposure, fitzpatrick,
                                  family_history, blistering_sunburns, many_moles, updated_at)
-            VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT(id) DO UPDATE SET
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(user_id) DO UPDATE SET
                 full_name = excluded.full_name,
                 location = excluded.location,
                 sun_exposure = excluded.sun_exposure,
@@ -443,6 +491,7 @@ def save_profile(
                 updated_at = excluded.updated_at
             """,
             (
+                user_id,
                 full_name or "",
                 location or "",
                 sun_exposure or "",
@@ -453,4 +502,38 @@ def save_profile(
                 _utc_now_iso(),
             ),
         )
-    return get_profile()
+    return get_profile(user_id)
+
+
+# --- whole-account operations ---------------------------------------------
+
+
+def export_user_data(user_id: str) -> dict:
+    """Everything stored for one user, as plain JSON-ready data.
+
+    Backs the "Export my data" download. Thumbnails are included (base64) since
+    they are the person's own photos; segmentation masks are an internal
+    artefact and are left out.
+    """
+    spots = list_spots(user_id, include_archived=True)
+    checks = []
+    for check in list_checks(user_id):
+        thumbnail = check.pop("thumbnail")
+        check.pop("mask")
+        check["thumbnailPng"] = base64.b64encode(thumbnail).decode("ascii") if thumbnail else None
+        checks.append(check)
+
+    return {
+        "profile": get_profile(user_id),
+        "spots": spots,
+        "checks": checks,
+    }
+
+
+def delete_user_data(user_id: str) -> dict:
+    """Erase every row the user owns. Returns the number removed per table."""
+    with _connect() as connection:
+        checks = connection.execute("DELETE FROM checks WHERE user_id = ?", (user_id,)).rowcount
+        spots = connection.execute("DELETE FROM spots WHERE user_id = ?", (user_id,)).rowcount
+        profile = connection.execute("DELETE FROM profile WHERE user_id = ?", (user_id,)).rowcount
+    return {"checks": checks, "spots": spots, "profile": profile}

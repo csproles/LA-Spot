@@ -1,0 +1,47 @@
+.session-identity {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.session-details {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.session-name {
+    margin: 0;
+    font-family: var(--font-heading);
+    font-weight: 700;
+    font-size: 16px;
+    color: var(--color-text);
+    overflow-wrap: anywhere;
+}
+
+.session-email {
+    margin: 0;
+    font-size: 13.5px;
+    color: var(--color-text-muted);
+    overflow-wrap: anywhere;
+}
+
+.session-provider {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 4px 0 0;
+    font-size: 12.5px;
+    color: var(--color-text-muted);
+}
+
+.session-provider-icon {
+    display: inline-flex;
+    font-size: 15px;
+    color: var(--color-accent-ink);
+}
+
+.session-actions {
+    margin-top: 16px;
+}

@@ -2,13 +2,15 @@
 
 import base64
 import datetime
+import hmac
 import os
+import re
 import tempfile
 import uuid
 
 import cv2
 import numpy as np
-from flask import Flask, jsonify, request
+from flask import Flask, g, jsonify, request
 from flask.json.provider import DefaultJSONProvider
 from flask_cors import CORS
 
@@ -45,9 +47,58 @@ store.init_db()
 
 # Full-size pipeline imagery for the current session only. Everything that has
 # to outlive a restart (spots, saved checks, thumbnails, masks, the risk
-# profile) lives in store.py instead.
+# profile) lives in store.py instead. Each entry records the user_id it was
+# produced for and is only ever handed back to that user.
 _results_store = {}
 _explanation_cache = {}
+
+# --- caller identity -----------------------------------------------------
+#
+# This API has exactly one client, the Blazor web app, which signs people in
+# and forwards the account id of whoever is asking in X-User-Id. Every row in
+# store.py and every entry in _results_store is scoped by that id.
+#
+# The header is only trustworthy if nothing else can reach this port. Docker
+# publishes it on the host, so SKINCHECK_INTERNAL_KEY -- a secret shared with
+# the web app -- is required alongside it whenever it is configured.
+USER_ID_HEADER = "X-User-Id"
+INTERNAL_KEY_HEADER = "X-Internal-Api-Key"
+INTERNAL_KEY = os.environ.get("SKINCHECK_INTERNAL_KEY", "")
+_USER_ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
+
+if not INTERNAL_KEY:
+    app.logger.warning(
+        "SKINCHECK_INTERNAL_KEY is not set: the %s header is trusted from any caller. "
+        "Fine for local development only.",
+        USER_ID_HEADER,
+    )
+
+
+@app.before_request
+def require_user():
+    """Reject any data request that doesn't identify its user (and prove it may)."""
+    if request.path == "/health" or request.method == "OPTIONS":
+        return None
+
+    if INTERNAL_KEY:
+        presented = request.headers.get(INTERNAL_KEY_HEADER, "")
+        if not hmac.compare_digest(presented, INTERNAL_KEY):
+            return jsonify({"error": "Missing or invalid internal API key."}), 401
+
+    user_id = request.headers.get(USER_ID_HEADER, "")
+    if not _USER_ID_PATTERN.match(user_id):
+        return jsonify({"error": f"Missing or invalid {USER_ID_HEADER} header."}), 401
+
+    g.user_id = user_id
+    return None
+
+
+def _owned_results(processing_id):
+    """In-memory results for a processing id, but only if they belong to the caller."""
+    results = _results_store.get(processing_id)
+    if results is None or results.get("user_id") != g.user_id:
+        return None
+    return results
 
 
 @app.errorhandler(413)
@@ -96,8 +147,9 @@ def process_image_endpoint():
 
     processing_id = f"proc_{uuid.uuid4().hex[:12]}"
     spot_id = request.form.get("spot_id") or None
-    spot = store.get_spot(spot_id) if spot_id else None
+    spot = store.get_spot(g.user_id, spot_id) if spot_id else None
 
+    results["user_id"] = g.user_id
     results["spot_id"] = spot["id"] if spot else None
     results["location"] = request.form.get("location") or (spot["bodyRegion"] if spot else "")
     results["symptoms"] = request.form.getlist("symptoms")
@@ -125,7 +177,7 @@ def _score_evolution(results: dict):
     photo) or when that prior check predates mask storage, so the UI can show a
     "needs a second photo" state rather than a fabricated zero.
     """
-    prior = store.get_last_check(results["spot_id"])
+    prior = store.get_last_check(g.user_id, results["spot_id"])
     if prior is None or not prior.get("mask"):
         return
 
@@ -157,7 +209,7 @@ def _score_evolution(results: dict):
 
 @app.route("/api/image/results/<processing_id>", methods=["GET"])
 def get_results(processing_id):
-    results = _results_store.get(processing_id)
+    results = _owned_results(processing_id)
     if results is None:
         return jsonify({"error": f"No results found for id '{processing_id}'"}), 404
 
@@ -197,7 +249,7 @@ def _prior_thumbnail_base64(results: dict):
     if not compared_with:
         return None
 
-    prior = store.get_check(compared_with)
+    prior = store.get_check(g.user_id, compared_with)
     if prior is None or not prior.get("thumbnail"):
         return None
     return base64.b64encode(prior["thumbnail"]).decode("utf-8")
@@ -205,7 +257,7 @@ def _prior_thumbnail_base64(results: dict):
 
 @app.route("/api/image/save/<processing_id>", methods=["POST"])
 def save_to_history(processing_id):
-    results = _results_store.get(processing_id)
+    results = _owned_results(processing_id)
     if results is None:
         return jsonify({"error": f"No results found for id '{processing_id}'"}), 404
 
@@ -215,7 +267,7 @@ def save_to_history(processing_id):
     # photo and collects details afterwards, so they arrive here, not at process.
     body = request.get_json(silent=True) or {}
     spot_id = body.get("spotId") or request.form.get("spot_id") or results.get("spot_id")
-    if spot_id and store.get_spot(spot_id) is None:
+    if spot_id and store.get_spot(g.user_id, spot_id) is None:
         return jsonify({"error": f"No spot found for id '{spot_id}'"}), 404
 
     if isinstance(body.get("symptoms"), list):
@@ -224,6 +276,7 @@ def save_to_history(processing_id):
         results["notes"] = body["notes"]
 
     store.save_check(
+        user_id=g.user_id,
         processing_id=processing_id,
         spot_id=spot_id,
         risk_score=results["risk_score"],
@@ -260,7 +313,7 @@ def get_history():
             if check["thumbnail"]
             else "",
         }
-        for check in store.list_checks()
+        for check in store.list_checks(g.user_id)
     ]
     return jsonify({"entries": entries})
 
@@ -270,8 +323,8 @@ def get_history():
 
 @app.route("/api/spots", methods=["GET"])
 def list_spots_endpoint():
-    profile = store.get_profile()
-    spots = [_with_due_date(spot, profile) for spot in store.list_spots()]
+    profile = store.get_profile(g.user_id)
+    spots = [_with_due_date(spot, profile) for spot in store.list_spots(g.user_id)]
     return jsonify({"spots": spots})
 
 
@@ -286,18 +339,18 @@ def create_spot_endpoint():
     if not body_region:
         return jsonify({"error": "A body region is required."}), 400
 
-    spot = store.create_spot(label, body_region)
-    return jsonify(_with_due_date({**spot, **store.aggregate_checks([])}, store.get_profile())), 201
+    spot = store.create_spot(g.user_id, label, body_region)
+    return jsonify(_with_due_date({**spot, **store.aggregate_checks([])}, store.get_profile(g.user_id))), 201
 
 
 @app.route("/api/spots/<spot_id>", methods=["GET"])
 def get_spot_endpoint(spot_id):
-    spot = store.get_spot(spot_id)
+    spot = store.get_spot(g.user_id, spot_id)
     if spot is None:
         return jsonify({"error": f"No spot found for id '{spot_id}'"}), 404
 
-    checks = store.get_checks_for_spot(spot_id)
-    profile = store.get_profile()
+    checks = store.get_checks_for_spot(g.user_id, spot_id)
+    profile = store.get_profile(g.user_id)
     summary = _with_due_date({**spot, **store.aggregate_checks(_as_rows(checks))}, profile)
 
     return jsonify({
@@ -324,12 +377,13 @@ def get_spot_endpoint(spot_id):
 
 @app.route("/api/spots/<spot_id>", methods=["PATCH"])
 def update_spot_endpoint(spot_id):
-    if store.get_spot(spot_id) is None:
+    if store.get_spot(g.user_id, spot_id) is None:
         return jsonify({"error": f"No spot found for id '{spot_id}'"}), 404
 
     body = request.get_json(silent=True) or {}
     label = body.get("label")
     spot = store.update_spot(
+        g.user_id,
         spot_id,
         label=label.strip() if isinstance(label, str) and label.strip() else None,
         archived=body.get("archived"),
@@ -363,7 +417,7 @@ def _with_due_date(spot: dict, profile) -> dict:
 
 @app.route("/api/profile", methods=["GET"])
 def get_profile_endpoint():
-    profile = store.get_profile()
+    profile = store.get_profile(g.user_id)
     if profile is None:
         return jsonify({"configured": False})
     return jsonify({**profile, "configured": True})
@@ -382,6 +436,7 @@ def save_profile_endpoint():
         return jsonify({"error": "sunExposure must be one of: " + ", ".join(policy.SUN_EXPOSURE_LEVELS)}), 400
 
     profile = store.save_profile(
+        user_id=g.user_id,
         full_name=body.get("fullName") or "",
         location=body.get("location") or "",
         sun_exposure=sun_exposure,
@@ -395,7 +450,7 @@ def save_profile_endpoint():
 
 @app.route("/api/image/explain/<processing_id>", methods=["POST"])
 def explain_results(processing_id):
-    results = _results_store.get(processing_id)
+    results = _owned_results(processing_id)
     if results is None:
         return jsonify({"error": f"No results found for id '{processing_id}'"}), 404
 
@@ -413,6 +468,28 @@ def explain_results(processing_id):
 
     _explanation_cache[processing_id] = explanation
     return jsonify({"explanation": explanation})
+
+
+# --- account -------------------------------------------------------------
+
+
+@app.route("/api/account/export", methods=["GET"])
+def export_account_endpoint():
+    """Everything stored for the caller, for the web app's data-export download."""
+    return jsonify(store.export_user_data(g.user_id))
+
+
+@app.route("/api/account", methods=["DELETE"])
+def delete_account_endpoint():
+    """Erase the caller's stored data and any in-memory results of theirs."""
+    removed = store.delete_user_data(g.user_id)
+
+    owned = [pid for pid, results in list(_results_store.items()) if results.get("user_id") == g.user_id]
+    for processing_id in owned:
+        _results_store.pop(processing_id, None)
+        _explanation_cache.pop(processing_id, None)
+
+    return jsonify({"deleted": True, **removed, "pendingResults": len(owned)})
 
 
 def _encode_image_png(image: np.ndarray) -> bytes:

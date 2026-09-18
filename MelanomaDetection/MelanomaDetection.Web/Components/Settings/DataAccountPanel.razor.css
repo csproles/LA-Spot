@@ -2,10 +2,28 @@
     border: 1.5px solid var(--color-alert);
 }
 
+.danger-lead {
+    margin: 0 0 14px;
+    font-size: 13.5px;
+    line-height: 1.5;
+    color: var(--color-text-muted);
+}
+
 .danger-actions {
     display: flex;
     flex-wrap: wrap;
     gap: 12px;
+}
+
+.danger-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.danger-action-icon {
+    display: inline-flex;
+    font-size: 17px;
 }
 
 .btn-outline-danger {
@@ -19,8 +37,45 @@
     color: var(--color-on-alert);
 }
 
-.danger-info {
-    margin: 12px 0 0;
+.delete-confirm {
+    margin-top: 16px;
+    padding: 14px 16px;
+    border-radius: var(--radius-control);
+    background: var(--color-alert-soft);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.delete-confirm-title {
+    margin: 0;
+    font-family: var(--font-heading);
+    font-weight: 700;
+    font-size: 15px;
+    color: var(--color-alert-ink);
+}
+
+.delete-confirm-text {
+    margin: 0;
     font-size: 13px;
-    color: var(--color-text-muted);
+    line-height: 1.5;
+    color: var(--color-text);
+}
+
+.delete-confirm-label {
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--color-text);
+    margin: 4px 0 0;
+}
+
+.delete-confirm-input {
+    max-width: 240px;
+}
+
+.delete-confirm-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 6px;
 }

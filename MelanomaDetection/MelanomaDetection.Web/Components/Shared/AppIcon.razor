@@ -44,6 +44,11 @@
         ["home"] = """<path d="M4 10.5 12 4l8 6.5V19a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 19Z" /><path d="M9.5 20.5v-6h5v6" />""",
         ["spots"] = """<circle cx="12" cy="7" r="3" /><path d="M12 10v4M8 21c0-3 1.8-5 4-5s4 2 4 5" /><circle cx="17.5" cy="15.5" r="1.4" fill="currentColor" stroke="none" /><circle cx="6.5" cy="13.5" r="1.4" fill="currentColor" stroke="none" />""",
         ["map"] = """<path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2Z" /><path d="M9 4v14M15 6v14" />""",
+        ["check"] = """<path d="m5 12.5 4.5 4.5L19 7.5" />""",
+        ["logout"] = """<path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4" /><path d="M15 8l4 4-4 4M19 12H9" />""",
+        ["download"] = """<path d="M12 4v11" /><path d="m7.5 10.5 4.5 4.5 4.5-4.5" /><path d="M4 19h16" />""",
+        ["trash"] = """<path d="M4.5 7h15" /><path d="M9 7V4.5h6V7" /><path d="M6.5 7l.8 12h9.4l.8-12" /><path d="M10 11v5M14 11v5" />""",
+        ["shield"] = """<path d="M12 3.5 5 6.2v5.3c0 4.2 2.9 7.4 7 9 4.1-1.6 7-4.8 7-9V6.2Z" /><path d="m9.2 12 2 2 3.8-4" />""",
     };
 
     private MarkupString Shape => new(Shapes.TryGetValue(Name, out var path) ? path : string.Empty);

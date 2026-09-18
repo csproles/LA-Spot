@@ -1,0 +1,25 @@
+@* Confirms an account-level action that ends on the sign-in page, such as
+   deletion, where there is no longer a signed-in session to show it in. *@
+
+@if (Message is not null)
+{
+    <div class="account-status" role="status">
+        <span class="account-status-icon">
+            <AppIcon Name="check" Size="lg" />
+        </span>
+        <p class="account-status-text">@Message</p>
+    </div>
+}
+
+@code {
+    /// <summary>The "status" query value the endpoint redirected with.</summary>
+    [Parameter]
+    public string? Status { get; set; }
+
+    private string? Message => Status switch
+    {
+        "account-deleted" => "Your account and all of its data have been deleted.",
+        "demo-ended" => "Demo ended. Everything from that session has been erased.",
+        _ => null,
+    };
+}

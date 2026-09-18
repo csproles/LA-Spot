@@ -1,0 +1,24 @@
+@* The frame every legal page shares: title, effective date, and a readable
+   measure for long prose. The documents themselves are separate components
+   so the wording lives in exactly one place each. *@
+
+<article class="legal-document">
+    <PageHeader Title="@Title" Eyebrow="@Eyebrow" Subtitle="@($"Effective {EffectiveDate:MMMM d, yyyy}")" />
+    <div class="card-panel legal-body">
+        @ChildContent
+    </div>
+</article>
+
+@code {
+    [Parameter, EditorRequired]
+    public string Title { get; set; } = string.Empty;
+
+    [Parameter]
+    public string Eyebrow { get; set; } = "LEGAL";
+
+    [Parameter, EditorRequired]
+    public DateOnly EffectiveDate { get; set; }
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+}

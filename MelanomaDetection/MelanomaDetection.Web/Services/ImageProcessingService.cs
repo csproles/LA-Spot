@@ -1,6 +1,8 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text.Json;
 using MelanomaDetection.Web.Models;
+using MelanomaDetection.Web.Services.Account;
 
 namespace MelanomaDetection.Web.Services;
 
@@ -17,14 +19,25 @@ public class ImageProcessingApiException : Exception
 
 /// <summary>
 /// Talks to the Python Flask image-processing API (see MelanomaDetection.Python/main.py).
+///
+/// Every request is made on behalf of the signed-in person: their account id
+/// travels in <see cref="UserIdHeader"/> and the API scopes every row it reads
+/// or writes by it. The browser never talks to Flask directly, so this header
+/// (together with the shared key set on the HttpClient) is the whole identity
+/// story between the two services.
 /// </summary>
 public class ImageProcessingService
 {
-    private readonly HttpClient _httpClient;
+    public const string UserIdHeader = "X-User-Id";
+    public const string InternalKeyHeader = "X-Internal-Api-Key";
 
-    public ImageProcessingService(HttpClient httpClient)
+    private readonly HttpClient _httpClient;
+    private readonly CurrentUser _currentUser;
+
+    public ImageProcessingService(HttpClient httpClient, CurrentUser currentUser)
     {
         _httpClient = httpClient;
+        _currentUser = currentUser;
     }
 
     /// <summary>
@@ -183,12 +196,38 @@ public class ImageProcessingService
     }
 
     /// <summary>
+    /// Maps to GET /api/account/export -- every spot, check and the risk profile
+    /// for one account, as the raw JSON document the API produced. Takes the
+    /// account id explicitly because it is called from an endpoint, where there
+    /// is no component authentication state to read it from.
+    /// </summary>
+    public async Task<JsonElement> ExportUserDataAsync(Guid userId)
+    {
+        using var response = await SendAsync(() => _httpClient.GetAsync("/api/account/export"), userId);
+
+        var document = await response.Content.ReadFromJsonAsync<JsonElement>();
+        return document.ValueKind == JsonValueKind.Undefined
+            ? throw new ImageProcessingApiException("The analysis service returned an empty response.")
+            : document;
+    }
+
+    /// <summary>Maps to DELETE /api/account -- erases everything the API holds for one account.</summary>
+    public async Task DeleteUserDataAsync(Guid userId)
+    {
+        using var response = await SendAsync(() => _httpClient.DeleteAsync("/api/account"), userId);
+    }
+
+    /// <summary>
     /// Sends a request and converts every failure mode (unreachable server, the
     /// HttpClient's configured timeout, or a non-2xx response) into a single
     /// <see cref="ImageProcessingApiException"/> carrying a user-friendly message.
+    /// The signed-in account id is attached first; pass <paramref name="userId"/>
+    /// only from code that runs outside a component, where it has to be supplied.
     /// </summary>
-    private async Task<HttpResponseMessage> SendAsync(Func<Task<HttpResponseMessage>> send)
+    private async Task<HttpResponseMessage> SendAsync(Func<Task<HttpResponseMessage>> send, Guid? userId = null)
     {
+        await AttachUserAsync(userId);
+
         HttpResponseMessage response;
         try
         {
@@ -214,6 +253,24 @@ public class ImageProcessingService
         }
 
         return response;
+    }
+
+    /// <summary>
+    /// Stamp the account id onto this client. The HttpClient instance is ours
+    /// alone (IHttpClientFactory hands each typed-client instance its own), so
+    /// a default header is safe and set once per instance.
+    /// </summary>
+    private async ValueTask AttachUserAsync(Guid? explicitUserId)
+    {
+        if (_httpClient.DefaultRequestHeaders.Contains(UserIdHeader))
+        {
+            return;
+        }
+
+        var userId = explicitUserId ?? await _currentUser.GetUserIdAsync()
+            ?? throw new ImageProcessingApiException("Your session has ended. Sign in again to continue.");
+
+        _httpClient.DefaultRequestHeaders.Add(UserIdHeader, userId.ToString());
     }
 
     private static async Task<string?> TryReadErrorMessageAsync(HttpResponseMessage response)

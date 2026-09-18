@@ -1,0 +1,40 @@
+.nav-account {
+    display: none;
+}
+
+@media (min-width: 860px) {
+    .nav-account {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        margin-top: auto;
+        padding-top: 16px;
+        border-top: 1px solid var(--color-nav-hover-bg);
+        color: var(--color-nav-text);
+    }
+
+    .nav-account-identity {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 8px;
+        border-radius: var(--radius-control);
+        color: var(--color-nav-text);
+        text-decoration: none;
+        min-width: 0;
+    }
+
+    .nav-account-identity:hover {
+        background-color: var(--color-nav-hover-bg);
+        color: var(--color-nav-text);
+    }
+
+    .nav-account-name {
+        font-family: var(--font-body);
+        font-size: 12.5px;
+        font-weight: 600;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+}

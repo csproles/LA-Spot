@@ -79,6 +79,62 @@ dotnet run --launch-profile https
 Open `https://localhost:7001` in a browser. Both processes need to stay running
 — the Blazor app calls the Flask API over HTTP for every image analysis.
 
+**3. Set up sign-in** (once):
+
+Every page except sign-in, privacy and terms needs a signed-in person, and
+Google is the only way to sign in — there are no passwords to manage. Google
+sign-in is free.
+
+1. In [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
+   (the same project as the Maps key is fine) go to **APIs & Services →
+   Credentials → Create credentials → OAuth client ID**, type **Web
+   application**.
+2. Under **Authorised redirect URIs** add one entry per origin you run the app
+   on, each ending in `/signin-google`:
+   - `https://localhost:7001/signin-google` (the `https` launch profile)
+   - `http://localhost:5218/signin-google` (the `http` launch profile)
+   - `http://localhost:7001/signin-google` (Docker Compose)
+3. If the OAuth consent screen is in **Testing**, add each Google account that
+   should be able to sign in under **Test users** (limit 100). Switching it to
+   **Production** lets anyone sign in; with only the `openid`, `email` and
+   `profile` scopes this app requests, Google does not require app
+   verification, but it does require the **Privacy policy** and **Terms**
+   links — those live at `/privacy` and `/terms` and need the bracketed
+   placeholders filled in first.
+4. Store the client ID and secret outside source control:
+
+   ```bash
+   cd MelanomaDetection.Web
+   dotnet user-secrets set "Authentication:Google:ClientId" "xxxx.apps.googleusercontent.com"
+   dotnet user-secrets set "Authentication:Google:ClientSecret" "xxxx"
+   ```
+
+   For Docker, put the same two values in `.env` as
+   `Authentication__Google__ClientId` / `Authentication__Google__ClientSecret`
+   (see `.env.example`).
+
+**Demo mode.** The sign-in page also offers **Try the demo**: a throw-away
+account that starts with no spots, so a walkthrough always begins at the
+onboarding flow without touching anyone's real data. Ending the demo (or
+signing out) erases that account; abandoned demos are swept after 8 hours.
+It is on in Development (which Docker Compose uses) and off elsewhere unless
+`Demo:Enabled` is `true`. Real accounts keep their spots across restarts —
+the Flask database on the `skincheck-data` volume is no longer wiped at
+startup.
+
+Accounts are stored in the web app's own SQLite file (`skincheck-users.db`,
+created and migrated automatically on first run). Everything else about a
+person — spots, checks, risk profile — is stored by the Flask API under their
+account id, which the web app sends in an `X-User-Id` header.
+
+**Shared secret between the two services.** Because Flask's port is reachable
+from the host, that header is only trusted when it arrives with the secret in
+`SKINCHECK_INTERNAL_KEY` (Flask) / `FlaskApi:InternalKey` (web). Set both to
+the same random string — `.env` covers both under Docker Compose; locally use
+`dotnet user-secrets set "FlaskApi:InternalKey" "..."` and export
+`SKINCHECK_INTERNAL_KEY` before `python main.py`. Leaving it unset is allowed
+in Development only (Flask logs a warning).
+
 ## How to use
 
 The app has three screens, in the left sidebar (top bar on narrow screens):
@@ -95,9 +151,10 @@ The app has three screens, in the left sidebar (top bar on narrow screens):
    compare mode) to open its full detail view — every pipeline-stage image,
    the four ABCD visual explanations, and the AI explanation button — at
    `/results/{id}`.
-3. **Profile** (`/profile`) — account fields, privacy/notification toggles, and
-   app preferences. Client-side only in this build; nothing here is persisted
-   to the backend.
+3. **Profile** (`/profile`) — who you're signed in as (with sign-out), the
+   risk profile, privacy/notification toggles, app preferences, and **Data &
+   account**: *Export my data* downloads everything held about you as JSON,
+   *Delete account* erases it all and signs you out everywhere.
 
 No test images on hand? A labeled set from the ISIC archive lives in
 `../Images/Benign/` and `../Images/Malignant/` at the repo root.

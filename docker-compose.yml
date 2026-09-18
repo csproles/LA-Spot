@@ -8,12 +8,11 @@ services:
     ports:
       - "5002:5002"
     env_file:
-      - .env   # provides OPENAI_API_KEY (only needed for the "Get AI Explanation" button)
+      - .env   # provides OPENAI_API_KEY (only for "Get AI Explanation") and SKINCHECK_INTERNAL_KEY
     environment:
-      # Tracked spots, saved checks and the risk profile live in this SQLite
-      # file for the life of the container -- store.init_db() wipes it on every
-      # startup so each demo run begins at the onboarding flow, not with
-      # leftover spots from a prior session.
+      # Tracked spots, saved checks and risk profiles live in this SQLite file
+      # on the named volume below, so they survive container rebuilds. Use the
+      # web app's demo account for a clean-slate walkthrough.
       - SKINCHECK_DB=/app/data/skincheck.db
     volumes:
       - skincheck-data:/app/data
@@ -30,16 +29,26 @@ services:
     ports:
       - "7001:8080"
     env_file:
-      - .env   # provides GoogleMaps__ApiKey (dotnet user-secrets isn't visible inside the container)
+      - .env   # provides GoogleMaps__ApiKey and Authentication__Google__* (dotnet user-secrets isn't visible inside the container)
     environment:
       # Overrides Program.cs's FlaskApi:BaseUrl to point at the Flask container by
       # its service name instead of localhost -- Docker Compose gives each service
       # its own DNS name on the shared network automatically.
       - FlaskApi__BaseUrl=http://python-api:5002
+      # The same secret Flask reads as SKINCHECK_INTERNAL_KEY, so Flask can trust
+      # the X-User-Id header this app sends.
+      - FlaskApi__InternalKey=${SKINCHECK_INTERNAL_KEY}
+      # Accounts database and cookie-encryption keys live on the volume below, so
+      # sign-ins survive a container rebuild.
+      - ConnectionStrings__SkinCheck=Data Source=/app/data/skincheck-users.db
+      - DataProtection__KeysDirectory=/app/data/keys
       - ASPNETCORE_ENVIRONMENT=Development
+    volumes:
+      - web-data:/app/data
     depends_on:
       python-api:
         condition: service_healthy
 
 volumes:
   skincheck-data:
+  web-data:

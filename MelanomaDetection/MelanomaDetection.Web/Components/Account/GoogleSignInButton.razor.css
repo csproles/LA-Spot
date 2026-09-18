@@ -1,0 +1,44 @@
+.google-signin-form {
+    width: 100%;
+}
+
+/* Colours are Google's published button spec, not app tokens: the button must
+   look the same in every product that carries it. Both pairs clear WCAG AAA. */
+.google-signin-button {
+    --google-bg: light-dark(#FFFFFF, #131314);
+    --google-border: light-dark(#747775, #8E918F);
+    --google-text: light-dark(#1F1F1F, #E3E3E3);
+    --google-hover: light-dark(rgba(31, 31, 31, 0.08), rgba(227, 227, 227, 0.08));
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    width: 100%;
+    min-height: 44px;
+    padding: 0 16px;
+    background: var(--google-bg);
+    border: 1px solid var(--google-border);
+    border-radius: var(--radius-control);
+    color: var(--google-text);
+    font-family: var(--font-body);
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: box-shadow 0.15s ease, background-color 0.15s ease;
+}
+
+.google-signin-button:hover {
+    box-shadow: inset 0 0 0 100px var(--google-hover);
+}
+
+.google-signin-button:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
+}
+
+.google-signin-logo {
+    display: inline-flex;
+    width: 20px;
+    height: 20px;
+}

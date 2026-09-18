@@ -1,0 +1,36 @@
+@* The one thing on the sign-in page: why to sign in, the button, and the
+   consent line. Wording here is part of what the person agrees to, so it is
+   kept in a single component rather than retyped. *@
+
+<section class="card-panel signin-card" aria-labelledby="signin-title">
+    <h1 id="signin-title" class="signin-title">Sign in to Skin Check</h1>
+    <p class="signin-lead">
+        Your spots, photos and check history are private to your account and
+        follow you to any device you sign in on.
+    </p>
+
+    <GoogleSignInButton ReturnUrl="@ReturnUrl" />
+
+    @if (DemoAvailable)
+    {
+        <div class="signin-divider" aria-hidden="true"><span>or</span></div>
+        <DemoSignInButton />
+    }
+
+    <p class="signin-consent">
+        By continuing you agree to the <a href="/terms">Terms of use</a> and
+        acknowledge the <a href="/privacy">Privacy policy</a>. Google shares
+        only your name, email address and profile picture with us.
+    </p>
+
+    <MedicalDisclaimer Message="Skin Check helps you monitor spots between appointments. It is not a diagnosis and does not replace a dermatologist." />
+</section>
+
+@code {
+    [Parameter]
+    public string ReturnUrl { get; set; } = "/";
+
+    /// <summary>Whether "Try the demo" is offered (see DemoSettings).</summary>
+    [Parameter]
+    public bool DemoAvailable { get; set; }
+}

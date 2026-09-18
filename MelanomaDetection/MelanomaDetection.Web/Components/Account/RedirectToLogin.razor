@@ -1,0 +1,13 @@
+@* Rendered by AuthorizeRouteView when a page needs a signed-in person and
+   there isn't one. Sends them to sign in and brings them back here after. *@
+@inject NavigationManager NavigationManager
+
+@code {
+    protected override void OnInitialized()
+    {
+        var returnUrl = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
+        NavigationManager.NavigateTo(
+            $"login?ReturnUrl={Uri.EscapeDataString("/" + returnUrl)}",
+            forceLoad: true);
+    }
+}

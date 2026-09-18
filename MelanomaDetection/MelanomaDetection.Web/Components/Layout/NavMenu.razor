@@ -10,30 +10,47 @@
         </a>
     </div>
 
-    <div class="app-nav-links">
-        @foreach (var destination in Destinations)
-        {
-            <NavLink class="@LinkClass(destination)"
-                     href="@destination.Href"
-                     Match="@(destination.Href.Length == 0 ? NavLinkMatch.All : NavLinkMatch.Prefix)">
-                @if (destination.IsPrimary)
+    <AuthorizeView>
+        <Authorized>
+            <div class="app-nav-links">
+                @foreach (var destination in Destinations)
                 {
-                    <span class="app-nav-primary-mark">
-                        <span class="app-nav-icon">
-                            <AppIcon Name="@destination.Icon" Size="inherit" StrokeWidth="2" />
-                        </span>
-                    </span>
+                    <NavLink class="@LinkClass(destination)"
+                             href="@destination.Href"
+                             Match="@(destination.Href.Length == 0 ? NavLinkMatch.All : NavLinkMatch.Prefix)">
+                        @if (destination.IsPrimary)
+                        {
+                            <span class="app-nav-primary-mark">
+                                <span class="app-nav-icon">
+                                    <AppIcon Name="@destination.Icon" Size="inherit" StrokeWidth="2" />
+                                </span>
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="app-nav-icon">
+                                <AppIcon Name="@destination.Icon" Size="inherit" />
+                            </span>
+                        }
+                        <span class="app-nav-label">@destination.Label</span>
+                    </NavLink>
                 }
-                else
-                {
+            </div>
+            <NavAccountCard />
+        </Authorized>
+        <NotAuthorized>
+            @* Public pages (privacy, terms, not-found) still get the shell; the
+               only place to go from them is sign-in. *@
+            <div class="app-nav-links">
+                <NavLink class="app-nav-link" href="login">
                     <span class="app-nav-icon">
-                        <AppIcon Name="@destination.Icon" Size="inherit" />
+                        <AppIcon Name="person" Size="inherit" />
                     </span>
-                }
-                <span class="app-nav-label">@destination.Label</span>
-            </NavLink>
-        }
-    </div>
+                    <span class="app-nav-label">Sign in</span>
+                </NavLink>
+            </div>
+        </NotAuthorized>
+    </AuthorizeView>
 </nav>
 
 @code {

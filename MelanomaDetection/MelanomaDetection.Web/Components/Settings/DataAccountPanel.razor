@@ -1,26 +1,50 @@
-@* Export and deletion. Both are stubs in this build and say so rather than
-   pretending to work. *@
+@* The person's rights over their data: take a copy of all of it, or erase
+   all of it. Export is a plain download; deletion is a form POST behind a
+   second, explicit confirmation because it cannot be undone. *@
 
 <div class="card-panel danger-card">
     <p class="panel-title">Data &amp; account</p>
+    <p class="danger-lead">
+        Export gives you a JSON file with your account details, every spot,
+        every saved check and your risk profile. Deleting your account erases
+        all of it immediately and cannot be undone.
+    </p>
+
     <div class="danger-actions">
-        <button type="button" class="btn btn-outline-primary" @onclick="ShowExportInfo">
+        <a class="btn btn-outline-primary danger-action" href="/account/export" download="@AccountEndpoints.ExportFileName">
+            <span class="danger-action-icon"><AppIcon Name="download" Size="inherit" /></span>
             Export my data
-        </button>
-        <button type="button" class="btn btn-outline-danger" @onclick="ShowDeleteInfo">
-            Delete account
-        </button>
+        </a>
+
+        @if (!ConfirmingDelete)
+        {
+            <button type="button" class="btn btn-outline-danger danger-action" @onclick="() => ConfirmingDelete = true">
+                <span class="danger-action-icon"><AppIcon Name="trash" Size="inherit" /></span>
+                Delete account
+            </button>
+        }
     </div>
-    @if (InfoMessage is not null)
+
+    @if (ConfirmingDelete)
     {
-        <p class="danger-info" role="status">@InfoMessage</p>
+        <form method="post" action="/account/delete" class="delete-confirm" aria-labelledby="delete-confirm-title">
+            <AntiforgeryToken />
+            <p id="delete-confirm-title" class="delete-confirm-title">Delete your account and all of your data?</p>
+            <p class="delete-confirm-text">
+                This removes your spots, photos, check history, risk profile and
+                sign-in record. Consider exporting first. Type <strong>delete</strong> to confirm.
+            </p>
+            <label class="delete-confirm-label" for="delete-confirmation">Confirmation</label>
+            <input id="delete-confirmation" name="confirmation" type="text" class="form-control delete-confirm-input"
+                   autocomplete="off" required pattern="[Dd][Ee][Ll][Ee][Tt][Ee]" placeholder="delete" />
+            <div class="delete-confirm-actions">
+                <button type="submit" class="btn btn-outline-danger">Permanently delete</button>
+                <button type="button" class="btn btn-outline-primary" @onclick="() => ConfirmingDelete = false">Keep my account</button>
+            </div>
+        </form>
     }
 </div>
 
 @code {
-    private string? InfoMessage;
-
-    private void ShowExportInfo() => InfoMessage = "Data export isn't wired up in this demo yet.";
-
-    private void ShowDeleteInfo() => InfoMessage = "Account deletion isn't wired up in this demo yet.";
+    private bool ConfirmingDelete;
 }

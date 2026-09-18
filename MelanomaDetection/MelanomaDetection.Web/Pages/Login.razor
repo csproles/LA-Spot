@@ -1,0 +1,62 @@
+@page "/login"
+@attribute [AllowAnonymous]
+@layout AuthLayout
+@using Microsoft.AspNetCore.Authentication
+@using Microsoft.AspNetCore.Authentication.Google
+@using Microsoft.Extensions.Options
+@inject IAuthenticationSchemeProvider Schemes
+@inject IOptions<DemoSettings> Demo
+@inject NavigationManager NavigationManager
+
+@* Statically rendered on purpose: the sign-in button is a form POST, which
+   needs a real HTTP round-trip rather than a Blazor circuit. *@
+
+<PageTitle>Sign in - Skin Check</PageTitle>
+
+<AccountStatusBanner Status="@Status" />
+
+@if (GoogleAvailable)
+{
+    <SignInCard ReturnUrl="@SafeReturnUrl" DemoAvailable="Demo.Value.Enabled" />
+}
+else
+{
+    <AuthConfigNotice />
+    @if (Demo.Value.Enabled)
+    {
+        <div class="login-demo-fallback">
+            <DemoSignInButton />
+        </div>
+    }
+}
+
+@code {
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthenticationState { get; set; }
+
+    [SupplyParameterFromQuery]
+    public string? ReturnUrl { get; set; }
+
+    [SupplyParameterFromQuery]
+    public string? Status { get; set; }
+
+    private bool GoogleAvailable;
+
+    private string SafeReturnUrl => LocalRedirect.Sanitize(ReturnUrl);
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (AuthenticationState is not null)
+        {
+            var state = await AuthenticationState;
+            if (state.User.Identity?.IsAuthenticated == true)
+            {
+                // Already signed in: there is nothing to do here.
+                NavigationManager.NavigateTo(SafeReturnUrl);
+                return;
+            }
+        }
+
+        GoogleAvailable = await Schemes.GetSchemeAsync(GoogleDefaults.AuthenticationScheme) is not null;
+    }
+}
