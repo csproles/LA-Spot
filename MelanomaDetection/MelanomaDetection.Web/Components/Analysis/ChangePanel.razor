@@ -1,9 +1,6 @@
-@* The "E" in ABCDE: what changed since this spot's previous photo. Reads the
-   evolving score's details JSON (shape from evolution.py) and degrades to a
-   "first photo" state when there is nothing to compare against. *@
-@using System.Text.Json
-@using MelanomaDetection.Web.Models
-@using MelanomaDetection.Web.Services
+@* The "E" in ABCDE: what changed since this spot's previous photo. Degrades
+   to a "first photo" state when there is nothing to compare against, because
+   that is the common case and it is not an error. *@
 
 @if (Results.SpotId is not null)
 {
@@ -13,15 +10,16 @@
         @if (Score is null)
         {
             <div class="change-empty">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <circle cx="12" cy="12" r="8.5" />
-                    <path d="M12 7.5V12l3 2" />
-                </svg>
+                <span class="change-empty-icon">
+                    <AppIcon Name="clock" Size="hero" />
+                </span>
                 <div>
-                    <p class="change-empty-title">@(HasPrior ? "Couldn't compare these two photos" : "First photo of this spot")</p>
-                    <p class="text-muted-small">
-                        @(HasPrior
-                            ? Detail("reason") ?? "The two photos didn't have enough in common to measure change."
+                    <p class="change-empty-title">
+                        @(Details.HasPriorCheck ? "Couldn't compare these two photos" : "First photo of this spot")
+                    </p>
+                    <p class="change-empty-body">
+                        @(Details.HasPriorCheck
+                            ? Details.Text("reason") ?? "The two photos didn't have enough in common to measure change."
                             : "Change over time is the strongest melanoma warning sign. Photograph this spot again in a few weeks and we'll compare the two.")
                     </p>
                 </div>
@@ -29,69 +27,44 @@
         }
         else
         {
-            <div class="change-pair">
-                <figure class="change-figure">
-                    @if (Results.PriorThumbnail is not null)
-                    {
-                        <img src="data:image/png;base64,@Results.PriorThumbnail" alt="Previous photo of this spot" />
-                    }
-                    <figcaption>Before@(ComparedWhen is not null ? $" · {ComparedWhen}" : "")</figcaption>
-                </figure>
-                <span class="change-arrow" aria-hidden="true">→</span>
-                <figure class="change-figure">
-                    <img src="data:image/png;base64,@Results.Original" alt="This photo" />
-                    <figcaption>Now</figcaption>
-                </figure>
+            <div class="change-photos">
+                <PhotoComparisonPair BeforeBase64="@Results.PriorThumbnail"
+                                     BeforeAlt="Previous photo of this spot"
+                                     BeforeCaption="@BeforeCaption"
+                                     AfterBase64="@Results.Original"
+                                     AfterAlt="This photo"
+                                     AfterCaption="Now" />
             </div>
 
-            <div class="factor-row change-score">
-                <div class="factor-row-header">
-                    <span>Evolving score</span>
-                    <span>@Score.Value.ToString("F1") / 10</span>
-                </div>
-                <div class="factor-bar-track">
-                    <div class="factor-bar-fill factor-bar-@RiskBands.FactorBand(Score.Value)" style="width:@((Score.Value / 10 * 100).ToString("F0"))%"></div>
-                </div>
+            <div class="change-score">
+                <FactorBar Label="Evolving score" Score="Score" />
             </div>
 
             <ul class="change-signals">
-                @if (DetailNumber("shape_change") is { } shape)
+                @if (Details.Number("shape_change") is { } shape)
                 {
-                    <li class="@Tone(shape, DetailNumber("shape_concern_threshold") ?? 0.25)">
-                        <span class="signal-name">Shape</span>
-                        <span class="signal-value">@((shape * 100).ToString("F0"))% different outline</span>
-                    </li>
+                    <ChangeSignal Name="Shape" Value="@($"{shape * 100:F0}% different outline")"
+                                  Tone="@EvolutionDetails.Tone(shape, Details.Number("shape_concern_threshold") ?? 0.25)" />
                 }
-                @if (DetailNumber("color_distance") is { } color)
+                @if (Details.Number("color_distance") is { } color)
                 {
-                    <li class="@Tone(color, DetailNumber("color_concern_threshold") ?? 12)">
-                        <span class="signal-name">Colour</span>
-                        <span class="signal-value">@color.ToString("F0") ΔE shift</span>
-                    </li>
+                    <ChangeSignal Name="Colour" Value="@($"{color:F0} ΔE shift")"
+                                  Tone="@EvolutionDetails.Tone(color, Details.Number("color_concern_threshold") ?? 12)" />
                 }
-                @if (DetailNumber("area_growth_ratio") is { } growth)
+                @if (Details.Number("area_growth_ratio") is { } growth)
                 {
-                    <li class="@Tone(Math.Max(growth, 0), DetailNumber("growth_concern_threshold") ?? 0.3)">
-                        <span class="signal-name">Size</span>
-                        <span class="signal-value">
-                            @(growth >= 0 ? "+" : "")@((growth * 100).ToString("F0"))% area
-                            (@DetailNumber("prior_area_mm2")?.ToString("F1") → @DetailNumber("area_mm2")?.ToString("F1") mm²)
-                        </span>
-                    </li>
+                    <ChangeSignal Name="Size" Value="@GrowthText(growth)"
+                                  Tone="@EvolutionDetails.Tone(Math.Max(growth, 0), Details.Number("growth_concern_threshold") ?? 0.3)" />
                 }
                 else
                 {
-                    <li class="is-unavailable">
-                        <span class="signal-name">Size</span>
-                        <span class="signal-value">@(Detail("size_note") ?? "Not measured")</span>
-                    </li>
+                    <ChangeSignal Name="Size" Tone="unavailable"
+                                  Value="@(Details.Text("size_note") ?? "Not measured")" />
                 }
-                @if (DetailNumber("risk_score_delta") is { } delta)
+                @if (Details.Number("risk_score_delta") is { } delta)
                 {
-                    <li class="@(delta >= 5 ? "is-concern" : delta <= -5 ? "is-improved" : "is-stable")">
-                        <span class="signal-name">Risk score</span>
-                        <span class="signal-value">@(delta >= 0 ? "+" : "")@delta.ToString("F0") points</span>
-                    </li>
+                    <ChangeSignal Name="Risk score" Value="@($"{(delta >= 0 ? "+" : "")}{delta:F0} points")"
+                                  Tone="@(delta >= 5 ? "concern" : delta <= -5 ? "improved" : "stable")" />
                 }
             </ul>
 
@@ -113,27 +86,27 @@
 
     private double? Score => Results.AbcdeScores.Evolving.Score;
 
-    private JsonElement Details => Results.AbcdeScores.Evolving.Details;
+    private EvolutionDetails Details => new(Results.AbcdeScores.Evolving.Details);
 
-    private bool HasPrior => Detail("compared_with") is not null;
+    private string BeforeCaption
+    {
+        get
+        {
+            var when = Details.Text("compared_with_at");
+            return when is not null && DateTimeOffset.TryParse(when, out var at)
+                ? $"Before · {at.ToLocalTime():MMM d, yyyy}"
+                : "Before";
+        }
+    }
 
-    private string? ComparedWhen =>
-        Detail("compared_with_at") is { } at && DateTimeOffset.TryParse(at, out var when)
-            ? when.ToLocalTime().ToString("MMM d, yyyy")
-            : null;
-
-    private string? Detail(string key) =>
-        Details.ValueKind == JsonValueKind.Object && Details.TryGetProperty(key, out var value)
-            ? value.ValueKind == JsonValueKind.String ? value.GetString() : value.ToString()
-            : null;
-
-    private double? DetailNumber(string key) =>
-        Details.ValueKind == JsonValueKind.Object
-        && Details.TryGetProperty(key, out var value)
-        && value.ValueKind == JsonValueKind.Number
-            ? value.GetDouble()
-            : null;
-
-    private static string Tone(double raw, double threshold) =>
-        raw >= threshold ? "is-concern" : raw >= threshold * 0.5 ? "is-watch" : "is-stable";
+    private string GrowthText(double growth)
+    {
+        var sign = growth >= 0 ? "+" : string.Empty;
+        var change = $"{sign}{growth * 100:F0}% area";
+        var before = Details.Number("prior_area_mm2");
+        var after = Details.Number("area_mm2");
+        return before is null || after is null
+            ? change
+            : $"{change} ({before:F1} → {after:F1} mm²)";
+    }
 }

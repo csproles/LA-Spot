@@ -1,0 +1,77 @@
+@* Identity block for a single spot: its name (renameable in place), where it
+   is, how risky it looked last time, and the one action that matters here. *@
+
+<div class="spot-header">
+    <div class="spot-heading">
+        @if (IsRenaming)
+        {
+            <div class="rename-row">
+                <input class="form-control rename-input" @bind="RenameValue" @bind:event="oninput"
+                       placeholder="Spot label" aria-label="Spot label" />
+                <button type="button" class="btn btn-primary btn-sm"
+                        disabled="@(string.IsNullOrWhiteSpace(RenameValue) || IsSaving)"
+                        @onclick="SubmitRename">
+                    Save
+                </button>
+                <button type="button" class="btn btn-outline-primary btn-sm" @onclick="() => IsRenaming = false">
+                    Cancel
+                </button>
+            </div>
+        }
+        else
+        {
+            <h1 class="spot-title">
+                @Spot.Label
+                <button type="button" class="icon-button" title="Rename" aria-label="Rename spot" @onclick="StartRename">
+                    <AppIcon Name="pencil" Size="md" />
+                </button>
+            </h1>
+        }
+        <p class="spot-region">@Spot.BodyRegion · tracked since @TrackedSince</p>
+        <div class="spot-badges">
+            @if (Spot.LastRiskScore is not null)
+            {
+                <RiskScoreBadge Score="Spot.LastRiskScore" Format="detail" />
+            }
+            <RecheckBadge Spot="Spot" />
+        </div>
+    </div>
+    <div class="spot-actions">
+        <a href="/check?spot=@Spot.Id" class="btn btn-primary spot-recheck-button">
+            <AppIcon Name="camera" Size="md" />
+            Re-check this spot
+        </a>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public Spot Spot { get; set; } = null!;
+
+    /// <summary>Saves the new label and reports whether it stuck; a failed save
+    /// leaves the field open so the user doesn't lose what they typed.</summary>
+    [Parameter, EditorRequired]
+    public Func<string, Task<bool>> OnRename { get; set; } = null!;
+
+    [Parameter]
+    public bool IsSaving { get; set; }
+
+    private bool IsRenaming;
+    private string RenameValue = string.Empty;
+
+    private string TrackedSince => Spot.CreatedAt?.ToLocalTime().ToString("MMM yyyy") ?? "recently";
+
+    private void StartRename()
+    {
+        RenameValue = Spot.Label;
+        IsRenaming = true;
+    }
+
+    private async Task SubmitRename()
+    {
+        if (await OnRename(RenameValue.Trim()))
+        {
+            IsRenaming = false;
+        }
+    }
+}

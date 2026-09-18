@@ -1,0 +1,11 @@
+.spot-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.spot-list-empty {
+    color: var(--color-text-muted);
+    font-size: 13px;
+    margin: 0;
+}

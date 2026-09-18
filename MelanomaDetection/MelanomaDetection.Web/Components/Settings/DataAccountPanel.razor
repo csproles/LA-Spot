@@ -1,0 +1,26 @@
+@* Export and deletion. Both are stubs in this build and say so rather than
+   pretending to work. *@
+
+<div class="card-panel danger-card">
+    <p class="panel-title">Data &amp; account</p>
+    <div class="danger-actions">
+        <button type="button" class="btn btn-outline-primary" @onclick="ShowExportInfo">
+            Export my data
+        </button>
+        <button type="button" class="btn btn-outline-danger" @onclick="ShowDeleteInfo">
+            Delete account
+        </button>
+    </div>
+    @if (InfoMessage is not null)
+    {
+        <p class="danger-info" role="status">@InfoMessage</p>
+    }
+</div>
+
+@code {
+    private string? InfoMessage;
+
+    private void ShowExportInfo() => InfoMessage = "Data export isn't wired up in this demo yet.";
+
+    private void ShowDeleteInfo() => InfoMessage = "Account deletion isn't wired up in this demo yet.";
+}

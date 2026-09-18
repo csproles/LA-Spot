@@ -1,0 +1,26 @@
+.segmented {
+    display: inline-flex;
+    background: var(--color-well);
+    border-radius: var(--radius-pill);
+    padding: 3px;
+}
+
+.segmented-option {
+    border: none;
+    background: none;
+    padding: 6px 14px;
+    border-radius: var(--radius-pill);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--color-text-muted);
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.segmented-option:hover {
+    color: var(--color-accent-ink);
+}
+
+.segmented-option.is-selected {
+    background: var(--color-accent-strong);
+    color: var(--color-on-accent);
+}

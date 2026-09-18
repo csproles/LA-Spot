@@ -1,0 +1,25 @@
+@* One option in a radio group rendered as a card rather than a radio button.
+   Blazor drops aria-checked when it's given a false bool, so the state is
+   passed as a string. *@
+
+<button type="button" role="radio"
+        aria-checked="@(Selected ? "true" : "false")"
+        class="choice-card choice-card-@Layout @(Selected ? "is-selected" : "")"
+        @onclick="OnSelect">
+    @ChildContent
+</button>
+
+@code {
+    [Parameter]
+    public bool Selected { get; set; }
+
+    /// <summary>"row" puts the content side by side, "column" stacks it.</summary>
+    [Parameter]
+    public string Layout { get; set; } = "row";
+
+    [Parameter, EditorRequired]
+    public EventCallback OnSelect { get; set; }
+
+    [Parameter, EditorRequired]
+    public RenderFragment ChildContent { get; set; } = null!;
+}

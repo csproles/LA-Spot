@@ -1,0 +1,48 @@
+@* Display preferences. Theme is applied and remembered by theme.js; the
+   others are local to the session until they're persisted. *@
+@inject IJSRuntime JS
+
+<div class="card-panel">
+    <p class="panel-title">App preferences</p>
+    <PreferenceRow Label="Units">
+        <SegmentedControl Options="UnitOptions" @bind-Value="Units" AriaLabel="Measurement units" />
+    </PreferenceRow>
+    <PreferenceRow Label="Theme">
+        <SegmentedControl Options="ThemeOptions" Value="@Theme" ValueChanged="SetTheme" AriaLabel="Colour theme" />
+    </PreferenceRow>
+</div>
+
+@code {
+    private static readonly SegmentedControl.Option[] UnitOptions =
+    {
+        new("cm", "cm"),
+        new("in", "inches"),
+    };
+
+    private static readonly SegmentedControl.Option[] ThemeOptions =
+    {
+        new("system", "System"),
+        new("light", "Light"),
+        new("dark", "Dark"),
+    };
+
+    private string Units = "cm";
+    private string Theme = "system";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        Theme = await JS.InvokeAsync<string>("skinCheckTheme.get");
+        StateHasChanged();
+    }
+
+    private async Task SetTheme(string theme)
+    {
+        Theme = theme;
+        await JS.InvokeVoidAsync("skinCheckTheme.set", theme);
+    }
+}

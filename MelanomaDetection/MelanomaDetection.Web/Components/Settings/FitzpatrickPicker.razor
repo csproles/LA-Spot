@@ -1,0 +1,40 @@
+@* Fitzpatrick skin type. Asked as "how does your skin react to the sun?"
+   because the numbered scale means nothing to most people, and it's one of
+   the strongest personal risk factors for melanoma. *@
+
+<section class="card-panel">
+    <h2 class="panel-title">How does your skin react to the sun?</h2>
+    <p class="text-muted-small">Pick the closest match. This is the Fitzpatrick scale dermatologists use.</p>
+    <div class="fitz-grid" role="radiogroup" aria-label="Fitzpatrick skin type">
+        @foreach (var type in Types)
+        {
+            <ChoiceCard Selected="@(Value == type.Value)" OnSelect="() => ValueChanged.InvokeAsync(type.Value)">
+                <span class="fitz-swatch" style="background:@type.Swatch"></span>
+                <span class="fitz-text">
+                    <span class="fitz-name">Type @type.Numeral</span>
+                    <span class="fitz-desc">@type.Description</span>
+                </span>
+            </ChoiceCard>
+        }
+    </div>
+</section>
+
+@code {
+    private record SkinType(int Value, string Numeral, string Description, string Swatch);
+
+    private static readonly SkinType[] Types =
+    {
+        new(1, "I", "Very fair. Always burns, never tans.", "#F5E0D0"),
+        new(2, "II", "Fair. Burns easily, tans minimally.", "#EBC9A8"),
+        new(3, "III", "Medium. Burns moderately, tans gradually.", "#D9A985"),
+        new(4, "IV", "Olive. Burns minimally, tans easily.", "#B98060"),
+        new(5, "V", "Brown. Rarely burns, tans darkly.", "#8A5A3C"),
+        new(6, "VI", "Deeply pigmented. Never burns.", "#4A2E1E"),
+    };
+
+    [Parameter]
+    public int? Value { get; set; }
+
+    [Parameter]
+    public EventCallback<int> ValueChanged { get; set; }
+}

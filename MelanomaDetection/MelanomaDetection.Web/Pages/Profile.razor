@@ -1,152 +1,54 @@
 @page "/profile"
 @rendermode InteractiveServer
-@using Microsoft.AspNetCore.Components.Web
-@using static Microsoft.AspNetCore.Components.Web.RenderMode
-@using MelanomaDetection.Web.Components
-@using MelanomaDetection.Web.Models
-@using MelanomaDetection.Web.Services
 @inject ImageProcessingService ImageProcessingService
 
 <PageTitle>Profile - Skin Check</PageTitle>
 
 <div class="profile-page">
-    <div class="profile-header">
-        <h1 class="profile-title">Profile</h1>
-        <button type="button" class="btn btn-primary" disabled="@(IsSaving || !IsDirty)" @onclick="Save">
-            @if (IsSaving)
-            {
-                <span class="btn-spinner" aria-hidden="true"></span>
-            }
-            @(IsSaving ? "Saving…" : IsDirty ? "Save changes" : "Saved")
-        </button>
-    </div>
+    <PageHeader Title="Profile">
+        <Actions>
+            <button type="button" class="btn btn-primary" disabled="@(IsSaving || !IsDirty)" @onclick="Save">
+                @if (IsSaving)
+                {
+                    <span class="btn-spinner" aria-hidden="true"></span>
+                }
+                @(IsSaving ? "Saving…" : IsDirty ? "Save changes" : "Saved")
+            </button>
+        </Actions>
+    </PageHeader>
 
-    @if (LoadError is not null)
-    {
-        <div class="alert alert-danger" role="alert">@LoadError</div>
-    }
-    @if (SaveError is not null)
-    {
-        <div class="alert alert-danger" role="alert">@SaveError</div>
-    }
+    <ErrorAlert Message="@LoadError" />
+    <ErrorAlert Message="@SaveError" />
 
-    <div class="card-panel">
-        <p class="panel-title">Account</p>
-        <div class="account-fields">
-            <div class="field-group">
-                <label class="field-label" for="fullName">Full name</label>
-                <input id="fullName" type="text" class="form-control" placeholder="Jane Doe" value="@Model.FullName" @oninput="e => { Model.FullName = e.Value?.ToString() ?? string.Empty; IsDirty = true; }" />
-            </div>
-        </div>
-    </div>
+    <AccountPanel IsLoading="IsLoading" FullName="@Model.FullName" FullNameChanged="UpdateFullName" />
 
     <section class="profile-section">
         <div class="section-heading">
             <h2 class="section-title">Risk profile</h2>
-            <p class="text-muted-small">Tunes how often each spot is due for a recheck. @(Model.Configured ? "" : "Not set up yet.")</p>
+            <p class="text-muted-small">
+                Tunes how often each spot is due for a recheck.
+                @(IsLoading || Model.Configured ? "" : "Not set up yet.")
+            </p>
         </div>
-        <RiskProfileForm Profile="Model" ProfileChanged="_ => IsDirty = true" />
+        <RiskProfileForm Profile="Model" IsLoading="IsLoading" ProfileChanged="_ => IsDirty = true" />
     </section>
 
-    <div class="card-panel">
-        <p class="panel-title">Notifications</p>
-        <div class="toggle-row">
-            <div>
-                <p class="toggle-label">Recheck reminders</p>
-                <p class="toggle-description">Get reminded when a tracked spot is due for another photo.</p>
-            </div>
-            <label class="switch">
-                <input type="checkbox" aria-label="Recheck reminders" @bind="RecheckReminders" />
-                <span class="switch-track"></span>
-            </label>
-        </div>
-        <div class="toggle-row">
-            <div>
-                <p class="toggle-label">High-risk alerts</p>
-                <p class="toggle-description">Get notified right away for a high-risk result.</p>
-            </div>
-            <label class="switch">
-                <input type="checkbox" aria-label="High-risk alerts" @bind="HighRiskAlerts" />
-                <span class="switch-track"></span>
-            </label>
-        </div>
-    </div>
+    <NotificationSettingsPanel />
 
-    <div class="card-panel">
-        <p class="panel-title">Privacy &amp; data</p>
-        <div class="toggle-row">
-            <div>
-                <p class="toggle-label">Share with my dermatologist</p>
-                <p class="toggle-description">Let a linked provider view your saved checks.</p>
-            </div>
-            <label class="switch">
-                <input type="checkbox" aria-label="Share with my dermatologist" @bind="ShareWithDermatologist" />
-                <span class="switch-track"></span>
-            </label>
-        </div>
-        <div class="toggle-row">
-            <div>
-                <p class="toggle-label">Anonymous usage analytics</p>
-                <p class="toggle-description">Help improve the app with anonymized usage data.</p>
-            </div>
-            <label class="switch">
-                <input type="checkbox" aria-label="Anonymous usage analytics" @bind="AnonymousAnalytics" />
-                <span class="switch-track"></span>
-            </label>
-        </div>
-    </div>
+    <PrivacySettingsPanel />
 
-    <div class="card-panel">
-        <p class="panel-title">App preferences</p>
-        <div class="preference-row">
-            <span class="toggle-label">Units</span>
-            <div class="segmented">
-                <button type="button" class="segmented-option @(Units == "cm" ? "active" : "")" @onclick='() => Units = "cm"'>cm</button>
-                <button type="button" class="segmented-option @(Units == "in" ? "active" : "")" @onclick='() => Units = "in"'>inches</button>
-            </div>
-        </div>
-        <div class="preference-row">
-            <span class="toggle-label">Theme</span>
-            <div class="segmented">
-                <button type="button" class="segmented-option @(Theme == "Light" ? "active" : "")" @onclick='() => Theme = "Light"'>Light</button>
-                <button type="button" class="segmented-option @(Theme == "Dark" ? "active" : "")" @onclick='() => Theme = "Dark"'>Dark</button>
-            </div>
-        </div>
-    </div>
+    <AppPreferencesPanel />
 
-    <div class="card-panel danger-card">
-        <p class="panel-title">Data &amp; account</p>
-        <div class="danger-actions">
-            <button type="button" class="btn btn-outline-primary" @onclick="ShowExportInfo">
-                Export my data
-            </button>
-            <button type="button" class="btn btn-outline-danger" @onclick="ShowDeleteInfo">
-                Delete account
-            </button>
-        </div>
-        @if (InfoMessage is not null)
-        {
-            <p class="danger-info">@InfoMessage</p>
-        }
-    </div>
+    <DataAccountPanel />
 </div>
 
 @code {
     private RiskProfile Model = new();
+    private bool IsLoading = true;
     private bool IsDirty;
     private bool IsSaving;
     private string? LoadError;
     private string? SaveError;
-
-    private bool ShareWithDermatologist = true;
-    private bool AnonymousAnalytics;
-    private bool RecheckReminders = true;
-    private bool HighRiskAlerts = true;
-
-    private string Units = "cm";
-    private string Theme = "Light";
-
-    private string? InfoMessage;
 
     protected override async Task OnInitializedAsync()
     {
@@ -158,6 +60,16 @@
         {
             LoadError = ex.Message;
         }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private void UpdateFullName(string fullName)
+    {
+        Model.FullName = fullName;
+        IsDirty = true;
     }
 
     private async Task Save()
@@ -178,8 +90,4 @@
             IsSaving = false;
         }
     }
-
-    private void ShowExportInfo() => InfoMessage = "Data export isn't wired up in this demo yet.";
-
-    private void ShowDeleteInfo() => InfoMessage = "Account deletion isn't wired up in this demo yet.";
 }

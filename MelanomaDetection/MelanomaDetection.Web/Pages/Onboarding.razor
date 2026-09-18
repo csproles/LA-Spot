@@ -1,34 +1,21 @@
 @page "/onboarding"
 @rendermode InteractiveServer
-@using Microsoft.AspNetCore.Components.Web
-@using static Microsoft.AspNetCore.Components.Web.RenderMode
-@using MelanomaDetection.Web.Components
-@using MelanomaDetection.Web.Models
-@using MelanomaDetection.Web.Services
 @inject ImageProcessingService ImageProcessingService
 @inject NavigationManager NavigationManager
 
 <PageTitle>Your risk profile - Skin Check</PageTitle>
 
 <div class="onboarding-page">
-    <div class="onboarding-header">
-        <p class="onboarding-eyebrow">RISK PROFILE</p>
-        <h1 class="onboarding-title">A few questions about your skin</h1>
-        <p class="onboarding-subtitle">
-            These are the personal risk factors dermatologists screen on. They tune how often we
-            suggest rechecking each spot, and you can change them any time in Profile.
-        </p>
-    </div>
+    <PageHeader Eyebrow="RISK PROFILE"
+                Title="A few questions about your skin"
+                Subtitle="These are the personal risk factors dermatologists screen on. They tune how often we suggest rechecking each spot, and you can change them any time in Profile." />
 
-    @if (ErrorMessage is not null)
-    {
-        <div class="alert alert-danger" role="alert">@ErrorMessage</div>
-    }
+    <ErrorAlert Message="@ErrorMessage" />
 
-    <RiskProfileForm @bind-Profile="Profile" />
+    <RiskProfileForm @bind-Profile="Profile" IsLoading="IsLoading" />
 
     <div class="onboarding-actions">
-        <button type="button" class="btn btn-primary" disabled="@IsSaving" @onclick="Save">
+        <button type="button" class="btn btn-primary" disabled="@(IsSaving || IsLoading)" @onclick="Save">
             @if (IsSaving)
             {
                 <span class="btn-spinner" aria-hidden="true"></span>
@@ -41,6 +28,7 @@
 
 @code {
     private RiskProfile Profile = new();
+    private bool IsLoading = true;
     private bool IsSaving;
     private string? ErrorMessage;
 
@@ -57,6 +45,10 @@
         catch (ImageProcessingApiException)
         {
             // A fresh form is fine if the profile couldn't be loaded; saving will surface any real error.
+        }
+        finally
+        {
+            IsLoading = false;
         }
     }
 

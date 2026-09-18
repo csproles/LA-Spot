@@ -1,0 +1,21 @@
+.disclaimer-banner {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    background: var(--color-alert-soft);
+    border: 1px solid var(--color-alert);
+    border-radius: var(--radius-card);
+    padding: 14px 16px;
+}
+
+.disclaimer-icon {
+    display: inline-flex;
+    color: var(--color-alert);
+    margin-top: 1px;
+}
+
+.disclaimer-text {
+    margin: 0;
+    font-size: 13.5px;
+    color: var(--color-alert-ink);
+}

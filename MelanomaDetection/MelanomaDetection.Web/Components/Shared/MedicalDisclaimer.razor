@@ -1,0 +1,21 @@
+@* The "not a diagnosis" banner. Its wording is the one thing on the page with
+   medical consequences, so it lives in a single component rather than being
+   retyped per page. *@
+
+<div class="disclaimer-banner" role="@Role">
+    <span class="disclaimer-icon">
+        <AppIcon Name="info" Size="lg" />
+    </span>
+    <p class="disclaimer-text">@Message</p>
+</div>
+
+@code {
+    /// <summary>Longer wording for the dashboard, shorter for a results page.</summary>
+    [Parameter]
+    public string Message { get; set; } =
+        "This tool gives a preliminary read, not a diagnosis. See a dermatologist about any lesion that concerns you.";
+
+    /// <summary>"note" when it's standing context, "alert" when it qualifies a result on screen.</summary>
+    [Parameter]
+    public string Role { get; set; } = "note";
+}

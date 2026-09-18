@@ -1,0 +1,24 @@
+@* A single ABCDE criterion with the picture the number came from, so the
+   score can be checked rather than just believed. *@
+
+<div class="score-card">
+    @if (ImageData.HasImage(Visual))
+    {
+        <img src="@ImageData.PngUrl(Visual!)" alt="@($"{Label} visualization")" class="score-card-img" />
+    }
+    <FactorBar Label="@Label" Score="Score" Detail="@Detail" />
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public string Label { get; set; } = string.Empty;
+
+    [Parameter]
+    public double? Score { get; set; }
+
+    [Parameter]
+    public string? Visual { get; set; }
+
+    [Parameter]
+    public string? Detail { get; set; }
+}

@@ -1,0 +1,31 @@
+@* What the list below is showing, how many, and in what order. *@
+
+<div class="list-toolbar">
+    <span class="list-title">
+        @Title
+        <span class="list-count">@Count</span>
+    </span>
+    <SegmentedControl Options="SortOptions" Value="@SortBy" ValueChanged="SortByChanged"
+                      AriaLabel="Sort spots by" />
+</div>
+
+@code {
+    private static readonly SegmentedControl.Option[] SortOptions =
+    {
+        new("due", "Due first"),
+        new("risk", "Highest risk"),
+        new("recent", "Recent"),
+    };
+
+    [Parameter, EditorRequired]
+    public string Title { get; set; } = string.Empty;
+
+    [Parameter]
+    public int Count { get; set; }
+
+    [Parameter, EditorRequired]
+    public string SortBy { get; set; } = "due";
+
+    [Parameter]
+    public EventCallback<string> SortByChanged { get; set; }
+}

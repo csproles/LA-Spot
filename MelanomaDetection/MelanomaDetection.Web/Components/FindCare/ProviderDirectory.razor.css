@@ -1,0 +1,42 @@
+.provider-panel {
+    background: var(--color-surface);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-card);
+    border: 1px solid var(--color-border-subtle);
+    padding: 16px 18px;
+}
+
+.provider-loading {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.provider-status {
+    margin: 0;
+    color: var(--color-text-muted);
+    font-size: 14px;
+}
+
+.provider-panel-title {
+    font-family: var(--font-heading);
+    font-weight: 700;
+    font-size: 16px;
+    color: var(--color-accent-ink);
+    margin: 0 0 10px;
+}
+
+.provider-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 12px;
+}
+
+.provider-source {
+    margin: 12px 0 0;
+    font-size: 12px;
+    color: var(--color-text-muted);
+}

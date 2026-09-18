@@ -37,7 +37,7 @@
                 </button>
             }
         </div>
-        <p class="switch-label">Switch</p>
+        <p class="body-view-label">Switch</p>
         <button type="button" class="btn btn-outline-primary btn-sm body-toggle" @onclick="() => IsBackView = !IsBackView">
             @(IsBackView ? "Back view" : "Front view")
         </button>
@@ -102,9 +102,9 @@
     private string DotClass(string region, int count, string? band)
     {
         var classes = new List<string> { "body-dot" };
-        if (IsSelected(region)) classes.Add("active");
+        if (IsSelected(region)) classes.Add("body-dot-selected");
         if (band is not null) classes.Add($"body-dot-{band}");
-        if (count > 0) classes.Add("has-spots");
+        if (count > 0) classes.Add("body-dot-tracked");
         return string.Join(" ", classes);
     }
 

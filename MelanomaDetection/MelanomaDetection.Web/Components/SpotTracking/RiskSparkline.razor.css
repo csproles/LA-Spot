@@ -7,20 +7,20 @@
 }
 
 .sparkline-band-low {
-    fill: var(--color-cream);
+    fill: var(--color-well);
 }
 
 .sparkline-band-moderate {
-    fill: var(--color-moderate-bg);
+    fill: var(--color-warn-soft);
 }
 
 .sparkline-band-high {
-    fill: var(--color-risk-red-bg);
+    fill: var(--color-alert-soft);
 }
 
 .sparkline-line {
     fill: none;
-    stroke: var(--color-navy);
+    stroke: var(--color-accent-ink);
     stroke-width: 1.8;
     stroke-linejoin: round;
     stroke-linecap: round;
@@ -28,24 +28,24 @@
 }
 
 .sparkline-point {
-    stroke: var(--color-white);
+    stroke: var(--color-surface);
     stroke-width: 1.2;
     vector-effect: non-scaling-stroke;
 }
 
 .sparkline-point-low {
-    fill: var(--color-clay);
+    fill: var(--color-border-strong);
 }
 
 .sparkline-point-moderate {
-    fill: var(--color-goldenrod);
+    fill: var(--color-warn);
 }
 
 .sparkline-point-high {
-    fill: var(--color-risk-red-icon);
+    fill: var(--color-alert);
 }
 
 .sparkline-point.is-latest {
-    stroke: var(--color-navy);
+    stroke: var(--color-accent-ink);
     stroke-width: 1.5;
 }

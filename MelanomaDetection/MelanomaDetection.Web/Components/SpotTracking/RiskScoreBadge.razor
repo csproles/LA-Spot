@@ -1,0 +1,27 @@
+@* A risk score as a coloured pill. The band decides the colour everywhere it
+   appears, so a "62" on the dashboard and the same score on a timeline never
+   disagree. *@
+
+<span class="risk-badge risk-badge-@Band">@Text</span>
+
+@code {
+    [Parameter, EditorRequired]
+    public double? Score { get; set; }
+
+    /// <summary>
+    /// "score" -> 62, "band" -> Moderate, "band-score" -> Moderate · 62,
+    /// "detail" -> Moderate risk · 62/100.
+    /// </summary>
+    [Parameter]
+    public string Format { get; set; } = "score";
+
+    private string Band => RiskBands.Band(Score);
+
+    private string Text => Format switch
+    {
+        "band" => RiskBands.ShortLabel(Band),
+        "band-score" => $"{RiskBands.ShortLabel(Band)} · {Score:F0}",
+        "detail" => $"{RiskBands.ShortLabel(Band)} risk · {Score:F0}/100",
+        _ => $"{Score:F0}",
+    };
+}

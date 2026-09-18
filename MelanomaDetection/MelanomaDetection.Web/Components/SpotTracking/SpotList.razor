@@ -1,0 +1,52 @@
+@* A stack of spot rows. Owns the three states a list of remote data can be
+   in -- loading, empty, loaded -- so no caller has to repeat them. *@
+
+@if (IsLoading)
+{
+    <LoadingRegion Label="@LoadingLabel">
+        <div class="spot-list">
+            @for (var placeholder = 0; placeholder < SkeletonCount; placeholder++)
+            {
+                <SpotCardSkeleton />
+            }
+        </div>
+    </LoadingRegion>
+}
+else if (Spots.Count == 0)
+{
+    <p class="spot-list-empty">@EmptyMessage</p>
+}
+else
+{
+    <div class="spot-list">
+        @foreach (var spot in Spots)
+        {
+            <SpotCard Spot="spot" Selected="@(SelectedSpotId == spot.Id)" OnSelect="OnSelect" />
+        }
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public IReadOnlyList<Spot> Spots { get; set; } = Array.Empty<Spot>();
+
+    [Parameter]
+    public bool IsLoading { get; set; }
+
+    [Parameter]
+    public string LoadingLabel { get; set; } = "Loading your spots";
+
+    /// <summary>How many placeholder rows to show. Roughly the usual list length.</summary>
+    [Parameter]
+    public int SkeletonCount { get; set; } = 3;
+
+    [Parameter]
+    public string EmptyMessage { get; set; } = "No spots tracked yet.";
+
+    /// <summary>Passed through to each card: set it to select rather than navigate.</summary>
+    [Parameter]
+    public EventCallback<Spot> OnSelect { get; set; }
+
+    [Parameter]
+    public string? SelectedSpotId { get; set; }
+}

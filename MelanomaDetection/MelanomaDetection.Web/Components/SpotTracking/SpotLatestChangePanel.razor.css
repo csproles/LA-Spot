@@ -1,0 +1,27 @@
+.change-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin: 14px 0 12px;
+}
+
+.change-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.change-stat-name {
+    font-size: 11.5px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--color-text-faint);
+}
+
+.change-stat-value {
+    margin: 0;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--color-text);
+}

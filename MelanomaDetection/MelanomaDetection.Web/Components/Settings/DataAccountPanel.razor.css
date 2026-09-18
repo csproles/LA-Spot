@@ -1,0 +1,26 @@
+.danger-card {
+    border: 1.5px solid var(--color-alert);
+}
+
+.danger-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.btn-outline-danger {
+    color: var(--color-alert-ink);
+    border-color: var(--color-alert);
+}
+
+.btn-outline-danger:hover {
+    background: var(--color-alert);
+    border-color: var(--color-alert);
+    color: var(--color-on-alert);
+}
+
+.danger-info {
+    margin: 12px 0 0;
+    font-size: 13px;
+    color: var(--color-text-muted);
+}

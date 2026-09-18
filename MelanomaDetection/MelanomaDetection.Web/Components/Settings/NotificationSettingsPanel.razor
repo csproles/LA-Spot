@@ -1,0 +1,17 @@
+@* Reminder preferences. Local to the session until notification delivery is
+   wired up on the backend. *@
+
+<div class="card-panel">
+    <p class="panel-title">Notifications</p>
+    <ToggleRow Label="Recheck reminders"
+               Description="Get reminded when a tracked spot is due for another photo."
+               @bind-Value="RecheckReminders" />
+    <ToggleRow Label="High-risk alerts"
+               Description="Get notified right away for a high-risk result."
+               @bind-Value="HighRiskAlerts" />
+</div>
+
+@code {
+    private bool RecheckReminders = true;
+    private bool HighRiskAlerts = true;
+}

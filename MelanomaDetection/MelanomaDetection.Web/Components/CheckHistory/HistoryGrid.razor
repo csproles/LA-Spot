@@ -1,0 +1,41 @@
+@* The grid of saved checks, in whichever of its three states applies. *@
+
+@if (IsLoading)
+{
+    <LoadingRegion Label="Loading your saved checks">
+        <div class="history-grid">
+            @for (var placeholder = 0; placeholder < SkeletonCount; placeholder++)
+            {
+                <HistoryCardSkeleton />
+            }
+        </div>
+    </LoadingRegion>
+}
+else
+{
+    <div class="history-grid">
+        @foreach (var entry in Entries)
+        {
+            <HistoryCard Entry="entry"
+                         Selected="@SelectedIds.Contains(entry.ProcessingId)"
+                         OnClick="OnCardClick" />
+        }
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public IReadOnlyList<HistoryEntry> Entries { get; set; } = Array.Empty<HistoryEntry>();
+
+    [Parameter]
+    public bool IsLoading { get; set; }
+
+    [Parameter]
+    public int SkeletonCount { get; set; } = 6;
+
+    [Parameter]
+    public IReadOnlyCollection<string> SelectedIds { get; set; } = Array.Empty<string>();
+
+    [Parameter]
+    public EventCallback<HistoryEntry> OnCardClick { get; set; }
+}

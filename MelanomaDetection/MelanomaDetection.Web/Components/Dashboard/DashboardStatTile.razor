@@ -1,0 +1,34 @@
+@* One number on the dashboard. While the numbers are in flight the tile keeps
+   its full size and shows a placeholder where the figure will be. *@
+
+<div class="card-panel stat-tile @(Attention ? "stat-tile-attention" : "")">
+    @if (IsLoading)
+    {
+        <SkeletonBlock Width="46px" Height="28px" />
+        <SkeletonBlock Width="82%" Height="11px" />
+    }
+    else
+    {
+        <span class="stat-value stat-value-@Tone">@Value</span>
+        <span class="stat-label">@Label</span>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public string Value { get; set; } = string.Empty;
+
+    [Parameter]
+    public string Label { get; set; } = string.Empty;
+
+    /// <summary>"navy" (default), "moderate", "high" or "muted".</summary>
+    [Parameter]
+    public string Tone { get; set; } = "navy";
+
+    /// <summary>Outlines the tile when the number is one the user should act on.</summary>
+    [Parameter]
+    public bool Attention { get; set; }
+
+    [Parameter]
+    public bool IsLoading { get; set; }
+}

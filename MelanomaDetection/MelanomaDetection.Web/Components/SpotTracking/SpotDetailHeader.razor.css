@@ -1,0 +1,74 @@
+.spot-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.spot-heading {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.spot-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--font-heading);
+    font-weight: 800;
+    font-size: 26px;
+    color: var(--color-accent-ink);
+    margin: 0;
+}
+
+.icon-button {
+    background: none;
+    border: none;
+    padding: 4px;
+    color: var(--color-border-strong);
+    border-radius: 8px;
+    display: inline-flex;
+    transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.icon-button:hover {
+    color: var(--color-accent-ink);
+    background: var(--color-well);
+}
+
+.rename-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.rename-input {
+    max-width: 260px;
+    font-family: var(--font-heading);
+    font-weight: 700;
+    font-size: 18px;
+}
+
+.spot-region {
+    margin: 0;
+    color: var(--color-text-muted);
+    font-size: 14px;
+}
+
+.spot-badges {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-top: 4px;
+}
+
+.spot-recheck-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}

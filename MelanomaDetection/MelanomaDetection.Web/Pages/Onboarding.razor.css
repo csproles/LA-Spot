@@ -6,30 +6,6 @@
     gap: 20px;
 }
 
-.onboarding-eyebrow {
-    text-transform: uppercase;
-    font-size: 12.5px;
-    letter-spacing: 0.04em;
-    color: var(--color-text-faint);
-    margin: 0;
-    font-weight: 600;
-}
-
-.onboarding-title {
-    font-family: var(--font-heading);
-    font-weight: 800;
-    font-size: 28px;
-    color: var(--color-navy);
-    margin: 0;
-}
-
-.onboarding-subtitle {
-    color: var(--color-text-muted);
-    font-size: 15px;
-    margin: 6px 0 0;
-    line-height: 1.5;
-}
-
 .onboarding-actions {
     display: flex;
     align-items: center;

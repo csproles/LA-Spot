@@ -1,0 +1,41 @@
+@* One captioned photo of a spot. Takes the bare base64 the API returns. *@
+
+<figure class="photo-figure photo-figure-@Shape">
+    @if (ImageData.HasImage(Base64))
+    {
+        <img src="@ImageData.PngUrl(Base64!)" alt="@Alt" class="photo-figure-image" />
+    }
+    else
+    {
+        <div class="photo-figure-image photo-figure-missing" role="img" aria-label="Photo unavailable"></div>
+    }
+    <figcaption class="photo-figure-caption">
+        @if (Caption is not null)
+        {
+            @Caption
+        }
+        else
+        {
+            @CaptionText
+        }
+    </figcaption>
+</figure>
+
+@code {
+    [Parameter]
+    public string? Base64 { get; set; }
+
+    [Parameter]
+    public string Alt { get; set; } = string.Empty;
+
+    [Parameter]
+    public string? CaptionText { get; set; }
+
+    /// <summary>Richer caption -- a date plus a risk badge, say.</summary>
+    [Parameter]
+    public RenderFragment? Caption { get; set; }
+
+    /// <summary>"square" for side-by-side thumbnails, "wide" for the larger compare view.</summary>
+    [Parameter]
+    public string Shape { get; set; } = "square";
+}

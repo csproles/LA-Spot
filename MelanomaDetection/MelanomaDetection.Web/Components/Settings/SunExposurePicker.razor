@@ -1,0 +1,33 @@
+@* Self-reported time outdoors with skin exposed. *@
+
+<section class="card-panel">
+    <h2 class="panel-title">Average sun exposure</h2>
+    <p class="text-muted-small">How much time do you typically spend outdoors with skin exposed?</p>
+    <div class="exposure-grid" role="radiogroup" aria-label="Average sun exposure">
+        @foreach (var level in Levels)
+        {
+            <ChoiceCard Layout="column" Selected="@(Value == level.Value)"
+                        OnSelect="() => ValueChanged.InvokeAsync(level.Value)">
+                <span class="exposure-name">@level.Label</span>
+                <span class="exposure-desc">@level.Description</span>
+            </ChoiceCard>
+        }
+    </div>
+</section>
+
+@code {
+    private record ExposureLevel(string Value, string Label, string Description);
+
+    private static readonly ExposureLevel[] Levels =
+    {
+        new("low", "Low", "Mostly indoors, with brief or covered outdoor time."),
+        new("moderate", "Moderate", "Outdoors most days, sometimes without sun protection."),
+        new("high", "High", "Extended time outdoors most days -- work, sports, or sun-seeking."),
+    };
+
+    [Parameter]
+    public string Value { get; set; } = string.Empty;
+
+    [Parameter]
+    public EventCallback<string> ValueChanged { get; set; }
+}

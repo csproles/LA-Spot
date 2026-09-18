@@ -1,0 +1,27 @@
+@* All five ABCDE criteria with the evidence behind each. Evolving has no
+   visual of its own here -- it compares two photos, which is what the change
+   panel shows. *@
+
+<div class="card-panel">
+    <h2 class="panel-title">ABCDE scores &amp; visual evidence</h2>
+    <p class="text-muted-small">What each score is actually based on, not just the number.</p>
+    <div class="score-grid">
+        <ScoreEvidenceCard Label="Asymmetry" Score="Scores.Asymmetry.Score" Visual="@Results.AsymmetryVisual"
+                           Detail="@AbcdeDetails.Caption("asymmetry", Scores.Asymmetry)" />
+        <ScoreEvidenceCard Label="Border Irregularity" Score="Scores.Border.Score" Visual="@Results.BorderVisual"
+                           Detail="@AbcdeDetails.Caption("border", Scores.Border)" />
+        <ScoreEvidenceCard Label="Color Variation" Score="Scores.Color.Score" Visual="@Results.ColorVisual"
+                           Detail="@AbcdeDetails.Caption("color", Scores.Color)" />
+        <ScoreEvidenceCard Label="Diameter" Score="Scores.Diameter.Score" Visual="@Results.DiameterVisual"
+                           Detail="@AbcdeDetails.Caption("diameter", Scores.Diameter)" />
+        <ScoreEvidenceCard Label="Evolving" Score="Scores.Evolving.Score"
+                           Detail="Not assessable from a single static image." />
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public ImageProcessingResults Results { get; set; } = null!;
+
+    private AbcdeScores Scores => Results.AbcdeScores;
+}

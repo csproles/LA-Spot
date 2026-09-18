@@ -1,0 +1,16 @@
+@* The headline verdict for a check: band, score out of 100, and what to do
+   about it. Wording comes from RiskBands so it stays in step with the
+   backend's policy.py thresholds. *@
+
+<div class="card-panel risk-band risk-band-@Band">
+    <p class="risk-band-label">@RiskBands.Label(Band)</p>
+    <p class="risk-band-score">@Score.ToString("F0") <span class="risk-band-score-total">/100</span></p>
+    <p class="risk-band-recommendation">@RiskBands.Recommendation(Band)</p>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public double Score { get; set; }
+
+    private string Band => RiskBands.Band(Score);
+}

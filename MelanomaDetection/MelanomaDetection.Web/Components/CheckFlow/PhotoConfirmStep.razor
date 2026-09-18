@@ -1,0 +1,52 @@
+@* Step 3: a last look before spending ~30 seconds of pipeline on the photo,
+   then the analysing state on the same frame so the photo doesn't jump. *@
+
+<div class="card-panel confirm-panel">
+    @if (IsAnalyzing)
+    {
+        <h2 class="panel-title">Analyzing your photo</h2>
+        <div class="analyzing-frame">
+            <img src="@PreviewDataUrl" alt="" class="confirm-preview" />
+            <div class="analyzing-overlay" aria-hidden="true"></div>
+        </div>
+        <p class="analyzing-note" role="status">
+            <span class="btn-spinner btn-spinner-navy" aria-hidden="true"></span>
+            Cleaning up the image, finding the lesion, and measuring shape, border, colour and size.
+            Usually under 30 seconds.
+        </p>
+    }
+    else
+    {
+        <h2 class="panel-title">Use this photo?</h2>
+        <img src="@PreviewDataUrl" alt="Captured lesion preview" class="confirm-preview" />
+        <p class="preview-filename">@FileName <span class="preview-filesize">(@FormattedSize)</span></p>
+        <div class="result-actions">
+            <button type="button" class="btn btn-primary" @onclick="OnConfirm">Use this photo</button>
+            <button type="button" class="btn btn-outline-primary" @onclick="OnRetake">Retake</button>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public string? PreviewDataUrl { get; set; }
+
+    [Parameter]
+    public string? FileName { get; set; }
+
+    [Parameter]
+    public long FileSize { get; set; }
+
+    [Parameter]
+    public bool IsAnalyzing { get; set; }
+
+    [Parameter, EditorRequired]
+    public EventCallback OnConfirm { get; set; }
+
+    [Parameter, EditorRequired]
+    public EventCallback OnRetake { get; set; }
+
+    private string FormattedSize => FileSize < 1024 * 1024
+        ? $"{FileSize / 1024.0:F1} KB"
+        : $"{FileSize / (1024.0 * 1024.0):F2} MB";
+}

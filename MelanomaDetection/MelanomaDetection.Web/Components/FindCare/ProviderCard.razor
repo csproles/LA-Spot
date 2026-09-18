@@ -1,0 +1,15 @@
+@* One dermatology practice from the NPI Registry. *@
+
+<li class="provider-card">
+    <p class="provider-name">@Provider.Name</p>
+    <p class="provider-address">@Provider.Address</p>
+    @if (!string.IsNullOrWhiteSpace(Provider.Phone))
+    {
+        <p class="provider-phone">@Provider.Phone</p>
+    }
+</li>
+
+@code {
+    [Parameter, EditorRequired]
+    public DermatologyProvider Provider { get; set; } = null!;
+}

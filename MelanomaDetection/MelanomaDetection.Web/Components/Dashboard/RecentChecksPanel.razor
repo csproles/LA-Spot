@@ -1,0 +1,45 @@
+@* Dashboard panel: the handful of most recent saved checks across all spots. *@
+
+<section class="card-panel recent-checks-panel">
+    <SectionHeader Title="Recent checks">
+        <Trailing>
+            <a href="/history" class="link-button">All checks</a>
+        </Trailing>
+    </SectionHeader>
+
+    @if (IsLoading)
+    {
+        <LoadingRegion Label="Loading your recent checks">
+            <ul class="recent-list">
+                @for (var placeholder = 0; placeholder < SkeletonCount; placeholder++)
+                {
+                    <RecentCheckRowSkeleton />
+                }
+            </ul>
+        </LoadingRegion>
+    }
+    else if (Checks.Count == 0)
+    {
+        <p class="text-muted-small recent-checks-empty">No checks saved yet.</p>
+    }
+    else
+    {
+        <ul class="recent-list">
+            @foreach (var check in Checks)
+            {
+                <RecentCheckRow Entry="check" />
+            }
+        </ul>
+    }
+</section>
+
+@code {
+    [Parameter, EditorRequired]
+    public IReadOnlyList<HistoryEntry> Checks { get; set; } = Array.Empty<HistoryEntry>();
+
+    [Parameter]
+    public bool IsLoading { get; set; }
+
+    [Parameter]
+    public int SkeletonCount { get; set; } = 4;
+}

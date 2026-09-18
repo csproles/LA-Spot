@@ -1,0 +1,123 @@
+@* Step 1: which spot is this photo of? Picking an existing spot is what makes
+   change-over-time comparable, so tracked spots are offered first and
+   creating a new one is the secondary path -- unless there are none yet. *@
+
+<div class="spot-selection-step">
+    @if (IsLoading)
+    {
+        <LoadingRegion Label="Loading your spots">
+            <div class="spot-selection-loading">
+                <SkeletonBlock Width="100%" Height="78px" Shape="card" />
+                <div class="card-panel spot-selection-loading-panel">
+                    <SkeletonBlock Width="220px" Height="16px" />
+                    <SpotCardSkeleton />
+                    <SpotCardSkeleton />
+                </div>
+            </div>
+        </LoadingRegion>
+    }
+    else
+    {
+        @if (ShowExistingSpots)
+        {
+            <CaptureTile IconName="plus" Title="Track a new spot"
+                         Subtitle="Start a fresh timeline for a spot you haven't photographed before"
+                         OnClick="StartNewSpot" />
+
+            <section class="card-panel">
+                <h2 class="panel-title">Re-check a spot you're tracking</h2>
+                <SpotList Spots="Spots" OnSelect="ChooseExisting" SelectedSpotId="@SelectedSpot?.Id" />
+            </section>
+        }
+        else
+        {
+            <section class="card-panel">
+                <h2 class="panel-title">@(Spots.Count == 0 ? "Where is the spot?" : "Track a new spot")</h2>
+                <p class="text-muted-small">
+                    Pick the region on the body map, then give the spot a name you'll recognise later.
+                </p>
+                <BodyMap @bind-SelectedRegion="NewSpotRegion" />
+
+                <label class="field-label" for="spot-label">Name this spot</label>
+                <input id="spot-label" class="form-control spot-label-input"
+                       placeholder='e.g. "dark mole near elbow"'
+                       @bind="NewSpotLabel" @bind:event="oninput" maxlength="60" />
+
+                @if (Spots.Count > 0)
+                {
+                    <button type="button" class="link-button spot-selection-back" @onclick="() => IsCreatingSpot = false">
+                        ← Choose an existing spot instead
+                    </button>
+                }
+            </section>
+        }
+
+        <div class="result-actions">
+            <button type="button" class="btn btn-primary" disabled="@(!CanContinue || IsSaving)" @onclick="Continue">
+                @if (IsSaving)
+                {
+                    <span class="btn-spinner" aria-hidden="true"></span>
+                }
+                Continue
+            </button>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public IReadOnlyList<Spot> Spots { get; set; } = Array.Empty<Spot>();
+
+    [Parameter]
+    public bool IsLoading { get; set; }
+
+    [Parameter]
+    public bool IsSaving { get; set; }
+
+    /// <summary>Creates the spot and returns it, or null if the save failed.</summary>
+    [Parameter, EditorRequired]
+    public Func<string, string, Task<Spot?>> CreateSpot { get; set; } = null!;
+
+    [Parameter, EditorRequired]
+    public EventCallback<Spot> OnSpotChosen { get; set; }
+
+    private Spot? SelectedSpot;
+    private bool IsCreatingSpot;
+    private string? NewSpotRegion;
+    private string NewSpotLabel = string.Empty;
+
+    private bool IsCreatingMode => IsCreatingSpot || Spots.Count == 0;
+
+    private bool ShowExistingSpots => Spots.Count > 0 && !IsCreatingSpot;
+
+    private bool CanContinue => IsCreatingMode
+        ? NewSpotRegion is not null && !string.IsNullOrWhiteSpace(NewSpotLabel)
+        : SelectedSpot is not null;
+
+    private void StartNewSpot()
+    {
+        IsCreatingSpot = true;
+        SelectedSpot = null;
+    }
+
+    private void ChooseExisting(Spot spot) => SelectedSpot = spot;
+
+    private async Task Continue()
+    {
+        if (!IsCreatingMode)
+        {
+            await OnSpotChosen.InvokeAsync(SelectedSpot);
+            return;
+        }
+
+        var created = await CreateSpot(NewSpotLabel.Trim(), NewSpotRegion!);
+        if (created is null)
+        {
+            return;
+        }
+
+        IsCreatingSpot = false;
+        SelectedSpot = created;
+        await OnSpotChosen.InvokeAsync(created);
+    }
+}

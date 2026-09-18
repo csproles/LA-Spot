@@ -1,0 +1,33 @@
+.score-card {
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    padding: 14px;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.score-card:hover {
+    border-color: var(--color-border-strong);
+    box-shadow: var(--shadow-raised);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .score-card {
+        animation: fade-in-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+        animation-delay: calc(var(--card-index, 4) * 0.04s);
+    }
+
+    .score-card:nth-child(1) { --card-index: 0; }
+    .score-card:nth-child(2) { --card-index: 1; }
+    .score-card:nth-child(3) { --card-index: 2; }
+    .score-card:nth-child(4) { --card-index: 3; }
+}
+
+.score-card-img {
+    display: block;
+    width: 100%;
+    max-height: 220px;
+    object-fit: contain;
+    background: var(--color-well);
+    border-radius: 10px;
+    margin-bottom: 12px;
+}

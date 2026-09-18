@@ -1,0 +1,17 @@
+@* Sharing and analytics choices. Local to the session until provider sharing
+   is wired up on the backend. *@
+
+<div class="card-panel">
+    <p class="panel-title">Privacy &amp; data</p>
+    <ToggleRow Label="Share with my dermatologist"
+               Description="Let a linked provider view your saved checks."
+               @bind-Value="ShareWithDermatologist" />
+    <ToggleRow Label="Anonymous usage analytics"
+               Description="Help improve the app with anonymized usage data."
+               @bind-Value="AnonymousAnalytics" />
+</div>
+
+@code {
+    private bool ShareWithDermatologist = true;
+    private bool AnonymousAnalytics;
+}

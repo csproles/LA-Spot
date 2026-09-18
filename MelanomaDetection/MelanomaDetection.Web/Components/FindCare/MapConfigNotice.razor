@@ -1,0 +1,11 @@
+@* Shown instead of the map when no Google Maps key is configured, with the
+   exact command to set one. *@
+
+<div class="card-panel map-fallback">
+    <p>
+        Google Maps API key isn't configured. From the
+        <code>MelanomaDetection.Web</code> project folder, run:
+    </p>
+    <p><code class="map-fallback-command">dotnet user-secrets set "GoogleMaps:ApiKey" "your-key-here"</code></p>
+    <p class="map-fallback-last">then restart the app.</p>
+</div>

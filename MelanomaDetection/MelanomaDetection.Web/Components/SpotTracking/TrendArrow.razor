@@ -1,0 +1,23 @@
+@* Which way a spot's risk score has moved since the previous check. Null
+   until there are two checks to compare. *@
+
+@if (Trend is not null)
+{
+    <span class="trend trend-@Trend" title="@Title">@Glyph</span>
+}
+
+@code {
+    /// <summary>"up", "down", "flat", or null.</summary>
+    [Parameter]
+    public string? Trend { get; set; }
+
+    [Parameter]
+    public string Title { get; set; } = "Risk trend since previous check";
+
+    private string Glyph => Trend switch
+    {
+        "up" => "▲",
+        "down" => "▼",
+        _ => "—",
+    };
+}

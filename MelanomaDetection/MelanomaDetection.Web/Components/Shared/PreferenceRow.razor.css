@@ -1,0 +1,17 @@
+.preference-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 10px 0;
+}
+
+.preference-row-label {
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.preference-row-control {
+    display: inline-flex;
+    align-items: center;
+}

@@ -1,0 +1,16 @@
+@* The spots whose recheck date has passed, worst score first -- the one part
+   of the dashboard that asks the user to do something today. *@
+
+<section class="due-spots-section">
+    <SectionHeader Title="Needs attention">
+        <Trailing>
+            <span class="due-spots-count">@Spots.Count</span>
+        </Trailing>
+    </SectionHeader>
+    <SpotList Spots="Spots" />
+</section>
+
+@code {
+    [Parameter, EditorRequired]
+    public IReadOnlyList<Spot> Spots { get; set; } = Array.Empty<Spot>();
+}

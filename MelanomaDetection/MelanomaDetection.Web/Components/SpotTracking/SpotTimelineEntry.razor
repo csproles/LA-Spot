@@ -1,0 +1,39 @@
+@* One photo in a spot's history. Tapping it opens that check, or picks it for
+   comparison while the timeline is in compare mode. *@
+
+<li class="timeline-entry">
+    <button type="button" class="timeline-item @(Selected ? "is-selected" : "")" @onclick="() => OnClick.InvokeAsync(Check)">
+        <img src="@ImageData.PngUrl(Check.Thumbnail)" alt="" class="timeline-thumb" />
+        <span class="timeline-text">
+            <span class="timeline-date">@Date</span>
+            <span class="timeline-meta">@Meta</span>
+        </span>
+        <RiskScoreBadge Score="Check.RiskScore" />
+        @if (Selected)
+        {
+            <span class="timeline-check" aria-hidden="true">&#10003;</span>
+        }
+    </button>
+</li>
+
+@code {
+    [Parameter, EditorRequired]
+    public SpotCheck Check { get; set; } = null!;
+
+    [Parameter]
+    public bool Selected { get; set; }
+
+    [Parameter]
+    public EventCallback<SpotCheck> OnClick { get; set; }
+
+    private string Date => Check.ProcessedAt?.ToLocalTime().ToString("MMM d, yyyy") ?? "Unknown date";
+
+    private string Meta
+    {
+        get
+        {
+            var size = Check.DiameterMm is null ? "size n/a" : $"≈{Check.DiameterMm:F1} mm";
+            return Check.Symptoms.Count > 0 ? $"{size} · {string.Join(", ", Check.Symptoms)}" : size;
+        }
+    }
+}

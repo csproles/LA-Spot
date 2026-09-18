@@ -1,367 +1,62 @@
 @page "/check"
 @rendermode InteractiveServer
-@using Microsoft.AspNetCore.Components
-@using Microsoft.AspNetCore.Components.Forms
-@using Microsoft.AspNetCore.Components.Web
-@using static Microsoft.AspNetCore.Components.Web.RenderMode
-@using MelanomaDetection.Web.Components
-@using MelanomaDetection.Web.Models
-@using MelanomaDetection.Web.Services
 @inject ImageProcessingService ImageProcessingService
 @inject NavigationManager NavigationManager
 
 <PageTitle>New Skin Check - Skin Check</PageTitle>
 
 <div class="check-page">
-    <div class="check-header">
-        <div>
-            <p class="check-date">@Today.ToString("dddd, MMMM d, yyyy").ToUpperInvariant()</p>
-            <h1 class="check-title">@StepTitle</h1>
-            <p class="check-subtitle">@StepSubtitle</p>
-        </div>
-    </div>
+    <PageHeader Eyebrow="@Today" Title="@StepTitle" Subtitle="@StepSubtitle" Size="lg" />
 
-    <ol class="stepper" aria-label="Progress">
-        @foreach (var (step, label, number) in StepLabels)
-        {
-            <li class="@(step == StepperStep ? "is-current" : step < StepperStep ? "is-done" : "")">
-                <span class="stepper-dot">@(step < StepperStep ? "✓" : number.ToString())</span>
-                <span class="stepper-label">@label</span>
-            </li>
-        }
-    </ol>
+    <CheckStepper CurrentStep="CurrentStep" />
 
-    @if (!string.IsNullOrEmpty(ErrorMessage))
-    {
-        <div class="alert alert-danger" role="alert">@ErrorMessage</div>
-    }
+    <ErrorAlert Message="@ErrorMessage" />
 
     @switch (CurrentStep)
     {
-        case Step.Spot:
-            @if (IsLoadingSpots)
-            {
-                <div class="d-flex align-items-center gap-2 text-muted">
-                    <div class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></div>
-                    <span>Loading your spots…</span>
-                </div>
-            }
-            else
-            {
-                @if (Spots.Count > 0 && !IsCreatingSpot)
-                {
-                    <button type="button" class="capture-tile new-spot-tile" @onclick="() => { IsCreatingSpot = true; SelectedSpot = null; }">
-                        <span class="capture-icon">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
-                                <path d="M12 5v14M5 12h14" />
-                            </svg>
-                        </span>
-                        <span class="capture-text">
-                            <span class="capture-title">Track a new spot</span>
-                            <span class="capture-subtitle">Start a fresh timeline for a spot you haven't photographed before</span>
-                        </span>
-                    </button>
-
-                    <section class="card-panel">
-                        <h2 class="panel-title">Re-check a spot you're tracking</h2>
-                        <div class="spot-list">
-                            @foreach (var spot in Spots)
-                            {
-                                <SpotCard Spot="spot" Selected="SelectedSpot?.Id == spot.Id" OnSelect="ChooseExistingSpot" />
-                            }
-                        </div>
-                    </section>
-                }
-                else
-                {
-                    <section class="card-panel">
-                        <h2 class="panel-title">@(Spots.Count == 0 ? "Where is the spot?" : "Track a new spot")</h2>
-                        <p class="text-muted-small">Pick the region on the body map, then give the spot a name you'll recognise later.</p>
-                        <BodyMap @bind-SelectedRegion="NewSpotRegion" />
-
-                        <label class="field-label" for="spot-label">Name this spot</label>
-                        <input id="spot-label" class="form-control spot-label-input" placeholder='e.g. "dark mole near elbow"' @bind="NewSpotLabel" @bind:event="oninput" maxlength="60" />
-
-                        @if (Spots.Count > 0)
-                        {
-                            <button type="button" class="link-button mt-3" @onclick="() => IsCreatingSpot = false">
-                                ← Choose an existing spot instead
-                            </button>
-                        }
-                    </section>
-                }
-
-                <div class="result-actions">
-                    <button type="button" class="btn btn-primary" disabled="@(!CanContinueFromSpot || IsSaving)" @onclick="ContinueFromSpot">
-                        @if (IsSaving)
-                        {
-                            <span class="btn-spinner" aria-hidden="true"></span>
-                        }
-                        Continue
-                    </button>
-                </div>
-            }
+        case CheckStep.Spot:
+            <SpotSelectionStep Spots="Spots" IsLoading="IsLoadingSpots" IsSaving="IsSaving"
+                               CreateSpot="CreateSpot" OnSpotChosen="StartCapture" />
             break;
 
-        case Step.Capture:
-            <section class="card-panel guidance-panel">
-                <h2 class="panel-title">Get a photo we can read well</h2>
-                <ul class="guidance-list">
-                    <li>
-                        <span class="guidance-icon">☀️</span>
-                        <span><strong>Bright, indirect light.</strong> Daylight near a window is ideal. Avoid the flash — it washes out colour and adds glare.</span>
-                    </li>
-                    <li>
-                        <span class="guidance-icon">📏</span>
-                        <span><strong>10–15 cm away, rear camera.</strong> Close enough to fill the frame, far enough to stay in focus. The front camera can't capture the detail needed.</span>
-                    </li>
-                    <li>
-                        <span class="guidance-icon">🎯</span>
-                        <span><strong>One spot, centred, sharp.</strong> Tap to focus on the spot itself and hold still. Only one lesion in frame.</span>
-                    </li>
-                    <li>
-                        <span class="guidance-icon">🔬</span>
-                        <span><strong>Include some surrounding skin.</strong> We calibrate size from the fine hair around the spot — without it, the diameter and size-change readings come back as "not measured".</span>
-                    </li>
-                    @if (SelectedSpot?.CheckCount > 0)
-                    {
-                        <li>
-                            <span class="guidance-icon">🔁</span>
-                            <span><strong>Match the last photo.</strong> Same distance and angle as before makes the change comparison much more reliable.</span>
-                        </li>
-                    }
-                </ul>
-            </section>
-
-            @if (RetakeHint is not null)
-            {
-                <div class="retake-hint" role="status">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <path d="M3 12a9 9 0 1 0 3-6.7" />
-                        <path d="M3 4v5h5" />
-                    </svg>
-                    <span>@RetakeHint</span>
-                </div>
-            }
-
-            <div class="capture-actions">
-                <div class="capture-tile capture-tile-primary">
-                    <span class="capture-icon">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                            <path d="M4 8a2 2 0 0 1 2-2h1.2a2 2 0 0 0 1.66-.9L9.6 4a2 2 0 0 1 1.66-.9h1.48A2 2 0 0 1 14.4 4l.74 1.1A2 2 0 0 0 16.8 6H18a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z" />
-                            <circle cx="12" cy="12.5" r="3.3" />
-                        </svg>
-                    </span>
-                    <span class="capture-text">
-                        <span class="capture-title">Take a photo</span>
-                        <span class="capture-subtitle">Opens the rear camera</span>
-                    </span>
-                    <InputFile OnChange="HandleFileSelected" accept="image/*" capture="environment" class="capture-input" aria-label="Take a photo" />
-                </div>
-
-                <div class="capture-tile">
-                    <span class="capture-icon">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                            <rect x="3.5" y="4.5" width="17" height="15" rx="2.2" />
-                            <circle cx="8.5" cy="9.5" r="1.6" />
-                            <path d="M20 15.5 15 11l-8.5 8" />
-                        </svg>
-                    </span>
-                    <span class="capture-text">
-                        <span class="capture-title">Choose from gallery</span>
-                        <span class="capture-subtitle">JPEG, PNG or WebP, up to 5 MB</span>
-                    </span>
-                    <InputFile OnChange="HandleFileSelected" accept="image/*" class="capture-input" aria-label="Choose a photo from your gallery" />
-                </div>
-            </div>
-
-            <div class="result-actions">
-                <button type="button" class="btn btn-outline-primary" @onclick="() => CurrentStep = Step.Spot">← Change spot</button>
-            </div>
+        case CheckStep.Capture:
+            <CaptureStep IsRecheck="@(SelectedSpot?.CheckCount > 0)" RetakeHint="@RetakeHint"
+                         OnFileSelected="HandleFileSelected"
+                         OnChangeSpot="() => CurrentStep = CheckStep.Spot" />
             break;
 
-        case Step.Confirm:
-            <div class="card-panel confirm-panel">
-                @if (IsAnalyzing)
-                {
-                    <h2 class="panel-title">Analyzing your photo</h2>
-                    <div class="analyzing-frame">
-                        <img src="@PreviewDataUrl" alt="" class="confirm-preview" />
-                        <div class="analyzing-overlay" aria-hidden="true"></div>
-                    </div>
-                    <p class="text-muted-small analyzing-note">
-                        <span class="btn-spinner btn-spinner-navy" aria-hidden="true"></span>
-                        Cleaning up the image, finding the lesion, and measuring shape, border, colour and size. Usually under 30 seconds.
-                    </p>
-                }
-                else
-                {
-                    <h2 class="panel-title">Use this photo?</h2>
-                    <img src="@PreviewDataUrl" alt="Captured lesion preview" class="confirm-preview" />
-                    <p class="preview-filename">@SelectedFileName <span class="preview-filesize">(@FormattedFileSize)</span></p>
-                    <div class="result-actions">
-                        <button type="button" class="btn btn-primary" @onclick="AnalyzeImage">Use this photo</button>
-                        <button type="button" class="btn btn-outline-primary" @onclick="RetakePhoto">Retake</button>
-                    </div>
-                }
-            </div>
+        case CheckStep.Confirm:
+            <PhotoConfirmStep PreviewDataUrl="@PreviewDataUrl" FileName="@SelectedFileName"
+                              FileSize="SelectedFileSize" IsAnalyzing="IsAnalyzing"
+                              OnConfirm="AnalyzeImage" OnRetake="RetakePhoto" />
             break;
 
-        case Step.Outline:
-            @if (AnalysisResults is not null)
-            {
-                <div class="card-panel">
-                    <h2 class="panel-title">Does the outline match your spot?</h2>
-                    <p class="text-muted-small">
-                        Every score depends on this outline, so it's worth a second. The traced line should hug the
-                        edge of the spot — not cut into it, and not wander off into surrounding skin, hair, or the
-                        edge of the photo.
-                    </p>
-                    @if (HasImage(AnalysisResults.BorderVisual))
-                    {
-                        <img src="@ToDataUrl(AnalysisResults.BorderVisual)" alt="Detected lesion border overlay" class="segmentation-preview" />
-                    }
-                    <div class="result-actions">
-                        <button type="button" class="btn btn-primary" @onclick="() => CurrentStep = Step.Details">Yes, that matches</button>
-                        <button type="button" class="btn btn-outline-primary" @onclick="RejectOutline">No — retake the photo</button>
-                    </div>
-                </div>
-            }
+        case CheckStep.Outline when AnalysisResults is not null:
+            <OutlineConfirmStep BorderVisual="@AnalysisResults.BorderVisual"
+                                OnAccept="() => CurrentStep = CheckStep.Details"
+                                OnReject="RejectOutline" />
             break;
 
-        case Step.Details:
-            <div class="card-panel preview-panel">
-                <img src="@PreviewDataUrl" alt="Selected lesion preview" class="preview-thumb" />
-                <div class="preview-meta">
-                    <p class="preview-filename">@SelectedSpot?.Label</p>
-                    <p class="preview-filesize">@SelectedSpot?.BodyRegion · @SelectedFileName</p>
-                    <button type="button" class="link-button" @onclick="RetakePhoto">Retake / choose another</button>
-                </div>
-            </div>
-
-            <div class="card-panel">
-                <h2 class="panel-title">Anything you've noticed?</h2>
-
-                <p class="field-label">Symptoms</p>
-                <div class="chip-row">
-                    @foreach (var symptom in AvailableSymptoms)
-                    {
-                        <button type="button" class="chip @(SelectedSymptoms.Contains(symptom) ? "chip-selected" : "")" @onclick="() => ToggleSymptom(symptom)">
-                            @symptom
-                        </button>
-                    }
-                </div>
-
-                <p class="field-label">Notes</p>
-                <textarea class="form-control notes-textarea" rows="3" placeholder="Anything else worth mentioning? (optional)" @bind="Notes"></textarea>
-
-                <button type="button" class="btn btn-primary analyze-button" @onclick="() => CurrentStep = Step.Results">
-                    See results
-                </button>
-            </div>
+        case CheckStep.Details:
+            <CheckDetailsStep PreviewDataUrl="@PreviewDataUrl" Spot="SelectedSpot" FileName="@SelectedFileName"
+                              Symptoms="SelectedSymptoms" @bind-Notes="Notes"
+                              OnRetake="RetakePhoto"
+                              OnContinue="() => CurrentStep = CheckStep.Results" />
             break;
 
-        case Step.Results:
-            @if (AnalysisResults is not null)
-            {
-                <div class="card-panel risk-band risk-band-@RiskBand">
-                    <p class="risk-band-label">@RiskBands.Label(RiskBand)</p>
-                    <p class="risk-band-score">@AnalysisResults.RiskScore.ToString("F0") <span>/100</span></p>
-                    <p class="risk-band-recommendation">@RiskBands.Recommendation(RiskBand)</p>
-                </div>
-
-                <ChangePanel Results="AnalysisResults" />
-
-                <div class="card-panel">
-                    <h2 class="panel-title">What we looked at</h2>
-                    @foreach (var factor in Factors)
-                    {
-                        <div class="factor-row">
-                            <div class="factor-row-header">
-                                <span>@factor.Label</span>
-                                <span>@(factor.Score is null ? "N/A" : $"{factor.Score:F1} / 10")</span>
-                            </div>
-                            @if (factor.Score is not null)
-                            {
-                                <div class="factor-bar-track">
-                                    <div class="factor-bar-fill factor-bar-@RiskBands.FactorBand(factor.Score.Value)" style="width:@((factor.Score.Value / 10 * 100).ToString("F0"))%"></div>
-                                </div>
-                            }
-                        </div>
-                    }
-                </div>
-
-                <div class="result-actions">
-                    <button type="button" class="btn btn-primary" disabled="@(IsSaving || IsSaved)" @onclick="SaveToHistory">
-                        @if (IsSaving)
-                        {
-                            <span class="btn-spinner" aria-hidden="true"></span>
-                        }
-                        @(IsSaved ? "Saved ✓" : IsSaving ? "Saving…" : "Save to this spot")
-                    </button>
-                    @if (IsSaved && SelectedSpot is not null)
-                    {
-                        <a href="/spots/@SelectedSpot.Id" class="btn btn-outline-primary">View spot timeline</a>
-                    }
-                    <button type="button" class="btn btn-outline-primary" @onclick="StartNewCheck">Start another check</button>
-                </div>
-
-                @if (ShowBreakdown)
-                {
-                    <div class="card-panel">
-                        <button type="button" class="link-button mb-3" @onclick="() => ShowBreakdown = false">Hide full breakdown ▲</button>
-                        <AnalysisBreakdown Results="AnalysisResults" ProcessingId="@CurrentProcessingId" />
-                    </div>
-                }
-                else
-                {
-                    <button type="button" class="card-panel detail-link" @onclick="() => ShowBreakdown = true">
-                        <svg class="detail-link-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                            <rect x="3.5" y="4.5" width="17" height="15" rx="2.2" />
-                            <circle cx="8.5" cy="9.5" r="1.6" />
-                            <path d="M20 15.5 15 11l-8.5 8" />
-                        </svg>
-                        <span class="detail-link-text">
-                            <span class="detail-link-title">See the full breakdown</span>
-                            <span class="detail-link-subtitle">Every processed image, the ABCD visual evidence, and an optional AI-generated explanation.</span>
-                        </span>
-                        <svg class="detail-link-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                            <path d="M9.5 5.5 16 12l-6.5 6.5" />
-                        </svg>
-                    </button>
-                }
-            }
+        case CheckStep.Results when AnalysisResults is not null:
+            <CheckResultsStep Results="AnalysisResults" ProcessingId="@CurrentProcessingId"
+                              IsSaving="IsSaving" IsSaved="IsSaved"
+                              OnSave="SaveToHistory" OnStartAnother="StartNewCheck" />
             break;
     }
 
-    <div class="disclaimer-banner" role="note">
-        <svg class="disclaimer-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <circle cx="12" cy="12" r="9.25" />
-            <path d="M12 8v4.5" />
-            <circle cx="12" cy="15.8" r="0.6" fill="currentColor" stroke="none" />
-        </svg>
-        <p>This tool gives a preliminary read, not a diagnosis. See a dermatologist about any lesion that concerns you.</p>
-    </div>
+    <MedicalDisclaimer />
 </div>
 
 @code {
-    private enum Step { Spot, Capture, Confirm, Outline, Details, Results }
-
     [SupplyParameterFromQuery(Name = "spot")]
     public string? SpotQuery { get; set; }
-
-    private static readonly (Step, string, int)[] StepLabels =
-    {
-        (Step.Spot, "Spot", 1),
-        (Step.Capture, "Photo", 2),
-        (Step.Details, "Details", 3),
-        (Step.Results, "Results", 4),
-    };
-
-    private static readonly string[] AvailableSymptoms =
-    {
-        "Itchy", "Growing", "Bleeding", "Painful", "Changed color", "New",
-    };
 
     private const long MaxFileSizeBytes = 5 * 1024 * 1024;
 
@@ -370,68 +65,53 @@
         "image/jpeg", "image/jpg", "image/png", "image/bmp", "image/webp"
     };
 
-    private readonly DateTime Today = DateTime.Now;
+    private static string Today => DateTime.Now.ToString("dddd, MMMM d, yyyy").ToUpperInvariant();
 
-    private Step CurrentStep = Step.Spot;
+    private CheckStep CurrentStep = CheckStep.Spot;
     private string? ErrorMessage;
 
     private List<Spot> Spots = new();
     private bool IsLoadingSpots = true;
     private Spot? SelectedSpot;
-    private bool IsCreatingSpot;
-    private string? NewSpotRegion;
-    private string NewSpotLabel = string.Empty;
 
     private string? PreviewDataUrl;
     private string? SelectedFileName;
     private long SelectedFileSize;
     private byte[]? SelectedFileBytes;
 
-    private readonly HashSet<string> SelectedSymptoms = new();
+    private HashSet<string> SelectedSymptoms = new();
     private string Notes = string.Empty;
 
     private bool IsAnalyzing;
     private bool IsSaving;
     private bool IsSaved;
-    private string? CurrentProcessingId;
+    private string CurrentProcessingId = string.Empty;
     private ImageProcessingResults? AnalysisResults;
     private string? RetakeHint;
-    private bool ShowBreakdown;
-
-    // Capture, photo confirmation, and outline confirmation are all one
-    // "Photo" step on the stepper: the user is still working on getting a
-    // usable photo until the outline is accepted.
-    private Step StepperStep => CurrentStep is Step.Confirm or Step.Outline ? Step.Capture : CurrentStep;
 
     private string StepTitle => CurrentStep switch
     {
-        Step.Spot => "Which spot?",
-        Step.Capture => SelectedSpot?.CheckCount > 0 ? $"Re-check \"{SelectedSpot.Label}\"" : $"Photograph \"{SelectedSpot?.Label}\"",
-        Step.Confirm => IsAnalyzing ? "One moment" : "Check the photo",
-        Step.Outline => "Check the outline",
-        Step.Details => "Add details",
+        CheckStep.Spot => "Which spot?",
+        CheckStep.Capture => SelectedSpot?.CheckCount > 0
+            ? $"Re-check \"{SelectedSpot.Label}\""
+            : $"Photograph \"{SelectedSpot?.Label}\"",
+        CheckStep.Confirm => IsAnalyzing ? "One moment" : "Check the photo",
+        CheckStep.Outline => "Check the outline",
+        CheckStep.Details => "Add details",
         _ => "Your results",
     };
 
     private string StepSubtitle => CurrentStep switch
     {
-        Step.Spot => "Every photo is filed under a spot so we can show you how it changes over time.",
-        Step.Capture => "A good photo is most of the accuracy. Two minutes here pays off.",
-        Step.Confirm => IsAnalyzing ? "Measuring the spot in your photo." : "Make sure the spot is sharp and centred before we analyze it.",
-        Step.Outline => "We've found what we think is the lesion. You know the spot better than we do.",
-        Step.Details => "Optional, but symptoms and notes are saved with the check.",
+        CheckStep.Spot => "Every photo is filed under a spot so we can show you how it changes over time.",
+        CheckStep.Capture => "A good photo is most of the accuracy. Two minutes here pays off.",
+        CheckStep.Confirm => IsAnalyzing
+            ? "Measuring the spot in your photo."
+            : "Make sure the spot is sharp and centred before we analyze it.",
+        CheckStep.Outline => "We've found what we think is the lesion. You know the spot better than we do.",
+        CheckStep.Details => "Optional, but symptoms and notes are saved with the check.",
         _ => "A preliminary read in under a minute.",
     };
-
-    private bool CanContinueFromSpot => IsCreatingSpot || Spots.Count == 0
-        ? NewSpotRegion is not null && !string.IsNullOrWhiteSpace(NewSpotLabel)
-        : SelectedSpot is not null;
-
-    private string FormattedFileSize => SelectedFileSize < 1024 * 1024
-        ? $"{SelectedFileSize / 1024.0:F1} KB"
-        : $"{SelectedFileSize / (1024.0 * 1024.0):F2} MB";
-
-    private string RiskBand => RiskBands.Band(AnalysisResults?.RiskScore);
 
     protected override async Task OnInitializedAsync()
     {
@@ -448,56 +128,42 @@
             IsLoadingSpots = false;
         }
 
-        if (Spots.Count == 0)
-        {
-            IsCreatingSpot = true;
-        }
-
         if (!string.IsNullOrWhiteSpace(SpotQuery))
         {
-            SelectedSpot = Spots.FirstOrDefault(s => s.Id == SpotQuery);
+            SelectedSpot = Spots.FirstOrDefault(spot => spot.Id == SpotQuery);
             if (SelectedSpot is not null)
             {
-                CurrentStep = Step.Capture;
+                CurrentStep = CheckStep.Capture;
             }
         }
     }
 
-    private void ChooseExistingSpot(Spot spot) => SelectedSpot = spot;
-
-    private async Task ContinueFromSpot()
+    private async Task<Spot?> CreateSpot(string label, string region)
     {
         ErrorMessage = null;
-
-        if (IsCreatingSpot || Spots.Count == 0)
+        IsSaving = true;
+        try
         {
-            IsSaving = true;
-            try
-            {
-                SelectedSpot = await ImageProcessingService.CreateSpotAsync(NewSpotLabel.Trim(), NewSpotRegion!);
-                Spots.Insert(0, SelectedSpot);
-                IsCreatingSpot = false;
-            }
-            catch (ImageProcessingApiException ex)
-            {
-                ErrorMessage = ex.Message;
-                return;
-            }
-            finally
-            {
-                IsSaving = false;
-            }
+            var created = await ImageProcessingService.CreateSpotAsync(label, region);
+            Spots.Insert(0, created);
+            return created;
         }
-
-        CurrentStep = Step.Capture;
+        catch (ImageProcessingApiException ex)
+        {
+            ErrorMessage = ex.Message;
+            return null;
+        }
+        finally
+        {
+            IsSaving = false;
+        }
     }
 
-    private void ToggleSymptom(string symptom)
+    private void StartCapture(Spot spot)
     {
-        if (!SelectedSymptoms.Remove(symptom))
-        {
-            SelectedSymptoms.Add(symptom);
-        }
+        SelectedSpot = spot;
+        ErrorMessage = null;
+        CurrentStep = CheckStep.Capture;
     }
 
     private void RetakePhoto()
@@ -506,8 +172,8 @@
         SelectedFileName = null;
         SelectedFileBytes = null;
         AnalysisResults = null;
-        CurrentProcessingId = null;
-        CurrentStep = Step.Capture;
+        CurrentProcessingId = string.Empty;
+        CurrentStep = CheckStep.Capture;
     }
 
     private void RejectOutline()
@@ -553,7 +219,7 @@
             PreviewDataUrl = $"data:{file.ContentType};base64,{Convert.ToBase64String(SelectedFileBytes)}";
             SelectedFileName = file.Name;
             SelectedFileSize = file.Size;
-            CurrentStep = Step.Confirm;
+            CurrentStep = CheckStep.Confirm;
         }
         catch (IOException)
         {
@@ -578,7 +244,7 @@
                 SelectedFileBytes, SelectedFileName, SelectedSpot.Id, SelectedSpot.BodyRegion);
             CurrentProcessingId = response.ProcessingId;
             AnalysisResults = await ImageProcessingService.GetResultsAsync(response.ProcessingId);
-            CurrentStep = Step.Outline;
+            CurrentStep = CheckStep.Outline;
         }
         catch (ImageProcessingApiException ex)
         {
@@ -592,7 +258,7 @@
 
     private async Task SaveToHistory()
     {
-        if (CurrentProcessingId is null)
+        if (string.IsNullOrEmpty(CurrentProcessingId))
         {
             return;
         }
@@ -623,31 +289,13 @@
         SelectedFileName = null;
         SelectedFileBytes = null;
         SelectedSpot = null;
-        IsCreatingSpot = Spots.Count == 0;
-        NewSpotRegion = null;
-        NewSpotLabel = string.Empty;
-        SelectedSymptoms.Clear();
+        SelectedSymptoms = new HashSet<string>();
         Notes = string.Empty;
         AnalysisResults = null;
-        CurrentProcessingId = null;
+        CurrentProcessingId = string.Empty;
         IsSaved = false;
         RetakeHint = null;
-        ShowBreakdown = false;
-        CurrentStep = Step.Spot;
+        CurrentStep = CheckStep.Spot;
         NavigationManager.NavigateTo("/check");
     }
-
-    private IEnumerable<(string Label, double? Score)> Factors => AnalysisResults is null
-        ? Enumerable.Empty<(string, double?)>()
-        : new (string, double?)[]
-        {
-            ("Shape symmetry", AnalysisResults.AbcdeScores.Asymmetry.Score),
-            ("Border regularity", AnalysisResults.AbcdeScores.Border.Score),
-            ("Color variation", AnalysisResults.AbcdeScores.Color.Score),
-            ("Diameter", AnalysisResults.AbcdeScores.Diameter.Score),
-        };
-
-    private static bool HasImage(string? base64) => !string.IsNullOrEmpty(base64);
-
-    private static string ToDataUrl(string base64Png) => $"data:image/png;base64,{base64Png}";
 }

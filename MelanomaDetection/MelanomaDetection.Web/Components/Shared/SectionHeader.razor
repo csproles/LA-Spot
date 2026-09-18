@@ -1,0 +1,18 @@
+@* A panel title with something on the right: a count, a "see all" link, or a
+   toggle button. *@
+
+<div class="section-header">
+    <h2 class="panel-title section-header-title">@Title</h2>
+    @if (Trailing is not null)
+    {
+        <div class="section-header-trailing">@Trailing</div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public string Title { get; set; } = string.Empty;
+
+    [Parameter]
+    public RenderFragment? Trailing { get; set; }
+}

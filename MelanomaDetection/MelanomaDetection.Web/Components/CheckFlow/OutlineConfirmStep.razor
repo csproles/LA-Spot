@@ -1,0 +1,31 @@
+@* Step 4: every downstream score is computed from this outline, so a bad
+   segmentation is worth catching here rather than reporting a confident
+   number about the wrong pixels. *@
+
+<div class="card-panel outline-step">
+    <h2 class="panel-title">Does the outline match your spot?</h2>
+    <p class="text-muted-small">
+        Every score depends on this outline, so it's worth a second. The traced line should hug the
+        edge of the spot — not cut into it, and not wander off into surrounding skin, hair, or the
+        edge of the photo.
+    </p>
+    @if (ImageData.HasImage(BorderVisual))
+    {
+        <img src="@ImageData.PngUrl(BorderVisual!)" alt="Detected lesion border overlay" class="segmentation-preview" />
+    }
+    <div class="result-actions">
+        <button type="button" class="btn btn-primary" @onclick="OnAccept">Yes, that matches</button>
+        <button type="button" class="btn btn-outline-primary" @onclick="OnReject">No — retake the photo</button>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public string? BorderVisual { get; set; }
+
+    [Parameter, EditorRequired]
+    public EventCallback OnAccept { get; set; }
+
+    [Parameter, EditorRequired]
+    public EventCallback OnReject { get; set; }
+}

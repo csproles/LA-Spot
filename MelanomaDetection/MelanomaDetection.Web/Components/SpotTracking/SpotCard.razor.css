@@ -4,8 +4,8 @@
     gap: 12px;
     width: 100%;
     text-align: left;
-    background: var(--color-white);
-    border: 1.5px solid var(--color-sand);
+    background: var(--color-surface);
+    border: 1.5px solid var(--color-border);
     border-radius: var(--radius-card);
     padding: 14px 16px;
     font-family: var(--font-body);
@@ -15,14 +15,14 @@
 }
 
 .spot-card:hover {
-    border-color: var(--color-navy);
+    border-color: var(--color-accent);
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(120, 76, 40, 0.12);
+    box-shadow: var(--shadow-raised);
 }
 
 .spot-card-selected {
-    border-color: var(--color-navy);
-    box-shadow: 0 0 0 3px rgba(27, 62, 111, 0.14);
+    border-color: var(--color-accent);
+    box-shadow: var(--ring-accent);
 }
 
 .spot-card-main {
@@ -44,7 +44,7 @@
     font-family: var(--font-heading);
     font-weight: 700;
     font-size: 15px;
-    color: var(--color-navy);
+    color: var(--color-accent-ink);
 }
 
 .spot-card-meta {
@@ -53,7 +53,7 @@
     color: var(--color-text-muted);
 }
 
-.spot-card-main .due-badge {
+.spot-card-status {
     align-self: flex-start;
     margin-top: 2px;
 }
@@ -66,7 +66,6 @@
 }
 
 .spot-card-chevron {
-    width: 18px;
-    height: 18px;
-    color: var(--color-clay);
+    display: inline-flex;
+    color: var(--color-border-strong);
 }

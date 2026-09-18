@@ -1,0 +1,59 @@
+@* An AI-written summary of the findings, fetched only on request: the first
+   call for a given ProcessingId costs a real OpenAI call on the Flask side
+   (later ones are served from its cache), so nothing here runs automatically. *@
+@inject ImageProcessingService ImageProcessingService
+
+<div class="card-panel">
+    <h2 class="panel-title">Plain-language explanation</h2>
+
+    @if (IsGenerating)
+    {
+        <LoadingRegion Label="Writing a plain-language explanation of these findings">
+            <SkeletonLines Lines="5" LineHeight="13px" LastLineWidth="44%" />
+        </LoadingRegion>
+    }
+    else if (Explanation is not null)
+    {
+        <p class="explanation-text">@Explanation</p>
+    }
+    else
+    {
+        <ErrorAlert Message="@GenerateError" />
+        <p class="text-muted-small">
+            Get an AI-generated, plain-language summary of these findings. This calls
+            an external AI service and is not itself a diagnosis.
+        </p>
+        <button type="button" class="btn btn-outline-primary" @onclick="Generate">
+            Get AI explanation
+        </button>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public string ProcessingId { get; set; } = string.Empty;
+
+    private string? Explanation;
+    private string? GenerateError;
+    private bool IsGenerating;
+
+    private async Task Generate()
+    {
+        IsGenerating = true;
+        GenerateError = null;
+        StateHasChanged();
+
+        try
+        {
+            Explanation = await ImageProcessingService.ExplainAsync(ProcessingId);
+        }
+        catch (ImageProcessingApiException ex)
+        {
+            GenerateError = ex.Message;
+        }
+        finally
+        {
+            IsGenerating = false;
+        }
+    }
+}

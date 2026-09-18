@@ -1,0 +1,19 @@
+.provider-card {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-control);
+    padding: 10px 12px;
+}
+
+.provider-name {
+    font-weight: 700;
+    font-size: 14px;
+    margin: 0 0 4px;
+    color: var(--color-accent-ink);
+}
+
+.provider-address,
+.provider-phone {
+    font-size: 13px;
+    color: var(--color-text-muted);
+    margin: 0 0 2px;
+}

@@ -1,0 +1,41 @@
+@* Where this spot's risk score has gone across every check, plus the recheck
+   cadence it earns at that level. The trend line needs two points, so a spot
+   with one photo gets told what it's waiting for. *@
+
+<section class="card-panel">
+    <h2 class="panel-title">Risk over time</h2>
+
+    @if (Checks.Count >= 2)
+    {
+        <RiskSparkline Scores="Scores" Width="320" Height="72" />
+        <div class="trend-summary">
+            <span class="trend-summary-from">@Checks[0].RiskScore.ToString("F0")</span>
+            <span class="trend-summary-arrow">
+                <TrendArrow Trend="@(Spot.Trend ?? "flat")" Title="Risk trend across all checks" />
+            </span>
+            <span class="trend-summary-to">@Checks[^1].RiskScore.ToString("F0")</span>
+            <span class="trend-summary-delta trend-summary-delta-@DeltaTone">
+                @(Delta >= 0 ? "+" : "")@Delta.ToString("F0") over @Checks.Count checks
+            </span>
+        </div>
+    }
+    else
+    {
+        <p class="text-muted-small">One photo so far. The trend line starts with your second check.</p>
+    }
+
+    <p class="cadence-note">@Recheck.CadenceSentence(Spot)</p>
+</section>
+
+@code {
+    [Parameter, EditorRequired]
+    public SpotDetail Spot { get; set; } = null!;
+
+    private List<SpotCheck> Checks => Spot.Checks;
+
+    private List<double> Scores => Checks.Select(check => check.RiskScore).ToList();
+
+    private double Delta => Checks[^1].RiskScore - Checks[0].RiskScore;
+
+    private string DeltaTone => Delta > 0 ? "worse" : Delta < 0 ? "better" : "flat";
+}

@@ -1,0 +1,91 @@
+@* Every photo of a spot, newest first, with an opt-in mode for putting any two
+   of them side by side. Compare mode is local to this panel -- the page above
+   doesn't need to know about it. *@
+
+<section class="card-panel">
+    <SectionHeader Title="Timeline">
+        <Trailing>
+            @if (Checks.Count >= 2)
+            {
+                <button type="button" class="btn @(IsCompareMode ? "btn-primary" : "btn-outline-primary") btn-sm"
+                        @onclick="ToggleCompareMode">
+                    @(IsCompareMode ? "Done comparing" : "Compare two")
+                </button>
+            }
+        </Trailing>
+    </SectionHeader>
+
+    @if (IsCompareMode)
+    {
+        <p class="text-muted-small">Pick any two photos to view them side by side.</p>
+    }
+
+    <ol class="timeline">
+        @foreach (var check in Checks.Reverse())
+        {
+            <SpotTimelineEntry Check="check"
+                               Selected="@(IsCompareMode && SelectedIds.Contains(check.ProcessingId))"
+                               OnClick="HandleEntryClick" />
+        }
+    </ol>
+
+    @if (IsCompareMode && ComparedChecks.Count == 2)
+    {
+        <div class="compare-grid">
+            @foreach (var check in ComparedChecks)
+            {
+                <PhotoFigure Base64="@check.Thumbnail" Shape="wide"
+                             Alt="@($"Photo from {DateOf(check)}")">
+                    <Caption>
+                        @DateOf(check) ·
+                        <RiskScoreBadge Score="check.RiskScore" />
+                    </Caption>
+                </PhotoFigure>
+            }
+        </div>
+    }
+</section>
+
+@code {
+    [Parameter, EditorRequired]
+    public IReadOnlyList<SpotCheck> Checks { get; set; } = Array.Empty<SpotCheck>();
+
+    /// <summary>Raised when a check is tapped outside compare mode.</summary>
+    [Parameter]
+    public EventCallback<SpotCheck> OnOpenCheck { get; set; }
+
+    private bool IsCompareMode;
+    private readonly List<string> SelectedIds = new();
+
+    private List<SpotCheck> ComparedChecks => Checks
+        .Where(check => SelectedIds.Contains(check.ProcessingId))
+        .OrderBy(check => check.ProcessedAt)
+        .ToList();
+
+    private void ToggleCompareMode()
+    {
+        IsCompareMode = !IsCompareMode;
+        SelectedIds.Clear();
+    }
+
+    private async Task HandleEntryClick(SpotCheck check)
+    {
+        if (!IsCompareMode)
+        {
+            await OnOpenCheck.InvokeAsync(check);
+            return;
+        }
+
+        if (!SelectedIds.Remove(check.ProcessingId))
+        {
+            if (SelectedIds.Count >= 2)
+            {
+                SelectedIds.RemoveAt(0);
+            }
+            SelectedIds.Add(check.ProcessingId);
+        }
+    }
+
+    private static string DateOf(SpotCheck check) =>
+        check.ProcessedAt?.ToLocalTime().ToString("MMM d, yyyy") ?? "Unknown date";
+}

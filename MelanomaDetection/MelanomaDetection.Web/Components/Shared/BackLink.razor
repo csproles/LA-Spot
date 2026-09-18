@@ -1,0 +1,14 @@
+@* Up-one-level link at the top of a detail page. *@
+
+<a href="@Href" class="back-link">
+    <AppIcon Name="chevron-left" Size="sm" />
+    @Text
+</a>
+
+@code {
+    [Parameter, EditorRequired]
+    public string Href { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string Text { get; set; } = string.Empty;
+}

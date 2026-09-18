@@ -1,0 +1,42 @@
+@* Pill-shaped exclusive choice: sort order, units, theme. Bindable via
+   @bind-Value. *@
+
+<div class="segmented" role="group" aria-label="@AriaLabel">
+    @foreach (var option in Options)
+    {
+        var isSelected = option.Value == Value;
+        <button type="button"
+                class="segmented-option @(isSelected ? "is-selected" : "")"
+                aria-pressed="@(isSelected ? "true" : "false")"
+                @onclick="() => Choose(option.Value)">
+            @option.Label
+        </button>
+    }
+</div>
+
+@code {
+    public record Option(string Value, string Label);
+
+    [Parameter, EditorRequired]
+    public IReadOnlyList<Option> Options { get; set; } = Array.Empty<Option>();
+
+    [Parameter, EditorRequired]
+    public string Value { get; set; } = string.Empty;
+
+    [Parameter]
+    public EventCallback<string> ValueChanged { get; set; }
+
+    [Parameter, EditorRequired]
+    public string AriaLabel { get; set; } = string.Empty;
+
+    private async Task Choose(string value)
+    {
+        if (value == Value)
+        {
+            return;
+        }
+
+        Value = value;
+        await ValueChanged.InvokeAsync(value);
+    }
+}

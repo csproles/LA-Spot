@@ -1,0 +1,47 @@
+@* Stands in for the whole spot page: heading, the two analysis panels, and a
+   few timeline rows. *@
+
+<div class="spot-detail-skeleton">
+    <div class="spot-detail-skeleton-header">
+        <div class="spot-detail-skeleton-heading">
+            <SkeletonBlock Width="220px" Height="26px" />
+            <SkeletonBlock Width="180px" Height="13px" />
+            <div class="spot-detail-skeleton-badges">
+                <SkeletonBlock Width="130px" Height="18px" Shape="pill" />
+                <SkeletonBlock Width="96px" Height="18px" Shape="pill" />
+            </div>
+        </div>
+        <SkeletonBlock Width="168px" Height="38px" Shape="pill" />
+    </div>
+
+    <div class="spot-detail-skeleton-grid">
+        <div class="card-panel spot-detail-skeleton-panel">
+            <SkeletonBlock Width="120px" Height="16px" />
+            <SkeletonBlock Width="100%" Height="72px" Shape="card" />
+            <SkeletonLines Lines="2" />
+        </div>
+        <div class="card-panel spot-detail-skeleton-panel">
+            <SkeletonBlock Width="130px" Height="16px" />
+            <div class="spot-detail-skeleton-photos">
+                <SkeletonBlock Width="100%" Height="128px" Shape="card" Tone="media" />
+                <SkeletonBlock Width="100%" Height="128px" Shape="card" Tone="media" />
+            </div>
+            <SkeletonLines Lines="2" />
+        </div>
+    </div>
+
+    <div class="card-panel spot-detail-skeleton-panel">
+        <SkeletonBlock Width="96px" Height="16px" />
+        @for (var row = 0; row < 3; row++)
+        {
+            <div class="spot-detail-skeleton-row">
+                <SkeletonBlock Width="52px" Height="52px" Shape="thumb" Tone="media" />
+                <div class="spot-detail-skeleton-row-text">
+                    <SkeletonBlock Width="44%" Height="12px" />
+                    <SkeletonBlock Width="30%" Height="10px" />
+                </div>
+                <SkeletonBlock Width="38px" Height="18px" Shape="pill" />
+            </div>
+        }
+    </div>
+</div>

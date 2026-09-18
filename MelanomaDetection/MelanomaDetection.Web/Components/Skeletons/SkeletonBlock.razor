@@ -1,0 +1,27 @@
+@* One placeholder shape. Sized and shaped by the caller so a skeleton can
+   trace the real element it stands in for. Its classes are global rather than
+   scoped, because callers set the geometry and Blazor's CSS isolation would
+   otherwise stop a parent's class from reaching this element. *@
+
+<div class="skeleton-block skeleton-block-@Shape @ToneClass" style="@SizeStyle"></div>
+
+@code {
+    /// <summary>Any CSS length -- "100%", "44px", "8ch".</summary>
+    [Parameter]
+    public string Width { get; set; } = "100%";
+
+    [Parameter]
+    public string Height { get; set; } = "14px";
+
+    /// <summary>Corner treatment: "default", "pill", "circle", "thumb" or "card".</summary>
+    [Parameter]
+    public string Shape { get; set; } = "default";
+
+    /// <summary>"media" for a stand-in photo, which sits a shade darker than text.</summary>
+    [Parameter]
+    public string Tone { get; set; } = "default";
+
+    private string ToneClass => Tone == "media" ? "skeleton-block-media" : string.Empty;
+
+    private string SizeStyle => $"width:{Width};height:{Height};";
+}

@@ -46,7 +46,7 @@ function renderMap(container) {
 
 let mapReady;
 
-// Exposed for Blazor interop (see Map.razor). init() is called explicitly from
+// Exposed for Blazor interop (see MapCanvas.razor). init() is called explicitly from
 // OnAfterRenderAsync rather than running at script-parse time — this component
 // prerenders, and grabbing the container element too early binds the map to the
 // pre-interactive DOM node, which Blazor's circuit attach then discards (the map

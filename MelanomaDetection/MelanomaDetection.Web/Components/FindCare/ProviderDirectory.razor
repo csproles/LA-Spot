@@ -1,0 +1,60 @@
+@* Providers near the chosen parish, pulled live from the NPI Registry. The
+   lookup is a network round trip on every parish change, so it shows
+   placeholder cards rather than swapping the panel for a line of text. *@
+
+<div class="provider-panel">
+    @if (IsLoading)
+    {
+        <LoadingRegion Label="@($"Looking up dermatology providers near {RegionLabel}")">
+            <div class="provider-loading">
+                <SkeletonBlock Width="58%" Height="16px" />
+                <ul class="provider-list">
+                    @for (var placeholder = 0; placeholder < SkeletonCount; placeholder++)
+                    {
+                        <ProviderCardSkeleton />
+                    }
+                </ul>
+            </div>
+        </LoadingRegion>
+    }
+    else if (!string.IsNullOrEmpty(LoadError))
+    {
+        <p class="provider-status">@LoadError</p>
+    }
+    else if (Providers.Count == 0)
+    {
+        <p class="provider-status">
+            Select your parish to see nearby dermatology providers, pulled live from the NPI Registry.
+        </p>
+    }
+    else
+    {
+        <p class="provider-panel-title">Dermatology providers near @RegionLabel</p>
+        <ul class="provider-list">
+            @foreach (var provider in Providers)
+            {
+                <ProviderCard Provider="provider" />
+            }
+        </ul>
+        <p class="provider-source">
+            Source: NPI Registry (CMS). Verify insurance and availability before visiting.
+        </p>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public IReadOnlyList<DermatologyProvider> Providers { get; set; } = Array.Empty<DermatologyProvider>();
+
+    [Parameter]
+    public bool IsLoading { get; set; }
+
+    [Parameter]
+    public string? LoadError { get; set; }
+
+    [Parameter]
+    public string? RegionLabel { get; set; }
+
+    [Parameter]
+    public int SkeletonCount { get; set; } = 4;
+}

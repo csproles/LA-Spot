@@ -1,0 +1,44 @@
+@* Traces the four panels of the risk-profile form: a grid of skin-type cards,
+   a text field, a row of exposure cards, and three toggle rows. *@
+
+<div class="risk-profile-skeleton">
+    <div class="card-panel risk-profile-skeleton-panel">
+        <SkeletonBlock Width="58%" Height="17px" />
+        <SkeletonBlock Width="72%" Height="11px" />
+        <div class="risk-profile-skeleton-choices">
+            @for (var card = 0; card < 6; card++)
+            {
+                <SkeletonBlock Width="100%" Height="58px" Shape="card" />
+            }
+        </div>
+    </div>
+
+    <div class="card-panel risk-profile-skeleton-panel">
+        <SkeletonBlock Width="36%" Height="17px" />
+        <SkeletonBlock Width="360px" Height="38px" />
+    </div>
+
+    <div class="card-panel risk-profile-skeleton-panel">
+        <SkeletonBlock Width="44%" Height="17px" />
+        <div class="risk-profile-skeleton-exposure">
+            @for (var card = 0; card < 3; card++)
+            {
+                <SkeletonBlock Width="100%" Height="64px" Shape="card" />
+            }
+        </div>
+    </div>
+
+    <div class="card-panel risk-profile-skeleton-panel">
+        <SkeletonBlock Width="30%" Height="17px" />
+        @for (var row = 0; row < 3; row++)
+        {
+            <div class="risk-profile-skeleton-toggle">
+                <div class="risk-profile-skeleton-toggle-text">
+                    <SkeletonBlock Width="58%" Height="13px" />
+                    <SkeletonBlock Width="76%" Height="10px" />
+                </div>
+                <SkeletonBlock Width="42px" Height="24px" Shape="pill" />
+            </div>
+        }
+    </div>
+</div>

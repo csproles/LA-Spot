@@ -1,5 +1,5 @@
 .app-nav {
-    background: var(--color-navy);
+    background: var(--color-nav-bg);
     position: sticky;
     top: 0;
     z-index: 20;
@@ -29,7 +29,7 @@
     gap: 1px;
     padding: 6px 4px;
     border-radius: var(--radius-control);
-    color: var(--color-cream) !important;
+    color: var(--color-nav-text) !important;
     text-decoration: none !important;
     font-family: var(--font-body);
     font-size: 11px;
@@ -39,8 +39,8 @@
 }
 
 ::deep .app-nav-link:hover {
-    color: #ffffff !important;
-    background-color: rgba(255, 255, 255, 0.1);
+    color: var(--color-nav-text) !important;
+    background-color: var(--color-nav-hover-bg);
 }
 
 ::deep .app-nav-link:active {
@@ -48,14 +48,16 @@
 }
 
 ::deep .app-nav-link.active {
-    background-color: var(--color-cream);
-    color: var(--color-navy) !important;
+    background-color: var(--color-nav-active-bg);
+    color: var(--color-nav-active-text) !important;
     font-weight: 700;
 }
 
+/* The icon is sized through font-size so <AppIcon Size="inherit"> picks it up
+   across the component boundary, which a width/height rule could not do. */
 .app-nav-icon {
-    width: 18px;
-    height: 18px;
+    display: inline-flex;
+    font-size: 18px;
     transition: transform 0.2s ease;
 }
 
@@ -69,18 +71,17 @@
     width: 38px;
     height: 38px;
     border-radius: 50%;
-    background: var(--color-cream);
-    color: var(--color-navy);
+    background: var(--color-nav-active-bg);
+    color: var(--color-nav-active-text);
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+    box-shadow: 0 2px 8px var(--shadow-tint-strong);
     transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .app-nav-primary-mark .app-nav-icon {
-    width: 22px;
-    height: 22px;
+    font-size: 22px;
 }
 
 ::deep .app-nav-link-primary:hover {
@@ -89,17 +90,17 @@
 
 ::deep .app-nav-link-primary:hover .app-nav-primary-mark {
     transform: translateY(-1px) scale(1.06);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 4px 12px var(--shadow-tint-strong);
 }
 
 ::deep .app-nav-link-primary.active {
     background-color: transparent;
-    color: #fff !important;
+    color: var(--color-nav-text) !important;
 }
 
 ::deep .app-nav-link-primary.active .app-nav-primary-mark {
-    background: var(--color-goldenrod);
-    color: #fff;
+    background: var(--color-warn);
+    color: var(--color-on-warn);
 }
 
 @media (min-width: 860px) {
@@ -128,19 +129,26 @@
             text-decoration: none;
         }
 
+    /* The mascot is transparent line art, so it needs a plate behind it that
+       contrasts with the ink: black lines get the pale tile, white lines get
+       the dark one. Drawn as a background rather than two <img> tags so the
+       browser only downloads the variant actually in use. */
     .app-nav-brand-mark {
         width: 44px;
         height: 44px;
         border-radius: 12px;
-        background: rgba(255, 255, 255, 0.14);
-        object-fit: cover;
         flex-shrink: 0;
+        background-color: var(--color-brand-mark-plate);
+        background-image: var(--brand-mascot);
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
     }
 
     .app-nav-brand-text {
         font-family: var(--font-heading);
         font-weight: 700;
-        color: #fff;
+        color: var(--color-nav-text);
         font-size: 13.5px;
     }
 
@@ -161,8 +169,7 @@
     }
 
     .app-nav-icon {
-        width: 17px;
-        height: 17px;
+        font-size: 17px;
     }
 
     /* In the sidebar the primary action sits inline as a compact filled disc. */
@@ -174,8 +181,7 @@
     }
 
     .app-nav-primary-mark .app-nav-icon {
-        width: 17px;
-        height: 17px;
+        font-size: 17px;
     }
 
     ::deep .app-nav-link-primary:hover .app-nav-primary-mark {

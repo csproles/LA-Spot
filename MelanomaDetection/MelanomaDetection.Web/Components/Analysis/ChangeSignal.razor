@@ -1,0 +1,19 @@
+@* One measured difference between this photo and the last, colour-coded by
+   how far past its concern threshold it is. *@
+
+<li class="change-signal change-signal-@Tone">
+    <span class="signal-name">@Name</span>
+    <span class="signal-value">@Value</span>
+</li>
+
+@code {
+    [Parameter, EditorRequired]
+    public string Name { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string Value { get; set; } = string.Empty;
+
+    /// <summary>"stable", "watch", "concern", "improved" or "unavailable".</summary>
+    [Parameter]
+    public string Tone { get; set; } = "stable";
+}

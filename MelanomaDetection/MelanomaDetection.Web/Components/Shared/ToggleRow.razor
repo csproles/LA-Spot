@@ -1,0 +1,32 @@
+@* A settings line: what the switch does, why you'd want it, and the switch. *@
+
+<div class="toggle-row">
+    <div class="toggle-row-text">
+        <p class="toggle-row-label">@Label</p>
+        <p class="toggle-row-description">@Description</p>
+    </div>
+    <label class="switch">
+        <input type="checkbox" aria-label="@Label" checked="@Value" @onchange="OnChanged" />
+        <span class="switch-track"></span>
+    </label>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public string Label { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string Description { get; set; } = string.Empty;
+
+    [Parameter]
+    public bool Value { get; set; }
+
+    [Parameter]
+    public EventCallback<bool> ValueChanged { get; set; }
+
+    private async Task OnChanged(ChangeEventArgs e)
+    {
+        Value = (bool)e.Value!;
+        await ValueChanged.InvokeAsync(Value);
+    }
+}

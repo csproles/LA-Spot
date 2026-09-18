@@ -1,0 +1,44 @@
+.risk-band {
+    border: 1.5px solid transparent;
+}
+
+.risk-band-low {
+    background: var(--color-well);
+    border-color: var(--color-border);
+    color: var(--color-accent-ink);
+}
+
+.risk-band-moderate {
+    background: var(--color-warn-soft);
+    border-color: var(--color-warn);
+    color: var(--color-warn-ink);
+}
+
+.risk-band-high {
+    background: var(--color-alert-soft);
+    border-color: var(--color-alert);
+    color: var(--color-alert-ink);
+}
+
+.risk-band-label {
+    font-weight: 700;
+    font-size: 14px;
+    margin: 0 0 4px;
+}
+
+.risk-band-score {
+    font-family: var(--font-heading);
+    font-weight: 800;
+    font-size: 34px;
+    margin: 0 0 6px;
+}
+
+.risk-band-score-total {
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.risk-band-recommendation {
+    margin: 0;
+    font-size: 14px;
+}

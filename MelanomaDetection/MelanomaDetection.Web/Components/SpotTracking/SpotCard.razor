@@ -1,7 +1,5 @@
 @* One tracked spot as a tappable row: label, region, latest risk, trend and
    recheck status. Used by the dashboard, the spot list and the check flow. *@
-@using MelanomaDetection.Web.Models
-@using MelanomaDetection.Web.Services
 @inject NavigationManager NavigationManager
 
 <button type="button" class="spot-card @(Selected ? "spot-card-selected" : "")" @onclick="HandleClick">
@@ -10,41 +8,20 @@
             <span class="spot-card-label">@Spot.Label</span>
             @if (Spot.LastRiskScore is not null)
             {
-                <span class="risk-badge risk-badge-@RiskBands.Band(Spot.LastRiskScore)">
-                    @RiskBands.ShortLabel(RiskBands.Band(Spot.LastRiskScore)) · @Spot.LastRiskScore.Value.ToString("F0")
-                </span>
+                <RiskScoreBadge Score="Spot.LastRiskScore" Format="band-score" />
             }
         </div>
-        <p class="spot-card-meta">
-            @Spot.BodyRegion
-            @if (Spot.CheckCount > 0)
-            {
-                <span> · @Spot.CheckCount @(Spot.CheckCount == 1 ? "check" : "checks") · last @Recheck.Ago(Spot.LastCheckedAt)</span>
-            }
-            else
-            {
-                <span> · not photographed yet</span>
-            }
-        </p>
-        @{
-            var status = Recheck.StatusOf(Spot);
-        }
-        @if (status.Text is not null)
-        {
-            <span class="due-badge due-badge-@status.Tone">@status.Text</span>
-        }
+        <p class="spot-card-meta">@MetaLine</p>
+        <span class="spot-card-status">
+            <RecheckBadge Spot="Spot" />
+        </span>
     </div>
 
     <div class="spot-card-side">
-        @if (Spot.Trend is not null)
-        {
-            <span class="trend trend-@Spot.Trend" title="Risk trend since previous check">
-                @(Spot.Trend switch { "up" => "▲", "down" => "▼", _ => "—" })
-            </span>
-        }
-        <svg class="spot-card-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M9.5 5.5 16 12l-6.5 6.5" />
-        </svg>
+        <TrendArrow Trend="@Spot.Trend" />
+        <span class="spot-card-chevron">
+            <AppIcon Name="chevron-right" Size="md" />
+        </span>
     </div>
 </button>
 
@@ -58,6 +35,10 @@
 
     [Parameter]
     public bool Selected { get; set; }
+
+    private string MetaLine => Spot.CheckCount > 0
+        ? $"{Spot.BodyRegion} · {Spot.CheckCount} {(Spot.CheckCount == 1 ? "check" : "checks")} · last {Recheck.Ago(Spot.LastCheckedAt)}"
+        : $"{Spot.BodyRegion} · not photographed yet";
 
     private async Task HandleClick()
     {

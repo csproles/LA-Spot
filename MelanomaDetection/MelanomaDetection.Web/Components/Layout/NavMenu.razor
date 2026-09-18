@@ -1,50 +1,53 @@
+@* Primary navigation: a bottom bar on phones, a sidebar from 860px up. The
+   destinations are data rather than five hand-written links so the two
+   layouts can never drift apart. *@
+
 <nav class="app-nav" aria-label="Primary">
     <div class="app-nav-brand">
         <a href="/">
-            <img src="icons/mascot.png" alt="" class="app-nav-brand-mark" />
+            <span class="app-nav-brand-mark" aria-hidden="true"></span>
             <span class="app-nav-brand-text">Skin Check</span>
         </a>
     </div>
 
     <div class="app-nav-links">
-        <NavLink class="app-nav-link" href="" Match="NavLinkMatch.All">
-            <svg class="app-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M4 10.5 12 4l8 6.5V19a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 19Z" />
-                <path d="M9.5 20.5v-6h5v6" />
-            </svg>
-            <span>Home</span>
-        </NavLink>
-        <NavLink class="app-nav-link" href="spots">
-            <svg class="app-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <circle cx="12" cy="7" r="3" />
-                <path d="M12 10v4M8 21c0-3 1.8-5 4-5s4 2 4 5" />
-                <circle cx="17.5" cy="15.5" r="1.4" fill="currentColor" stroke="none" />
-                <circle cx="6.5" cy="13.5" r="1.4" fill="currentColor" stroke="none" />
-            </svg>
-            <span>Spots</span>
-        </NavLink>
-        <NavLink class="app-nav-link app-nav-link-primary" href="check">
-            <span class="app-nav-primary-mark">
-                <svg class="app-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <path d="M4 8a2 2 0 0 1 2-2h1.2a2 2 0 0 0 1.66-.9L9.6 4a2 2 0 0 1 1.66-.9h1.48A2 2 0 0 1 14.4 4l.74 1.1A2 2 0 0 0 16.8 6H18a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z" />
-                    <circle cx="12" cy="12.5" r="3.3" />
-                </svg>
-            </span>
-            <span>Check</span>
-        </NavLink>
-        <NavLink class="app-nav-link" href="map">
-            <svg class="app-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2Z" />
-                <path d="M9 4v14M15 6v14" />
-            </svg>
-            <span>Find care</span>
-        </NavLink>
-        <NavLink class="app-nav-link" href="profile">
-            <svg class="app-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <circle cx="12" cy="8.2" r="3.2" />
-                <path d="M5 19c1-3.3 3.9-5 7-5s6 1.7 7 5" />
-            </svg>
-            <span>Profile</span>
-        </NavLink>
+        @foreach (var destination in Destinations)
+        {
+            <NavLink class="@LinkClass(destination)"
+                     href="@destination.Href"
+                     Match="@(destination.Href.Length == 0 ? NavLinkMatch.All : NavLinkMatch.Prefix)">
+                @if (destination.IsPrimary)
+                {
+                    <span class="app-nav-primary-mark">
+                        <span class="app-nav-icon">
+                            <AppIcon Name="@destination.Icon" Size="inherit" StrokeWidth="2" />
+                        </span>
+                    </span>
+                }
+                else
+                {
+                    <span class="app-nav-icon">
+                        <AppIcon Name="@destination.Icon" Size="inherit" />
+                    </span>
+                }
+                <span class="app-nav-label">@destination.Label</span>
+            </NavLink>
+        }
     </div>
 </nav>
+
+@code {
+    private record Destination(string Href, string Icon, string Label, bool IsPrimary = false);
+
+    private static readonly Destination[] Destinations =
+    {
+        new("", "home", "Home"),
+        new("spots", "spots", "Spots"),
+        new("check", "camera", "Check", IsPrimary: true),
+        new("map", "map", "Find care"),
+        new("profile", "person", "Profile"),
+    };
+
+    private static string LinkClass(Destination destination) =>
+        destination.IsPrimary ? "app-nav-link app-nav-link-primary" : "app-nav-link";
+}

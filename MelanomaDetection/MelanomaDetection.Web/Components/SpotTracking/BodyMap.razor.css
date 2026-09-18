@@ -21,8 +21,8 @@
 
 .body-head, .body-torso, .body-arm, .body-leg {
     position: absolute;
-    background: var(--color-sand);
-    border: 1.5px solid var(--color-clay);
+    background: var(--color-body-fill);
+    border: 1.5px solid var(--color-border-strong);
 }
 
 .body-head {
@@ -49,7 +49,7 @@
 }
 
 .is-back .body-torso {
-    background: var(--color-cream);
+    background: var(--color-body-fill-back);
 }
 
 .body-arm {
@@ -89,8 +89,8 @@
     width: 16px;
     height: 16px;
     border-radius: 50%;
-    background: var(--color-white);
-    border: 2px solid var(--color-navy);
+    background: var(--color-surface);
+    border: 2px solid var(--color-accent);
     transform: translate(-50%, -50%);
     padding: 0;
     cursor: pointer;
@@ -104,52 +104,52 @@
     transform: translate(-50%, -50%) scale(1.15);
 }
 
-.body-dot.active {
-    background: var(--color-navy);
-    box-shadow: 0 0 0 4px rgba(27, 62, 111, 0.18);
+.body-dot.body-dot-selected {
+    background: var(--color-accent-strong);
+    box-shadow: var(--ring-accent);
 }
 
 /* A region with tracked spots grows into a badge coloured by its worst risk band. */
-.body-dot.has-spots {
+.body-dot.body-dot-tracked {
     width: 20px;
     height: 20px;
 }
 
 .body-dot-low {
-    border-color: var(--color-clay);
-    background: var(--color-cream);
+    border-color: var(--color-border-strong);
+    background: var(--color-well);
 }
 
 .body-dot-moderate {
-    border-color: var(--color-goldenrod);
-    background: var(--color-moderate-bg);
+    border-color: var(--color-warn);
+    background: var(--color-warn-soft);
 }
 
 .body-dot-high {
-    border-color: var(--color-risk-red-icon);
-    background: var(--color-risk-red-bg);
+    border-color: var(--color-alert);
+    background: var(--color-alert-soft);
 }
 
 .body-dot-count {
     font-size: 10px;
     font-weight: 700;
     line-height: 1;
-    color: var(--color-navy);
+    color: var(--color-accent-ink);
 }
 
-.body-dot.active .body-dot-count {
-    color: #fff;
+.body-dot.body-dot-selected .body-dot-count {
+    color: var(--color-on-accent);
 }
 
 .body-dot-high .body-dot-count {
-    color: var(--color-risk-red-text);
+    color: var(--color-alert-ink);
 }
 
 .body-dot-moderate .body-dot-count {
-    color: var(--color-golden-earth);
+    color: var(--color-warn-ink);
 }
 
-.switch-label {
+.body-view-label {
     font-size: 11.5px;
     font-weight: 600;
     text-transform: uppercase;
@@ -176,9 +176,9 @@
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    border: 1.5px solid var(--color-clay);
-    background: var(--color-white);
-    color: var(--color-navy);
+    border: 1.5px solid var(--color-border-strong);
+    background: var(--color-surface);
+    color: var(--color-accent-ink);
     border-radius: var(--radius-control);
     padding: 8px 12px;
     font-size: 13.5px;
@@ -188,13 +188,13 @@
 
 .region-button:hover {
     transform: translateY(-1px);
-    border-color: var(--color-navy);
+    border-color: var(--color-accent);
 }
 
 .region-button-selected {
-    background: var(--color-navy);
-    border-color: var(--color-navy);
-    color: #fff;
+    background: var(--color-accent-strong);
+    border-color: var(--color-accent);
+    color: var(--color-on-accent);
 }
 
 .region-count {
@@ -202,11 +202,11 @@
     font-weight: 700;
     padding: 1px 7px;
     border-radius: var(--radius-pill);
-    background: var(--color-cream);
-    color: var(--color-navy);
+    background: var(--color-well);
+    color: var(--color-accent-ink);
 }
 
 .region-button-selected .region-count {
-    background: rgba(255, 255, 255, 0.2);
-    color: #fff;
+    background: var(--color-on-accent-wash);
+    color: var(--color-on-accent);
 }

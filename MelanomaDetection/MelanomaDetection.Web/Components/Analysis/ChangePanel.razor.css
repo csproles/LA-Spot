@@ -4,11 +4,9 @@
     align-items: flex-start;
 }
 
-.change-empty svg {
-    width: 26px;
-    height: 26px;
-    color: var(--color-clay);
-    flex-shrink: 0;
+.change-empty-icon {
+    display: inline-flex;
+    color: var(--color-border-strong);
     margin-top: 2px;
 }
 
@@ -16,48 +14,18 @@
     margin: 0 0 4px;
     font-weight: 700;
     font-size: 14px;
-    color: var(--color-navy);
+    color: var(--color-accent-ink);
 }
 
-.change-empty .text-muted-small {
-    margin-bottom: 0;
-}
-
-.change-pair {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 14px;
-}
-
-.change-figure {
-    flex: 1;
+.change-empty-body {
     margin: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    min-width: 0;
-}
-
-.change-figure img {
-    width: 100%;
-    aspect-ratio: 1;
-    object-fit: cover;
-    border-radius: 12px;
-    background: var(--color-cream);
-    border: 1px solid var(--color-sand);
-}
-
-.change-figure figcaption {
-    font-size: 12px;
     color: var(--color-text-muted);
-    text-align: center;
+    font-size: 13px;
+    line-height: 1.5;
 }
 
-.change-arrow {
-    font-size: 20px;
-    color: var(--color-clay);
-    flex-shrink: 0;
+.change-photos {
+    margin-bottom: 14px;
 }
 
 .change-score {
@@ -79,49 +47,6 @@
     }
 }
 
-.change-signals li {
-    display: flex;
-    flex-direction: column;
-    gap: 1px;
-    padding: 8px 12px;
-    border-radius: 10px;
-    border-left: 3px solid var(--color-clay);
-    background: var(--color-cream);
-}
-
-.change-signals li.is-concern {
-    border-left-color: var(--color-risk-red-icon);
-    background: var(--color-risk-red-bg);
-}
-
-.change-signals li.is-watch {
-    border-left-color: var(--color-goldenrod);
-    background: var(--color-moderate-bg);
-}
-
-.change-signals li.is-improved {
-    border-left-color: var(--color-improve);
-}
-
-.change-signals li.is-unavailable {
-    border-left-color: var(--color-sand);
-    opacity: 0.8;
-}
-
-.signal-name {
-    font-size: 11.5px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-    color: var(--color-text-faint);
-}
-
-.signal-value {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--color-text);
-}
-
 .change-caveat {
     margin: 0;
     font-size: 12.5px;
@@ -132,5 +57,5 @@
 .change-caveat strong {
     display: block;
     margin-top: 6px;
-    color: var(--color-risk-red-text);
+    color: var(--color-alert-ink);
 }

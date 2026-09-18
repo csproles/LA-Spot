@@ -1,0 +1,18 @@
+@* Wraps any skeleton so the wait is announced once, in words, while the
+   shapes themselves stay out of the accessibility tree. *@
+
+<div class="loading-region" role="status" aria-live="polite" aria-busy="true">
+    <span class="visually-hidden">@Label</span>
+    <div class="loading-region-content" aria-hidden="true">
+        @ChildContent
+    </div>
+</div>
+
+@code {
+    /// <summary>What is being waited on, e.g. "Loading your spots".</summary>
+    [Parameter, EditorRequired]
+    public string Label { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public RenderFragment ChildContent { get; set; } = null!;
+}

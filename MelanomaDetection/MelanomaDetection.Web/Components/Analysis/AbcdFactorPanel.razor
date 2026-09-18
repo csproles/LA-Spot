@@ -1,0 +1,16 @@
+@* The four ABCD measurements as bars. Evolving is deliberately absent: it
+   compares two photos rather than measuring this one, and it gets its own
+   panel. *@
+
+<div class="card-panel">
+    <h2 class="panel-title">What we looked at</h2>
+    <FactorBar Label="Shape symmetry" Score="Scores.Asymmetry.Score" />
+    <FactorBar Label="Border regularity" Score="Scores.Border.Score" />
+    <FactorBar Label="Color variation" Score="Scores.Color.Score" />
+    <FactorBar Label="Diameter" Score="Scores.Diameter.Score" />
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public AbcdeScores Scores { get; set; } = null!;
+}

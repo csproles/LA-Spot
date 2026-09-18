@@ -1,0 +1,25 @@
+@* Louisiana parish picker. Choosing one recentres the map and decides which
+   city the NPI Registry is queried for. *@
+
+<div class="parish-picker">
+    <label class="parish-label" for="parish-select">Your parish</label>
+    <select id="parish-select" class="parish-select" value="@Parish"
+            @onchange="e => ParishChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty)">
+        <option value="">All Louisiana parishes</option>
+        @foreach (var parish in Parishes)
+        {
+            <option value="@parish">@parish</option>
+        }
+    </select>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public IReadOnlyList<string> Parishes { get; set; } = Array.Empty<string>();
+
+    [Parameter]
+    public string Parish { get; set; } = string.Empty;
+
+    [Parameter]
+    public EventCallback<string> ParishChanged { get; set; }
+}

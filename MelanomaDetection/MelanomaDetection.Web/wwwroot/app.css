@@ -1,39 +1,147 @@
+/* Design tokens ----------------------------------------------------------
+   Every colour in the app comes from this block; page and component
+   stylesheets must not introduce new hex values.
+
+   Each token is declared once via light-dark(), so the two themes can never
+   drift apart the way parallel blocks do. `color-scheme` below is what picks
+   between the pairs: `light dark` follows the OS, and the data-theme rules
+   further down override it when the viewer has chosen explicitly.
+
+   Ten colours are fixed by the brand -- bg, surface, both accents and both
+   text tones, per mode. The rest are derived, and the derivations exist for a
+   reason: the light-mode accent (#769382) is a mid-tone that cannot carry
+   text at AAA in either direction, and the light-mode surface (#C0C3B9) is
+   itself mid-tone, which caps how dark text on a card needs to be. So each
+   accent splits into a fill (`--color-accent`), an interactive fill that
+   carries text (`--color-accent-strong`), and an ink tone for when the accent
+   has to *be* text (`--color-accent-ink`).
+
+   Text tones target WCAG AAA (7:1) against both the page and the card, not
+   just AA -- see the ramp in the contrast notes below. Non-text targets
+   follow 1.4.11 (3:1) for control boundaries; decorative dividers and
+   disabled controls are exempt.
+
+   Semantics: sage = calm/low risk/improving, amber = watch/moderate,
+   coral (accent-2) = concern/high risk/medical disclaimer. */
 :root {
-    /* Design tokens. Every colour in the app comes from this block; page
-       stylesheets must not introduce new hex values. Text tokens are chosen
-       to clear WCAG AA (4.5:1) on both white and --color-cream; --color-clay
-       is a border/fill tone only (it clears the 3:1 UI-component bar, not
-       the text bar), which is why text-faint is a separate, darker value. */
-    --color-white: #FFFFFF;
-    --color-cream: #FBF1E4;
-    --color-sand: #EFDFC5;
-    --color-clay: #9C8468;
-    --color-navy: #1B3E6F;
-    --color-navy-deep: #16335C;
-    --color-goldenrod: #B6880C;
-    --color-golden-earth: #7A5A08;
-    --color-moderate-bg: #FCF3DC;
-    --color-improve: #276B4E;
+    color-scheme: light dark;
 
-    --color-risk-red-icon: #C4291F;
-    --color-risk-red-text: #B8291F;
-    --color-risk-red-banner-text: #8C291F;
-    --color-risk-red-bg: #FDEDEC;
+    --color-bg: light-dark(#F3EFE3, #12161A);
+    --color-surface: light-dark(#C0C3B9, #1E252B);
+    --color-surface-alt: light-dark(#D3D6CD, #262F36);
+    /* Nested zones sit *lighter* than the card in light mode, not darker:
+       small text lands on them constantly (badges, tracks, segmented
+       controls) and the card is already a mid-tone, so going darker would
+       leave no headroom for AAA text. */
+    --color-well: light-dark(#D7DAD1, #151A1F);
+    --color-field: light-dark(#F0ECE0, #161B20);
 
-    --color-text: #2A2420;
-    --color-text-muted: #5C5347;
-    --color-text-faint: #7A6449;
+    --color-border: light-dark(#7D8476, #3E4A54);
+    --color-border-strong: light-dark(#565D51, #64727D);
+    --color-border-subtle: light-dark(rgba(31, 41, 55, 0.2), rgba(244, 246, 245, 0.16));
 
-    --focus-ring: 0 0 0 3px rgba(182, 136, 12, 0.55);
+    --color-accent: light-dark(#769382, #8BB09B);
+    --color-accent-strong: light-dark(#2F4A3C, #9EC2AE);
+    --color-accent-hover: light-dark(#243A2E, #B2D2C0);
+    --color-accent-ink: light-dark(#223429, #A7C8B6);
+    --color-accent-soft: light-dark(#DDE4DC, #24352C);
+    --color-on-accent: light-dark(#F6F8F5, #0B0F13);
+
+    --color-accent-2: light-dark(#D98880, #EAA096);
+    --color-accent-2-ink: light-dark(#531E1A, #F7BDB4);
+    --color-accent-2-soft: light-dark(#F8E3DF, #3C2824);
+    --color-on-accent-2: light-dark(#16202B, #12161A);
+
+    --color-warn: light-dark(#C08A3E, #E0B070);
+    /* Amber is too light to carry the near-white ink, so it gets its own. */
+    --color-on-warn: light-dark(#231702, #12161A);
+    --color-warn-ink: light-dark(#412B06, #F2D4A8);
+    --color-warn-soft: light-dark(#F6EDDC, #382D1C);
+
+    --color-alert: light-dark(#A8443B, #E07A6E);
+    --color-alert-ink: light-dark(#531E1A, #F7BDB4);
+    --color-alert-soft: light-dark(#F8E3DF, #3C2824);
+    --color-on-alert: light-dark(#FFFFFF, #12161A);
+
+    --color-positive: light-dark(#113725, #8FD9B0);
+
+    /* Disabled controls are exempt from contrast minimums, but they still
+       have to be readable -- so they get a real tone rather than Bootstrap's
+       blue at 65% opacity, plus an outline so the control stays perceivable. */
+    --color-disabled-bg: light-dark(#9FA79F, #2E3840);
+    --color-disabled-text: light-dark(#2E3833, #9AA6AF);
+
+    --color-text: light-dark(#1F2937, #F4F6F5);
+    --color-text-muted: light-dark(#24323F, #C2CAD1);
+    --color-text-faint: light-dark(#28342D, #AAB4BC);
+
+    --color-nav-bg: light-dark(#2A3B31, #171D22);
+    --color-nav-text: light-dark(#EDF1EB, #EDF1EF);
+    --color-nav-active-bg: light-dark(#DDE4DC, #8BB09B);
+    --color-nav-active-text: light-dark(#22322A, #0B0F13);
+    --color-nav-hover-bg: light-dark(rgba(255, 255, 255, 0.14), rgba(244, 246, 245, 0.1));
+    --color-brand-mark-plate: light-dark(#DDE4DC, rgba(244, 246, 245, 0.08));
+
+    --color-overlay-soft: light-dark(rgba(243, 239, 227, 0.55), rgba(139, 176, 155, 0.22));
+    --color-scrim: light-dark(rgba(31, 41, 55, 0.5), rgba(0, 0, 0, 0.62));
+    /* Translucent ink for chips and counters sitting on an accent fill. */
+    --color-on-accent-wash: light-dark(rgba(246, 248, 245, 0.18), rgba(11, 15, 19, 0.2));
+
+    --focus-ring: 0 0 0 3px light-dark(rgba(146, 96, 20, 0.85), rgba(224, 176, 112, 0.7));
+    --ring-accent: 0 0 0 3px light-dark(rgba(47, 74, 60, 0.4), rgba(158, 194, 174, 0.38));
+    --ring-accent-color: light-dark(rgba(47, 74, 60, 0.45), rgba(158, 194, 174, 0.42));
+
+    --shadow-card: 0 1px 2px light-dark(rgba(31, 41, 55, 0.12), rgba(0, 0, 0, 0.4));
+    --shadow-raised: 0 4px 12px light-dark(rgba(31, 41, 55, 0.18), rgba(0, 0, 0, 0.5));
+    --shadow-lifted: 0 6px 16px light-dark(rgba(31, 41, 55, 0.22), rgba(0, 0, 0, 0.55));
+    --shadow-tint-strong: light-dark(rgba(31, 41, 55, 0.35), rgba(0, 0, 0, 0.6));
+
+    --dot-near: light-dark(rgba(31, 41, 55, 0.12), rgba(244, 246, 245, 0.07));
+    --dot-far: light-dark(rgba(31, 41, 55, 0.07), rgba(244, 246, 245, 0.04));
+    --color-bg-wash: light-dark(#E7E3D4, #171D23);
+    /* The body diagram needs to read as a silhouette against a card, which
+       neither the border nor the well tone is far enough from. */
+    --color-body-fill: light-dark(#E4E6DD, #3B454D);
+    --color-body-fill-back: light-dark(#CFD2C8, #2C353C);
+    --skeleton-sheen: light-dark(rgba(255, 255, 255, 0.85), rgba(244, 246, 245, 0.08));
 
     --radius-card: 15px;
     --radius-control: 9px;
     --radius-pill: 999px;
 
-    --shadow-card: 0 1px 2px rgba(120, 76, 40, 0.07);
-
     --font-heading: "Manrope", system-ui, sans-serif;
     --font-body: "Work Sans", system-ui, sans-serif;
+}
+
+/* An explicit choice from the Theme control in Profile. Flipping
+   color-scheme is all it takes -- every light-dark() pair above follows it.
+   theme.js writes this attribute and re-applies it after Blazor's enhanced
+   navigation, which would otherwise strip it. */
+:root[data-theme="light"] {
+    color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+    color-scheme: dark;
+}
+
+/* The mascot is an image, not a colour, so it cannot ride on light-dark(). */
+:root {
+    --brand-mascot: url('icons/dogblack.png');
+}
+
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+        --brand-mascot: url('icons/dogwhite.png');
+    }
+}
+
+:root[data-theme="dark"] {
+    --brand-mascot: url('icons/dogwhite.png');
+}
+
+:root[data-theme="light"] {
+    --brand-mascot: url('icons/dogblack.png');
 }
 
 html, body {
@@ -42,41 +150,66 @@ html, body {
 }
 
 body {
-    background-color: var(--color-white);
+    background-color: var(--color-bg);
 }
 
 h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-heading);
-    color: var(--color-navy);
+    color: var(--color-accent-ink);
 }
 
 a, .btn-link {
-    color: var(--color-navy);
+    color: var(--color-accent-ink);
 }
 
+/* Bootstrap ships a pink --bs-code-color that belongs to neither palette and
+   fails contrast on our surfaces. */
+code {
+    color: var(--color-accent-2-ink);
+}
+
+/* Buttons drive Bootstrap's own --bs-btn-* variables rather than overriding
+   individual declarations. Setting the properties alone leaves every state
+   Bootstrap owns -- hover, active, and especially :disabled -- still painted
+   its default #0d6efd blue, which is where the stray blue buttons came from.
+   Disabled opacity is forced to 1 so the label stays readable; the muted
+   fill and outline are what communicate the state instead. */
 .btn-primary {
-    color: #fff;
-    background-color: var(--color-navy);
-    border-color: var(--color-navy);
-}
-
-.btn-primary:hover, .btn-primary:focus {
-    background-color: var(--color-navy-deep);
-    border-color: var(--color-navy-deep);
+    --bs-btn-color: var(--color-on-accent);
+    --bs-btn-bg: var(--color-accent-strong);
+    --bs-btn-border-color: var(--color-accent-strong);
+    --bs-btn-hover-color: var(--color-on-accent);
+    --bs-btn-hover-bg: var(--color-accent-hover);
+    --bs-btn-hover-border-color: var(--color-accent-hover);
+    --bs-btn-active-color: var(--color-on-accent);
+    --bs-btn-active-bg: var(--color-accent-hover);
+    --bs-btn-active-border-color: var(--color-accent-hover);
+    --bs-btn-disabled-color: var(--color-disabled-text);
+    --bs-btn-disabled-bg: var(--color-disabled-bg);
+    --bs-btn-disabled-border-color: var(--color-border-strong);
+    --bs-btn-disabled-opacity: 1;
+    font-weight: 600;
 }
 
 .btn-outline-primary {
-    color: var(--color-navy);
-    border-color: var(--color-navy);
+    --bs-btn-color: var(--color-accent-ink);
+    --bs-btn-border-color: var(--color-accent-strong);
+    --bs-btn-hover-color: var(--color-on-accent);
+    --bs-btn-hover-bg: var(--color-accent-strong);
+    --bs-btn-hover-border-color: var(--color-accent-strong);
+    --bs-btn-active-color: var(--color-on-accent);
+    --bs-btn-active-bg: var(--color-accent-hover);
+    --bs-btn-active-border-color: var(--color-accent-hover);
+    --bs-btn-disabled-color: var(--color-disabled-text);
+    --bs-btn-disabled-bg: transparent;
+    --bs-btn-disabled-border-color: var(--color-border-strong);
+    --bs-btn-disabled-opacity: 1;
+    border-width: 1.5px;
+    font-weight: 600;
 }
 
-.btn-outline-primary:hover {
-    background-color: var(--color-navy);
-    border-color: var(--color-navy);
-}
-
-/* One focus treatment everywhere: a goldenrod ring reads clearly against
-   navy buttons, white cards and the cream backdrop alike. */
+/* One focus treatment everywhere: a deep amber ring reads clearly against
+   sage fills, the mid-tone cards and the bone backdrop alike. */
 .btn:focus-visible, .btn:active:focus-visible, .btn-link.nav-link:focus-visible,
 .form-control:focus, .form-check-input:focus, .link-button:focus-visible,
 .segmented-option:focus-visible, .switch input:focus-visible + .switch-track,
@@ -85,8 +218,16 @@ a:focus-visible, button:focus-visible {
     box-shadow: var(--focus-ring);
 }
 
-.form-control:focus {
-    border-color: var(--color-goldenrod);
+.form-control, .form-select {
+    background-color: var(--color-field);
+    border: 1.5px solid var(--color-border-strong);
+    color: var(--color-text);
+}
+
+.form-control:focus, .form-select:focus {
+    background-color: var(--color-field);
+    border-color: var(--color-accent-strong);
+    color: var(--color-text);
 }
 
 .form-control::placeholder {
@@ -143,6 +284,19 @@ a:focus-visible, button:focus-visible {
     }
 }
 
+/* The sweep that cycles across every loading placeholder. One shared
+   definition so a dashboard tile, a timeline row and a provider card all
+   pulse on the same rhythm rather than looking like three separate spinners. */
+@keyframes skeleton-sweep {
+    from {
+        background-position: 190% 0;
+    }
+
+    to {
+        background-position: -90% 0;
+    }
+}
+
 /* Root wrapper of every routed page (.check-page, .results-page, etc.) --
    gives each navigation a soft fade-in instead of content popping in cold. */
 @media (prefers-reduced-motion: no-preference) {
@@ -163,6 +317,10 @@ a:focus-visible, button:focus-visible {
         background-size: 26px 26px, 26px 26px, 220% 220%;
         animation: drift-wash 24s ease-in-out infinite alternate;
     }
+
+    .skeleton-block {
+        animation: skeleton-sweep 1.5s ease-in-out infinite;
+    }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -180,7 +338,7 @@ a:focus-visible, button:focus-visible {
 
 .btn-primary:hover, .btn-outline-primary:hover, .btn-outline-danger:hover {
     transform: translateY(-1px);
-    box-shadow: 0 4px 10px rgba(120, 76, 40, 0.16);
+    box-shadow: var(--shadow-raised);
 }
 
 .btn-primary:active, .btn-outline-primary:active, .btn-outline-danger:active {
@@ -199,8 +357,10 @@ a:focus-visible, button:focus-visible {
     height: 13px;
     margin-right: 7px;
     vertical-align: -2px;
-    border: 2px solid rgba(255, 255, 255, 0.4);
-    border-top-color: #fff;
+    /* Takes the colour of whatever it sits in, so it works on an accent
+       button, an outline button and plain text alike, in either mode. */
+    border: 2px solid color-mix(in srgb, currentColor 28%, transparent);
+    border-top-color: currentColor;
     border-radius: 50%;
 }
 
@@ -210,12 +370,63 @@ a:focus-visible, button:focus-visible {
     }
 }
 
+/* Loading skeletons ------------------------------------------------------
+   Placeholder geometry for data that has not arrived yet. Each async panel
+   renders the same shape it will render once loaded, so nothing jumps when
+   the real content lands. The cycling sweep is defined once in the motion
+   layer above and stops under prefers-reduced-motion. */
+.skeleton-block {
+    background-color: var(--color-well);
+    background-image: linear-gradient(100deg, transparent 25%, var(--skeleton-sheen) 50%, transparent 75%);
+    background-size: 280% 100%;
+    background-repeat: no-repeat;
+    background-position: 190% 0;
+    border-radius: var(--radius-control);
+    flex-shrink: 0;
+}
+
+.skeleton-block-pill {
+    border-radius: var(--radius-pill);
+}
+
+.skeleton-block-circle {
+    border-radius: 50%;
+}
+
+.skeleton-block-thumb {
+    border-radius: 10px;
+}
+
+.skeleton-block-card {
+    border-radius: var(--radius-card);
+}
+
+/* A skeleton standing in for a photo sits on sand rather than cream, so a
+   loading thumbnail reads as "image here" next to loaded ones. */
+.skeleton-block-media {
+    background-color: var(--color-border);
+}
+
+.skeleton-lines {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* Wrapper for any loading placeholder: assistive tech gets the status
+   message, the decorative shapes are hidden from it. */
+.loading-region-content {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
 /* Shared UI primitives -- used across multiple pages/components, kept here
    (instead of duplicated per-page .razor.css) so spacing and color stay in
    sync as the app grows. */
 .card-panel {
-    background: var(--color-white);
-    border: 1px solid rgba(156, 132, 104, 0.14);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border-subtle);
     border-radius: var(--radius-card);
     box-shadow: var(--shadow-card);
     padding: 18px 20px;
@@ -225,7 +436,7 @@ a:focus-visible, button:focus-visible {
     font-family: var(--font-heading);
     font-weight: 700;
     font-size: 17px;
-    color: var(--color-navy);
+    color: var(--color-accent-ink);
     margin: 0 0 14px;
 }
 
@@ -239,7 +450,7 @@ a:focus-visible, button:focus-visible {
     background: none;
     border: none;
     padding: 0;
-    color: var(--color-navy);
+    color: var(--color-accent-ink);
     font-size: 13.5px;
     text-decoration: underline;
     width: fit-content;
@@ -251,331 +462,14 @@ a:focus-visible, button:focus-visible {
     gap: 12px;
 }
 
-.back-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 13.5px;
-    font-weight: 600;
-    text-decoration: none;
-    color: var(--color-text-muted);
-    width: fit-content;
-    transition: color 0.15s ease;
-}
-
-.back-link:hover {
-    color: var(--color-navy);
-}
-
-.back-link svg {
-    width: 16px;
-    height: 16px;
-}
-
-.disclaimer-banner {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    background: var(--color-risk-red-bg);
-    border: 1px solid rgba(196, 41, 31, 0.32);
-    border-radius: var(--radius-card);
-    padding: 14px 16px;
-}
-
-.disclaimer-icon {
-    width: 20px;
-    height: 20px;
-    flex-shrink: 0;
-    color: var(--color-risk-red-icon);
-    margin-top: 1px;
-}
-
-.disclaimer-banner p {
-    margin: 0;
-    font-size: 13.5px;
-    color: var(--color-risk-red-banner-text);
-}
-
-/* Segmented control -- e.g. sort-by / unit toggles */
-.segmented {
-    display: inline-flex;
-    background: var(--color-cream);
-    border-radius: var(--radius-pill);
-    padding: 3px;
-}
-
-.segmented-option {
-    border: none;
-    background: none;
-    padding: 6px 14px;
-    border-radius: var(--radius-pill);
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--color-text-muted);
-    transition: background-color 0.2s ease, color 0.2s ease;
-}
-
-.segmented-option.active {
-    background: var(--color-navy);
-    color: #fff;
-}
-
-/* Risk band -- large summary panel for a 0-100 risk score. Bands come from
-   Services/RiskBands.cs (mirroring the backend's policy.py). */
-.risk-band {
-    border: 1.5px solid transparent;
-}
-
-.risk-band-low {
-    background: var(--color-cream);
-    border-color: var(--color-sand);
-    color: var(--color-navy);
-}
-
-.risk-band-moderate {
-    background: var(--color-moderate-bg);
-    border-color: rgba(182, 136, 12, 0.35);
-    color: var(--color-golden-earth);
-}
-
-.risk-band-high {
-    background: var(--color-risk-red-bg);
-    border-color: var(--color-risk-red-icon);
-    color: var(--color-risk-red-text);
-}
-
-.risk-band-label {
-    font-weight: 700;
-    font-size: 14px;
-    margin: 0 0 4px;
-}
-
-.risk-band-score {
-    font-family: var(--font-heading);
-    font-weight: 800;
-    font-size: 34px;
-    margin: 0 0 6px;
-}
-
-.risk-band-score span {
-    font-size: 16px;
-    font-weight: 600;
-}
-
-.risk-band-recommendation {
-    margin: 0;
-    font-size: 14px;
-}
-
-/* Settings rows -- a label/description pair with a control on the right */
-.toggle-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-    padding: 12px 0;
-    border-bottom: 1px solid var(--color-cream);
-}
-
-.toggle-row:last-child {
-    border-bottom: none;
-    padding-bottom: 0;
-}
-
-.toggle-row:first-of-type {
-    padding-top: 0;
-}
-
-.toggle-label {
-    font-weight: 600;
-    font-size: 14px;
-    margin: 0;
-}
-
-.toggle-description {
-    color: var(--color-text-muted);
-    font-size: 12.5px;
-    margin: 2px 0 0;
-}
-
-/* Pill switch */
-.switch {
-    position: relative;
-    display: inline-block;
-    width: 42px;
-    height: 24px;
-    flex-shrink: 0;
-}
-
-.switch input {
-    opacity: 0;
-    width: 0;
-    height: 0;
-}
-
-.switch-track {
-    position: absolute;
-    inset: 0;
-    background: var(--color-sand);
-    border-radius: var(--radius-pill);
-    cursor: pointer;
-    transition: background-color 0.15s ease;
-}
-
-.switch-track::before {
-    content: "";
-    position: absolute;
-    width: 18px;
-    height: 18px;
-    left: 3px;
-    top: 3px;
-    background: var(--color-white);
-    border-radius: 50%;
-    transition: transform 0.15s ease;
-    box-shadow: 0 1px 2px rgba(120, 76, 40, 0.22);
-}
-
-.switch input:checked + .switch-track {
-    background: var(--color-navy);
-}
-
-.switch input:checked + .switch-track::before {
-    transform: translateX(18px);
-}
-
-/* Small status badges -- risk band, recheck status, trend arrow */
-.risk-badge {
-    display: inline-block;
-    border-radius: var(--radius-pill);
-    padding: 2px 10px;
-    font-size: 11.5px;
-    font-weight: 700;
-    flex-shrink: 0;
-    white-space: nowrap;
-}
-
-.risk-badge-low {
-    background: var(--color-cream);
-    color: var(--color-navy);
-}
-
-.risk-badge-moderate {
-    background: var(--color-moderate-bg);
-    color: var(--color-golden-earth);
-}
-
-.risk-badge-high {
-    background: var(--color-risk-red-bg);
-    color: var(--color-risk-red-text);
-}
-
-.due-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    border-radius: var(--radius-pill);
-    padding: 2px 10px;
-    font-size: 11.5px;
-    font-weight: 600;
-    white-space: nowrap;
-}
-
-.due-badge::before {
-    content: "";
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: currentColor;
-}
-
-.due-badge-overdue {
-    background: var(--color-risk-red-bg);
-    color: var(--color-risk-red-text);
-}
-
-.due-badge-soon {
-    background: var(--color-moderate-bg);
-    color: var(--color-golden-earth);
-}
-
-.due-badge-later {
-    background: var(--color-cream);
-    color: var(--color-text-muted);
-}
-
-.trend {
-    font-size: 13px;
-    font-weight: 700;
-    line-height: 1;
-}
-
-.trend-up {
-    color: var(--color-risk-red-icon);
-}
-
-.trend-down {
-    color: var(--color-improve);
-}
-
-.trend-flat {
-    color: var(--color-text-faint);
-}
-
-/* Factor / score bars -- 0-10 measurement rows with a filled track */
-.factor-row {
-    margin-bottom: 14px;
-}
-
-.factor-row:last-child {
-    margin-bottom: 0;
-}
-
-.factor-row-header {
-    display: flex;
-    justify-content: space-between;
-    font-size: 13.5px;
-    margin-bottom: 6px;
-}
-
-.factor-bar-track {
-    height: 8px;
-    border-radius: var(--radius-pill);
-    background: var(--color-cream);
-    overflow: hidden;
-}
-
-.factor-bar-fill {
-    height: 100%;
-    border-radius: var(--radius-pill);
-    transition: width 0.7s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-@starting-style {
-    .factor-bar-fill {
-        width: 0%;
-    }
-}
-
-.factor-bar-low {
-    background: var(--color-clay);
-}
-
-.factor-bar-moderate {
-    background: var(--color-goldenrod);
-}
-
-.factor-bar-high {
-    background: var(--color-risk-red-icon);
-}
-
 /* Soft diagonal wash + two-density dot grid, used behind the main content area */
 .app-background {
     position: relative;
     min-height: 100vh;
     background:
-        radial-gradient(circle, rgba(156, 132, 104, 0.16) 1px, transparent 1.3px) 13px 13px / 26px 26px,
-        radial-gradient(circle, rgba(156, 132, 104, 0.28) 1px, transparent 1.3px) 0 0 / 26px 26px,
-        linear-gradient(135deg, var(--color-cream) 0%, var(--color-white) 55%);
+        radial-gradient(circle, var(--dot-far) 1px, transparent 1.3px) 13px 13px / 26px 26px,
+        radial-gradient(circle, var(--dot-near) 1px, transparent 1.3px) 0 0 / 26px 26px,
+        linear-gradient(150deg, var(--color-bg) 0%, var(--color-bg-wash) 100%);
 }
 
 h1:focus {
@@ -583,15 +477,15 @@ h1:focus {
 }
 
 .valid.modified:not([type=checkbox]) {
-    outline: 1px solid var(--color-improve);
+    outline: 1px solid var(--color-positive);
 }
 
 .invalid {
-    outline: 1px solid var(--color-risk-red-icon);
+    outline: 1px solid var(--color-alert);
 }
 
 .validation-message {
-    color: var(--color-risk-red-icon);
+    color: var(--color-alert);
 }
 
 .blazor-error-boundary {
@@ -605,7 +499,7 @@ h1:focus {
     }
 
 .darker-border-checkbox.form-check-input {
-    border-color: var(--color-clay);
+    border-color: var(--color-border-strong);
 }
 
 .form-floating > .form-control-plaintext::placeholder, .form-floating > .form-control::placeholder {

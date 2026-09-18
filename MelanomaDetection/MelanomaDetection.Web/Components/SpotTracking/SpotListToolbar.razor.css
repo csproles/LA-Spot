@@ -1,0 +1,27 @@
+.list-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.list-title {
+    font-family: var(--font-heading);
+    font-weight: 700;
+    font-size: 16px;
+    color: var(--color-accent-ink);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.list-count {
+    font-family: var(--font-body);
+    font-size: 12px;
+    font-weight: 700;
+    padding: 1px 8px;
+    border-radius: var(--radius-pill);
+    background: var(--color-well);
+    color: var(--color-accent-ink);
+}

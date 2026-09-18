@@ -1,169 +1,62 @@
 @page "/"
 @rendermode InteractiveServer
-@using Microsoft.AspNetCore.Components.Web
-@using static Microsoft.AspNetCore.Components.Web.RenderMode
-@using MelanomaDetection.Web.Components
-@using MelanomaDetection.Web.Models
-@using MelanomaDetection.Web.Services
 @inject ImageProcessingService ImageProcessingService
 @inject NavigationManager NavigationManager
 
 <PageTitle>Home - Skin Check</PageTitle>
 
 <div class="home-page">
-    <div class="home-header">
-        <div>
-            <p class="home-date">@DateTime.Now.ToString("dddd, MMMM d").ToUpperInvariant()</p>
-            <h1 class="home-title">@Greeting</h1>
-            <p class="home-subtitle">@Summary</p>
-        </div>
-        <a href="/check" class="btn btn-primary home-cta">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
-                <path d="M12 5v14M5 12h14" />
-            </svg>
-            New skin check
-        </a>
-    </div>
-
-    @if (LoadError is not null)
-    {
-        <div class="alert alert-danger" role="alert">@LoadError</div>
-    }
-    else if (IsLoading)
-    {
-        <div class="d-flex align-items-center gap-2 text-muted">
-            <div class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></div>
-            <span>Loading your spots…</span>
-        </div>
-    }
-    else
-    {
-        @if (!Profile.Configured)
-        {
-            <a href="/onboarding" class="card-panel setup-card">
-                <div class="setup-card-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <circle cx="12" cy="8.2" r="3.2" />
-                        <path d="M5 19c1-3.3 3.9-5 7-5s6 1.7 7 5" />
-                    </svg>
-                </div>
-                <div class="setup-card-text">
-                    <span class="setup-card-title">Set up your risk profile</span>
-                    <span class="setup-card-subtitle">Four quick questions about your skin type and history tune how often we suggest rechecking each spot. Takes under a minute.</span>
-                </div>
-                <svg class="setup-card-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <path d="M9.5 5.5 16 12l-6.5 6.5" />
-                </svg>
+    <PageHeader Eyebrow="@Today" Title="@Greeting" Subtitle="@Summary" Size="lg">
+        <Actions>
+            <a href="/check" class="btn btn-primary home-cta">
+                <AppIcon Name="plus" Size="md" StrokeWidth="2" />
+                New skin check
             </a>
+        </Actions>
+    </PageHeader>
+
+    <ErrorAlert Message="@LoadError" />
+
+    @if (LoadError is null)
+    {
+        @if (!IsLoading && !Profile.Configured)
+        {
+            <RiskProfilePromptCard />
         }
 
-        <div class="stat-row">
-            <div class="card-panel stat-tile">
-                <span class="stat-value">@Spots.Count</span>
-                <span class="stat-label">@(Spots.Count == 1 ? "spot tracked" : "spots tracked")</span>
-            </div>
-            <div class="card-panel stat-tile @(DueSpots.Count > 0 ? "stat-tile-attention" : "")">
-                <span class="stat-value">@DueSpots.Count</span>
-                <span class="stat-label">due for recheck</span>
-            </div>
-            <div class="card-panel stat-tile">
-                <span class="stat-value">@TotalChecks</span>
-                <span class="stat-label">@(TotalChecks == 1 ? "check saved" : "checks saved")</span>
-            </div>
-            <div class="card-panel stat-tile">
-                @if (HighestRisk is not null)
-                {
-                    <span class="stat-value stat-value-@RiskBands.Band(HighestRisk)">@HighestRisk.Value.ToString("F0")</span>
-                    <span class="stat-label">highest risk score</span>
-                }
-                else
-                {
-                    <span class="stat-value stat-value-muted">—</span>
-                    <span class="stat-label">no scores yet</span>
-                }
-            </div>
-        </div>
+        <DashboardStatGrid Spots="Spots" IsLoading="IsLoading" />
 
-        @if (Spots.Count == 0)
+        @if (!IsLoading && Spots.Count == 0)
         {
-            <div class="card-panel empty-state">
-                <h2 class="panel-title">Start tracking your first spot</h2>
-                <p class="text-muted-small">
-                    Photograph a mole or spot you want to keep an eye on. Each spot gets its own
-                    timeline, so the next time you photograph it we can show you what changed.
-                </p>
-                <a href="/check" class="btn btn-primary">Photograph a spot</a>
-            </div>
+            <EmptyState Title="Start tracking your first spot"
+                        Description="Photograph a mole or spot you want to keep an eye on. Each spot gets its own timeline, so the next time you photograph it we can show you what changed."
+                        ActionHref="/check"
+                        ActionText="Photograph a spot" />
         }
         else
         {
             @if (DueSpots.Count > 0)
             {
-                <section class="home-section">
-                    <div class="section-header">
-                        <h2 class="panel-title">Needs attention</h2>
-                        <span class="section-count">@DueSpots.Count</span>
-                    </div>
-                    <div class="spot-list">
-                        @foreach (var spot in DueSpots)
-                        {
-                            <SpotCard Spot="spot" />
-                        }
-                    </div>
-                </section>
+                <DueSpotsSection Spots="DueSpots" />
             }
 
             <div class="home-grid">
-                <section class="card-panel">
-                    <div class="section-header">
-                        <h2 class="panel-title">Where you're tracking</h2>
+                <BodyMapPanel Title="Where you're tracking" Spots="Spots" IsLoading="IsLoading"
+                              SelectedRegionChanged="GoToRegion">
+                    <Trailing>
                         <a href="/spots" class="link-button">All spots</a>
-                    </div>
-                    <BodyMap RegionCounts="RegionCounts" RegionBands="RegionBands" ShowRegionList="false"
-                             SelectedRegionChanged="GoToRegion" />
-                    <p class="text-muted-small map-hint">Tap a region to see its spots. Colour shows the highest risk band in that region.</p>
-                </section>
+                    </Trailing>
+                    <Footer>
+                        Tap a region to see its spots. Colour shows the highest risk band in that region.
+                    </Footer>
+                </BodyMapPanel>
 
-                <section class="card-panel">
-                    <div class="section-header">
-                        <h2 class="panel-title">Recent checks</h2>
-                        <a href="/history" class="link-button">All checks</a>
-                    </div>
-                    @if (RecentChecks.Count == 0)
-                    {
-                        <p class="text-muted-small">No checks saved yet.</p>
-                    }
-                    else
-                    {
-                        <ul class="recent-list">
-                            @foreach (var check in RecentChecks)
-                            {
-                                <li>
-                                    <a href="/results/@check.ProcessingId" class="recent-item">
-                                        <img src="@ToDataUrl(check.Thumbnail)" alt="" class="recent-thumb" />
-                                        <span class="recent-text">
-                                            <span class="recent-title">@(check.SpotLabel ?? "Unfiled check")</span>
-                                            <span class="recent-meta">@check.Location · @Recheck.Ago(check.ProcessedAt)</span>
-                                        </span>
-                                        <span class="risk-badge risk-badge-@RiskBands.Band(check.RiskScore)">@check.RiskScore.ToString("F0")</span>
-                                    </a>
-                                </li>
-                            }
-                        </ul>
-                    }
-                </section>
+                <RecentChecksPanel Checks="RecentChecks" IsLoading="IsLoading" />
             </div>
         }
     }
 
-    <div class="disclaimer-banner" role="note">
-        <svg class="disclaimer-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <circle cx="12" cy="12" r="9.25" />
-            <path d="M12 8v4.5" />
-            <circle cx="12" cy="15.8" r="0.6" fill="currentColor" stroke="none" />
-        </svg>
-        <p>Skin Check gives a preliminary read to help you monitor between appointments. It is not a diagnosis. See a dermatologist about any spot that concerns you.</p>
-    </div>
+    <MedicalDisclaimer Message="Skin Check gives a preliminary read to help you monitor between appointments. It is not a diagnosis. See a dermatologist about any spot that concerns you." />
 </div>
 
 @code {
@@ -173,25 +66,14 @@
     private bool IsLoading = true;
     private string? LoadError;
 
+    private static string Today => DateTime.Now.ToString("dddd, MMMM d").ToUpperInvariant();
+
     private List<Spot> DueSpots => Spots
-        .Where(s => s.IsDue)
-        .OrderByDescending(s => s.LastRiskScore ?? 0)
+        .Where(spot => spot.IsDue)
+        .OrderByDescending(spot => spot.LastRiskScore ?? 0)
         .ToList();
 
-    private int TotalChecks => Spots.Sum(s => s.CheckCount);
-
-    private double? HighestRisk => Spots.Where(s => s.LastRiskScore is not null).Max(s => s.LastRiskScore);
-
-    private Dictionary<string, int> RegionCounts => Spots
-        .GroupBy(s => s.BodyRegion)
-        .ToDictionary(g => g.Key, g => g.Count());
-
-    private Dictionary<string, string> RegionBands => Spots
-        .Where(s => s.LastRiskScore is not null)
-        .GroupBy(s => s.BodyRegion)
-        .ToDictionary(g => g.Key, g => RiskBands.Band(g.Max(s => s.LastRiskScore)));
-
-    private string Greeting => DateTime.Now.Hour switch
+    private static string Greeting => DateTime.Now.Hour switch
     {
         < 12 => "Good morning",
         < 18 => "Good afternoon",
@@ -210,7 +92,7 @@
             {
                 0 => "Everything you're tracking is up to date.",
                 1 => "One spot is due for a recheck.",
-                var n => $"{n} spots are due for a recheck.",
+                var due => $"{due} spots are due for a recheck.",
             };
         }
     }
@@ -240,6 +122,4 @@
 
     private void GoToRegion(string region) =>
         NavigationManager.NavigateTo($"/spots?region={Uri.EscapeDataString(region)}");
-
-    private static string ToDataUrl(string base64Png) => $"data:image/png;base64,{base64Png}";
 }

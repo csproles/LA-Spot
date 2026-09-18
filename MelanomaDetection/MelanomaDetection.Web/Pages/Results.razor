@@ -1,11 +1,5 @@
 @page "/results/{ProcessingId}"
 @rendermode InteractiveServer
-@using Microsoft.AspNetCore.Components
-@using Microsoft.AspNetCore.Components.Web
-@using static Microsoft.AspNetCore.Components.Web.RenderMode
-@using MelanomaDetection.Web.Components
-@using MelanomaDetection.Web.Models
-@using MelanomaDetection.Web.Services
 @inject ImageProcessingService ImageProcessingService
 @inject NavigationManager NavigationManager
 
@@ -14,48 +8,35 @@
 <div class="results-page">
     @if (AnalysisResults?.SpotId is not null)
     {
-        <a href="/spots/@AnalysisResults.SpotId" class="back-link">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M14.5 5.5 8 12l6.5 6.5" />
-            </svg>
-            Back to spot timeline
-        </a>
+        <BackLink Href="@($"/spots/{AnalysisResults.SpotId}")" Text="Back to spot timeline" />
     }
-    <p class="results-eyebrow">SAVED CHECK</p>
-    <h1 class="results-title">Analysis details</h1>
 
-    <div class="disclaimer-banner" role="alert">
-        <svg class="disclaimer-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <circle cx="12" cy="12" r="9.25" />
-            <path d="M12 8v4.5" />
-            <circle cx="12" cy="15.8" r="0.6" fill="currentColor" stroke="none" />
-        </svg>
-        <p>Educational use only. This is not a substitute for professional medical diagnosis. Consult a dermatologist.</p>
-    </div>
+    <PageHeader Eyebrow="SAVED CHECK" Title="Analysis details" Size="lg" />
 
-    @if (IsLoading)
+    <MedicalDisclaimer Role="alert"
+                       Message="Educational use only. This is not a substitute for professional medical diagnosis. Consult a dermatologist." />
+
+    <ErrorAlert Message="@LoadError" />
+
+    @if (LoadError is not null)
     {
-        <div class="d-flex align-items-center gap-2 text-muted">
-            <div class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></div>
-            <span>Loading results…</span>
+        <div class="result-actions">
+            <button type="button" class="btn btn-primary" @onclick="GoToCheck">Analyze another photo</button>
         </div>
     }
-    else if (LoadError is not null)
+    else if (IsLoading)
     {
-        <div class="alert alert-danger" role="alert">@LoadError</div>
-        <button type="button" class="btn btn-primary" @onclick="GoToUpload">Analyze another photo</button>
+        <LoadingRegion Label="Loading this check">
+            <AnalysisResultsSkeleton />
+        </LoadingRegion>
     }
     else if (AnalysisResults is not null)
     {
-        <div class="card-panel risk-band risk-band-@RiskBand">
-            <p class="risk-band-label">@RiskBands.Label(RiskBand)</p>
-            <p class="risk-band-score">@AnalysisResults.RiskScore.ToString("F0") <span>/100</span></p>
-            <p class="risk-band-recommendation">@RiskBands.Recommendation(RiskBand)</p>
-        </div>
+        <RiskBandPanel Score="AnalysisResults.RiskScore" />
 
         <ChangePanel Results="AnalysisResults" />
 
-        <AnalysisBreakdown Results="AnalysisResults" ProcessingId="ProcessingId" />
+        <AnalysisBreakdown Results="AnalysisResults" ProcessingId="@ProcessingId" />
 
         <div class="result-actions">
             @if (AnalysisResults.SpotId is not null)
@@ -64,7 +45,7 @@
             }
             else
             {
-                <button type="button" class="btn btn-primary" @onclick="GoToUpload">Start a new check</button>
+                <button type="button" class="btn btn-primary" @onclick="GoToCheck">Start a new check</button>
             }
             <a href="/history" class="btn btn-outline-primary">All checks</a>
         </div>
@@ -106,7 +87,5 @@
         }
     }
 
-    private string RiskBand => RiskBands.Band(AnalysisResults?.RiskScore);
-
-    private void GoToUpload() => NavigationManager.NavigateTo("/check");
+    private void GoToCheck() => NavigationManager.NavigateTo("/check");
 }
