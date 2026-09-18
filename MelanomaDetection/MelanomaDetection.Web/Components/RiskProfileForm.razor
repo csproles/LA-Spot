@@ -1,0 +1,125 @@
+@* The risk-profile questions, shared by onboarding and the Profile page.
+   Mutates the bound RiskProfile in place and raises ProfileChanged on each edit. *@
+@using MelanomaDetection.Web.Models
+
+<div class="risk-form">
+    <section class="card-panel">
+        <h2 class="panel-title">How does your skin react to the sun?</h2>
+        <p class="text-muted-small">Pick the closest match. This is the Fitzpatrick scale dermatologists use.</p>
+        <div class="fitz-grid" role="radiogroup" aria-label="Fitzpatrick skin type">
+            @foreach (var type in FitzpatrickTypes)
+            {
+                <button type="button" role="radio" aria-checked="@(Profile.Fitzpatrick == type.Value ? "true" : "false")"
+                        class="fitz-option @(Profile.Fitzpatrick == type.Value ? "is-selected" : "")"
+                        @onclick="() => Set(p => p.Fitzpatrick = type.Value)">
+                    <span class="fitz-swatch" style="background:@type.Swatch"></span>
+                    <span class="fitz-text">
+                        <span class="fitz-name">Type @type.Numeral</span>
+                        <span class="fitz-desc">@type.Description</span>
+                    </span>
+                </button>
+            }
+        </div>
+    </section>
+
+    <section class="card-panel">
+        <h2 class="panel-title">Where you live</h2>
+        <p class="text-muted-small">City and state or country is enough. Helps tailor seasonal UV guidance.</p>
+        <input type="text" class="form-control location-input" placeholder="e.g. Austin, TX" value="@Profile.Location"
+               aria-label="Location"
+               @oninput="e => Set(p => p.Location = e.Value?.ToString() ?? string.Empty)" />
+    </section>
+
+    <section class="card-panel">
+        <h2 class="panel-title">Average sun exposure</h2>
+        <p class="text-muted-small">How much time do you typically spend outdoors with skin exposed?</p>
+        <div class="exposure-grid" role="radiogroup" aria-label="Average sun exposure">
+            @foreach (var level in SunExposureLevels)
+            {
+                <button type="button" role="radio" aria-checked="@(Profile.SunExposure == level.Value ? "true" : "false")"
+                        class="exposure-option @(Profile.SunExposure == level.Value ? "is-selected" : "")"
+                        @onclick="() => Set(p => p.SunExposure = level.Value)">
+                    <span class="exposure-name">@level.Label</span>
+                    <span class="exposure-desc">@level.Description</span>
+                </button>
+            }
+        </div>
+    </section>
+
+    <section class="card-panel">
+        <h2 class="panel-title">Your history</h2>
+        <div class="toggle-row">
+            <div>
+                <p class="toggle-label">Family history of melanoma or skin cancer</p>
+                <p class="toggle-description">A parent, sibling, or child who has been diagnosed.</p>
+            </div>
+            <label class="switch">
+                <input type="checkbox" aria-label="Family history of melanoma or skin cancer" checked="@Profile.FamilyHistory" @onchange="e => Set(p => p.FamilyHistory = (bool)e.Value!)" />
+                <span class="switch-track"></span>
+            </label>
+        </div>
+        <div class="toggle-row">
+            <div>
+                <p class="toggle-label">Blistering sunburns</p>
+                <p class="toggle-description">One or more severe sunburns, especially in childhood or adolescence.</p>
+            </div>
+            <label class="switch">
+                <input type="checkbox" aria-label="Blistering sunburns" checked="@Profile.BlisteringSunburns" @onchange="e => Set(p => p.BlisteringSunburns = (bool)e.Value!)" />
+                <span class="switch-track"></span>
+            </label>
+        </div>
+        <div class="toggle-row">
+            <div>
+                <p class="toggle-label">More than 50 moles</p>
+                <p class="toggle-description">A high mole count is a well-established risk factor on its own.</p>
+            </div>
+            <label class="switch">
+                <input type="checkbox" aria-label="More than 50 moles" checked="@Profile.ManyMoles" @onchange="e => Set(p => p.ManyMoles = (bool)e.Value!)" />
+                <span class="switch-track"></span>
+            </label>
+        </div>
+    </section>
+
+    @if (Profile.HasElevatedRiskFactors)
+    {
+        <p class="risk-note">
+            With these factors we'll suggest rechecking low-risk spots every 60 days instead of 90,
+            and moderate-risk spots every 3 weeks instead of monthly.
+        </p>
+    }
+</div>
+
+@code {
+    private record FitzpatrickType(int Value, string Numeral, string Description, string Swatch);
+
+    private static readonly FitzpatrickType[] FitzpatrickTypes =
+    {
+        new(1, "I", "Very fair. Always burns, never tans.", "#F5E0D0"),
+        new(2, "II", "Fair. Burns easily, tans minimally.", "#EBC9A8"),
+        new(3, "III", "Medium. Burns moderately, tans gradually.", "#D9A985"),
+        new(4, "IV", "Olive. Burns minimally, tans easily.", "#B98060"),
+        new(5, "V", "Brown. Rarely burns, tans darkly.", "#8A5A3C"),
+        new(6, "VI", "Deeply pigmented. Never burns.", "#4A2E1E"),
+    };
+
+    private record SunExposureLevel(string Value, string Label, string Description);
+
+    private static readonly SunExposureLevel[] SunExposureLevels =
+    {
+        new("low", "Low", "Mostly indoors, with brief or covered outdoor time."),
+        new("moderate", "Moderate", "Outdoors most days, sometimes without sun protection."),
+        new("high", "High", "Extended time outdoors most days -- work, sports, or sun-seeking."),
+    };
+
+    [Parameter, EditorRequired]
+    public RiskProfile Profile { get; set; } = new();
+
+    [Parameter]
+    public EventCallback<RiskProfile> ProfileChanged { get; set; }
+
+    private async Task Set(Action<RiskProfile> mutate)
+    {
+        mutate(Profile);
+        await ProfileChanged.InvokeAsync(Profile);
+    }
+}

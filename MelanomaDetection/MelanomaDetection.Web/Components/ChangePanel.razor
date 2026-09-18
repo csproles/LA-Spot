@@ -1,0 +1,139 @@
+@* The "E" in ABCDE: what changed since this spot's previous photo. Reads the
+   evolving score's details JSON (shape from evolution.py) and degrades to a
+   "first photo" state when there is nothing to compare against. *@
+@using System.Text.Json
+@using MelanomaDetection.Web.Models
+@using MelanomaDetection.Web.Services
+
+@if (Results.SpotId is not null)
+{
+    <div class="card-panel change-panel">
+        <h2 class="panel-title">Change since last check</h2>
+
+        @if (Score is null)
+        {
+            <div class="change-empty">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <circle cx="12" cy="12" r="8.5" />
+                    <path d="M12 7.5V12l3 2" />
+                </svg>
+                <div>
+                    <p class="change-empty-title">@(HasPrior ? "Couldn't compare these two photos" : "First photo of this spot")</p>
+                    <p class="text-muted-small">
+                        @(HasPrior
+                            ? Detail("reason") ?? "The two photos didn't have enough in common to measure change."
+                            : "Change over time is the strongest melanoma warning sign. Photograph this spot again in a few weeks and we'll compare the two.")
+                    </p>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="change-pair">
+                <figure class="change-figure">
+                    @if (Results.PriorThumbnail is not null)
+                    {
+                        <img src="data:image/png;base64,@Results.PriorThumbnail" alt="Previous photo of this spot" />
+                    }
+                    <figcaption>Before@(ComparedWhen is not null ? $" · {ComparedWhen}" : "")</figcaption>
+                </figure>
+                <span class="change-arrow" aria-hidden="true">→</span>
+                <figure class="change-figure">
+                    <img src="data:image/png;base64,@Results.Original" alt="This photo" />
+                    <figcaption>Now</figcaption>
+                </figure>
+            </div>
+
+            <div class="factor-row change-score">
+                <div class="factor-row-header">
+                    <span>Evolving score</span>
+                    <span>@Score.Value.ToString("F1") / 10</span>
+                </div>
+                <div class="factor-bar-track">
+                    <div class="factor-bar-fill factor-bar-@RiskBands.FactorBand(Score.Value)" style="width:@((Score.Value / 10 * 100).ToString("F0"))%"></div>
+                </div>
+            </div>
+
+            <ul class="change-signals">
+                @if (DetailNumber("shape_change") is { } shape)
+                {
+                    <li class="@Tone(shape, DetailNumber("shape_concern_threshold") ?? 0.25)">
+                        <span class="signal-name">Shape</span>
+                        <span class="signal-value">@((shape * 100).ToString("F0"))% different outline</span>
+                    </li>
+                }
+                @if (DetailNumber("color_distance") is { } color)
+                {
+                    <li class="@Tone(color, DetailNumber("color_concern_threshold") ?? 12)">
+                        <span class="signal-name">Colour</span>
+                        <span class="signal-value">@color.ToString("F0") ΔE shift</span>
+                    </li>
+                }
+                @if (DetailNumber("area_growth_ratio") is { } growth)
+                {
+                    <li class="@Tone(Math.Max(growth, 0), DetailNumber("growth_concern_threshold") ?? 0.3)">
+                        <span class="signal-name">Size</span>
+                        <span class="signal-value">
+                            @(growth >= 0 ? "+" : "")@((growth * 100).ToString("F0"))% area
+                            (@DetailNumber("prior_area_mm2")?.ToString("F1") → @DetailNumber("area_mm2")?.ToString("F1") mm²)
+                        </span>
+                    </li>
+                }
+                else
+                {
+                    <li class="is-unavailable">
+                        <span class="signal-name">Size</span>
+                        <span class="signal-value">@(Detail("size_note") ?? "Not measured")</span>
+                    </li>
+                }
+                @if (DetailNumber("risk_score_delta") is { } delta)
+                {
+                    <li class="@(delta >= 5 ? "is-concern" : delta <= -5 ? "is-improved" : "is-stable")">
+                        <span class="signal-name">Risk score</span>
+                        <span class="signal-value">@(delta >= 0 ? "+" : "")@delta.ToString("F0") points</span>
+                    </li>
+                }
+            </ul>
+
+            <p class="change-caveat">
+                Compared from two phone photos without a fixed distance or lighting, so treat this as a
+                change indicator to raise with a clinician, not a measurement.
+                @if (Score >= 5)
+                {
+                    <strong>This spot has changed noticeably — worth a dermatologist's look.</strong>
+                }
+            </p>
+        }
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public ImageProcessingResults Results { get; set; } = null!;
+
+    private double? Score => Results.AbcdeScores.Evolving.Score;
+
+    private JsonElement Details => Results.AbcdeScores.Evolving.Details;
+
+    private bool HasPrior => Detail("compared_with") is not null;
+
+    private string? ComparedWhen =>
+        Detail("compared_with_at") is { } at && DateTimeOffset.TryParse(at, out var when)
+            ? when.ToLocalTime().ToString("MMM d, yyyy")
+            : null;
+
+    private string? Detail(string key) =>
+        Details.ValueKind == JsonValueKind.Object && Details.TryGetProperty(key, out var value)
+            ? value.ValueKind == JsonValueKind.String ? value.GetString() : value.ToString()
+            : null;
+
+    private double? DetailNumber(string key) =>
+        Details.ValueKind == JsonValueKind.Object
+        && Details.TryGetProperty(key, out var value)
+        && value.ValueKind == JsonValueKind.Number
+            ? value.GetDouble()
+            : null;
+
+    private static string Tone(double raw, double threshold) =>
+        raw >= threshold ? "is-concern" : raw >= threshold * 0.5 ? "is-watch" : "is-stable";
+}

@@ -16,3 +16,6 @@ obj/
 # OS/editor cruft
 .DS_Store
 .vscode/
+
+# SQLite store for tracked spots / saved checks (MelanomaDetection.Python/store.py)
+*.db

@@ -1,0 +1,51 @@
+.sparkline {
+    display: block;
+    width: 100%;
+    height: 44px;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.sparkline-band-low {
+    fill: var(--color-cream);
+}
+
+.sparkline-band-moderate {
+    fill: var(--color-moderate-bg);
+}
+
+.sparkline-band-high {
+    fill: var(--color-risk-red-bg);
+}
+
+.sparkline-line {
+    fill: none;
+    stroke: var(--color-navy);
+    stroke-width: 1.8;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+    vector-effect: non-scaling-stroke;
+}
+
+.sparkline-point {
+    stroke: var(--color-white);
+    stroke-width: 1.2;
+    vector-effect: non-scaling-stroke;
+}
+
+.sparkline-point-low {
+    fill: var(--color-clay);
+}
+
+.sparkline-point-moderate {
+    fill: var(--color-goldenrod);
+}
+
+.sparkline-point-high {
+    fill: var(--color-risk-red-icon);
+}
+
+.sparkline-point.is-latest {
+    stroke: var(--color-navy);
+    stroke-width: 1.5;
+}

@@ -1,0 +1,72 @@
+.spot-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    text-align: left;
+    background: var(--color-white);
+    border: 1.5px solid var(--color-sand);
+    border-radius: var(--radius-card);
+    padding: 14px 16px;
+    font-family: var(--font-body);
+    color: var(--color-text);
+    cursor: pointer;
+    transition: border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.spot-card:hover {
+    border-color: var(--color-navy);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(120, 76, 40, 0.12);
+}
+
+.spot-card-selected {
+    border-color: var(--color-navy);
+    box-shadow: 0 0 0 3px rgba(27, 62, 111, 0.14);
+}
+
+.spot-card-main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.spot-card-heading {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.spot-card-label {
+    font-family: var(--font-heading);
+    font-weight: 700;
+    font-size: 15px;
+    color: var(--color-navy);
+}
+
+.spot-card-meta {
+    margin: 0;
+    font-size: 12.5px;
+    color: var(--color-text-muted);
+}
+
+.spot-card-main .due-badge {
+    align-self: flex-start;
+    margin-top: 2px;
+}
+
+.spot-card-side {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.spot-card-chevron {
+    width: 18px;
+    height: 18px;
+    color: var(--color-clay);
+}

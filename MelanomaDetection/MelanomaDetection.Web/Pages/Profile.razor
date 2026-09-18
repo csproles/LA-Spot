@@ -2,19 +2,73 @@
 @rendermode InteractiveServer
 @using Microsoft.AspNetCore.Components.Web
 @using static Microsoft.AspNetCore.Components.Web.RenderMode
+@using MelanomaDetection.Web.Components
+@using MelanomaDetection.Web.Models
+@using MelanomaDetection.Web.Services
+@inject ImageProcessingService ImageProcessingService
 
 <PageTitle>Profile - Skin Check</PageTitle>
 
 <div class="profile-page">
-    <h1 class="profile-title">Profile</h1>
+    <div class="profile-header">
+        <h1 class="profile-title">Profile</h1>
+        <button type="button" class="btn btn-primary" disabled="@(IsSaving || !IsDirty)" @onclick="Save">
+            @if (IsSaving)
+            {
+                <span class="btn-spinner" aria-hidden="true"></span>
+            }
+            @(IsSaving ? "Saving…" : IsDirty ? "Save changes" : "Saved")
+        </button>
+    </div>
+
+    @if (LoadError is not null)
+    {
+        <div class="alert alert-danger" role="alert">@LoadError</div>
+    }
+    @if (SaveError is not null)
+    {
+        <div class="alert alert-danger" role="alert">@SaveError</div>
+    }
 
     <div class="card-panel">
         <p class="panel-title">Account</p>
         <div class="account-fields">
             <div class="field-group">
                 <label class="field-label" for="fullName">Full name</label>
-                <input id="fullName" type="text" class="form-control" placeholder="Jane Doe" @bind="FullName" />
+                <input id="fullName" type="text" class="form-control" placeholder="Jane Doe" value="@Model.FullName" @oninput="e => { Model.FullName = e.Value?.ToString() ?? string.Empty; IsDirty = true; }" />
             </div>
+        </div>
+    </div>
+
+    <section class="profile-section">
+        <div class="section-heading">
+            <h2 class="section-title">Risk profile</h2>
+            <p class="text-muted-small">Tunes how often each spot is due for a recheck. @(Model.Configured ? "" : "Not set up yet.")</p>
+        </div>
+        <RiskProfileForm Profile="Model" ProfileChanged="_ => IsDirty = true" />
+    </section>
+
+    <div class="card-panel">
+        <p class="panel-title">Notifications</p>
+        <div class="toggle-row">
+            <div>
+                <p class="toggle-label">Recheck reminders</p>
+                <p class="toggle-description">Get reminded when a tracked spot is due for another photo.</p>
+            </div>
+            <label class="switch">
+                <input type="checkbox" aria-label="Recheck reminders" @bind="RecheckReminders" />
+                <span class="switch-track"></span>
+            </label>
+        </div>
+        <div class="toggle-row">
+            <div>
+                <p class="toggle-label">High-risk alerts</p>
+                <p class="toggle-description">Get notified right away for a high-risk result.</p>
+            </div>
+            <label class="switch">
+                <input type="checkbox" aria-label="High-risk alerts" @bind="HighRiskAlerts" />
+                <span class="switch-track"></span>
+            </label>
         </div>
     </div>
 
@@ -26,7 +80,7 @@
                 <p class="toggle-description">Let a linked provider view your saved checks.</p>
             </div>
             <label class="switch">
-                <input type="checkbox" @bind="ShareWithDermatologist" />
+                <input type="checkbox" aria-label="Share with my dermatologist" @bind="ShareWithDermatologist" />
                 <span class="switch-track"></span>
             </label>
         </div>
@@ -36,31 +90,7 @@
                 <p class="toggle-description">Help improve the app with anonymized usage data.</p>
             </div>
             <label class="switch">
-                <input type="checkbox" @bind="AnonymousAnalytics" />
-                <span class="switch-track"></span>
-            </label>
-        </div>
-    </div>
-
-    <div class="card-panel">
-        <p class="panel-title">Notifications</p>
-        <div class="toggle-row">
-            <div>
-                <p class="toggle-label">Recheck reminders</p>
-                <p class="toggle-description">Get reminded to re-photograph a tracked spot.</p>
-            </div>
-            <label class="switch">
-                <input type="checkbox" @bind="RecheckReminders" />
-                <span class="switch-track"></span>
-            </label>
-        </div>
-        <div class="toggle-row">
-            <div>
-                <p class="toggle-label">High-risk alerts</p>
-                <p class="toggle-description">Get notified right away for a high-risk result.</p>
-            </div>
-            <label class="switch">
-                <input type="checkbox" @bind="HighRiskAlerts" />
+                <input type="checkbox" aria-label="Anonymous usage analytics" @bind="AnonymousAnalytics" />
                 <span class="switch-track"></span>
             </label>
         </div>
@@ -102,7 +132,11 @@
 </div>
 
 @code {
-    private string FullName = string.Empty;
+    private RiskProfile Model = new();
+    private bool IsDirty;
+    private bool IsSaving;
+    private string? LoadError;
+    private string? SaveError;
 
     private bool ShareWithDermatologist = true;
     private bool AnonymousAnalytics;
@@ -113,6 +147,37 @@
     private string Theme = "Light";
 
     private string? InfoMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            Model = await ImageProcessingService.GetProfileAsync();
+        }
+        catch (ImageProcessingApiException ex)
+        {
+            LoadError = ex.Message;
+        }
+    }
+
+    private async Task Save()
+    {
+        IsSaving = true;
+        SaveError = null;
+        try
+        {
+            Model = await ImageProcessingService.SaveProfileAsync(Model);
+            IsDirty = false;
+        }
+        catch (ImageProcessingApiException ex)
+        {
+            SaveError = ex.Message;
+        }
+        finally
+        {
+            IsSaving = false;
+        }
+    }
 
     private void ShowExportInfo() => InfoMessage = "Data export isn't wired up in this demo yet.";
 

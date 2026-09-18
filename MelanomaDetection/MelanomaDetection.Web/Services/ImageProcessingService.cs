@@ -28,18 +28,24 @@ public class ImageProcessingService
     }
 
     /// <summary>
-    /// Maps to POST /api/image/process. location/symptoms/notes are optional tags
-    /// carried alongside the image so a later "Save to history" shows a properly
-    /// labeled entry in the History list.
+    /// Maps to POST /api/image/process. When spotId is given the backend files
+    /// the check under that spot and scores "Evolving" against the spot's
+    /// previous check. location/symptoms/notes are optional tags carried
+    /// alongside the image.
     /// </summary>
     public async Task<ProcessImageResponse> ProcessImageAsync(
-        byte[] data, string filename, string? location = null,
+        byte[] data, string filename, string? spotId = null, string? location = null,
         IEnumerable<string>? symptoms = null, string? notes = null)
     {
         using var content = new MultipartFormDataContent();
         using var fileContent = new ByteArrayContent(data);
         fileContent.Headers.ContentType = new MediaTypeHeaderValue(GetContentType(filename));
         content.Add(fileContent, "file", filename);
+
+        if (!string.IsNullOrWhiteSpace(spotId))
+        {
+            content.Add(new StringContent(spotId), "spot_id");
+        }
 
         if (!string.IsNullOrWhiteSpace(location))
         {
@@ -87,20 +93,93 @@ public class ImageProcessingService
         return result?.Explanation ?? throw new ImageProcessingApiException("The analysis service returned an empty response.");
     }
 
-    /// <summary>Maps to POST /api/image/save/{id} -- marks a processed check as saved.</summary>
-    public async Task SaveToHistoryAsync(string processingId)
+    /// <summary>
+    /// Maps to POST /api/image/save/{id} -- persists a processed check to history.
+    /// Symptoms and notes are collected after the photo is analyzed and its
+    /// outline confirmed, so they're attached here rather than at process time.
+    /// </summary>
+    public async Task SaveToHistoryAsync(string processingId, IEnumerable<string>? symptoms = null, string? notes = null)
     {
         using var response = await SendAsync(() =>
-            _httpClient.PostAsync($"/api/image/save/{Uri.EscapeDataString(processingId)}", null));
+            _httpClient.PostAsJsonAsync(
+                $"/api/image/save/{Uri.EscapeDataString(processingId)}",
+                new { symptoms = symptoms?.ToList(), notes }));
     }
 
-    /// <summary>Maps to GET /api/image/history -- all checks that have been saved.</summary>
+    /// <summary>Maps to GET /api/image/history -- all saved checks, newest first.</summary>
     public async Task<List<HistoryEntry>> GetHistoryAsync()
     {
         using var response = await SendAsync(() => _httpClient.GetAsync("/api/image/history"));
 
         var result = await response.Content.ReadFromJsonAsync<HistoryResponse>();
         return result?.Entries ?? new List<HistoryEntry>();
+    }
+
+    /// <summary>Maps to GET /api/spots -- every tracked spot with its aggregates and next-due date.</summary>
+    public async Task<List<Spot>> GetSpotsAsync()
+    {
+        using var response = await SendAsync(() => _httpClient.GetAsync("/api/spots"));
+
+        var result = await response.Content.ReadFromJsonAsync<SpotsResponse>();
+        return result?.Spots ?? new List<Spot>();
+    }
+
+    /// <summary>Maps to GET /api/spots/{id} -- one spot with its full check timeline.</summary>
+    public async Task<SpotDetail> GetSpotAsync(string spotId)
+    {
+        using var response = await SendAsync(() =>
+            _httpClient.GetAsync($"/api/spots/{Uri.EscapeDataString(spotId)}"));
+
+        var result = await response.Content.ReadFromJsonAsync<SpotDetail>();
+        return result ?? throw new ImageProcessingApiException("The analysis service returned an empty response.");
+    }
+
+    /// <summary>Maps to POST /api/spots.</summary>
+    public async Task<Spot> CreateSpotAsync(string label, string bodyRegion)
+    {
+        using var response = await SendAsync(() =>
+            _httpClient.PostAsJsonAsync("/api/spots", new { label, bodyRegion }));
+
+        var result = await response.Content.ReadFromJsonAsync<Spot>();
+        return result ?? throw new ImageProcessingApiException("The analysis service returned an empty response.");
+    }
+
+    /// <summary>Maps to PATCH /api/spots/{id} -- rename and/or archive.</summary>
+    public async Task<Spot> UpdateSpotAsync(string spotId, string? label = null, bool? archived = null)
+    {
+        using var response = await SendAsync(() =>
+            _httpClient.PatchAsJsonAsync($"/api/spots/{Uri.EscapeDataString(spotId)}", new { label, archived }));
+
+        var result = await response.Content.ReadFromJsonAsync<Spot>();
+        return result ?? throw new ImageProcessingApiException("The analysis service returned an empty response.");
+    }
+
+    /// <summary>Maps to GET /api/profile. Configured is false until the user fills it in.</summary>
+    public async Task<RiskProfile> GetProfileAsync()
+    {
+        using var response = await SendAsync(() => _httpClient.GetAsync("/api/profile"));
+
+        var result = await response.Content.ReadFromJsonAsync<RiskProfile>();
+        return result ?? new RiskProfile();
+    }
+
+    /// <summary>Maps to PUT /api/profile.</summary>
+    public async Task<RiskProfile> SaveProfileAsync(RiskProfile profile)
+    {
+        using var response = await SendAsync(() =>
+            _httpClient.PutAsJsonAsync("/api/profile", new
+            {
+                fullName = profile.FullName,
+                location = profile.Location,
+                sunExposure = profile.SunExposure,
+                fitzpatrick = profile.Fitzpatrick,
+                familyHistory = profile.FamilyHistory,
+                blisteringSunburns = profile.BlisteringSunburns,
+                manyMoles = profile.ManyMoles,
+            }));
+
+        var result = await response.Content.ReadFromJsonAsync<RiskProfile>();
+        return result ?? throw new ImageProcessingApiException("The analysis service returned an empty response.");
     }
 
     /// <summary>

@@ -9,6 +9,14 @@ services:
       - "5002:5002"
     env_file:
       - .env   # provides OPENAI_API_KEY (only needed for the "Get AI Explanation" button)
+    environment:
+      # Tracked spots, saved checks and the risk profile live in this SQLite
+      # file for the life of the container -- store.init_db() wipes it on every
+      # startup so each demo run begins at the onboarding flow, not with
+      # leftover spots from a prior session.
+      - SKINCHECK_DB=/app/data/skincheck.db
+    volumes:
+      - skincheck-data:/app/data
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5002/health')"]
       interval: 10s
@@ -32,3 +40,6 @@ services:
     depends_on:
       python-api:
         condition: service_healthy
+
+volumes:
+  skincheck-data:

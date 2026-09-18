@@ -3,7 +3,7 @@
     margin: 0 auto;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 20px;
 }
 
 .map-title {
@@ -15,8 +15,8 @@
 }
 
 .map-subtitle {
-    margin: 0 0 8px;
-    color: var(--color-muted, #6b7280);
+    margin: 4px 0 0;
+    color: var(--color-text-muted);
 }
 
 .map-canvas {

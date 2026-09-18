@@ -116,7 +116,9 @@ class MelanomaDetector:
                     "details" holds the raw measurement(s) behind each score
                     (e.g. diameter_mm, dangerous color percentages, whether that
                     criterion crossed its own clinical concern threshold).
-                "risk_score": float 0-100 combining the ABCDE sub-scores.
+                "risk_score": float 0-100 combining the ABCD sub-scores.
+                "mm_per_px": float millimeters-per-pixel calibration, or None if
+                    no hair was found to calibrate against.
 
         Raises:
             FileNotFoundError: if image_path doesn't exist or cv2 can't decode it
@@ -166,6 +168,10 @@ class MelanomaDetector:
             "diameter_visual": visuals["diameter"],
             "abcde_scores": abcde_scores,
             "risk_score": risk_score,
+            # Carried out of the pipeline so a later check of the same spot can
+            # convert mask areas to mm^2 (see evolution.score_change). None when
+            # no hair was available to calibrate against.
+            "mm_per_px": mm_per_px,
         }
 
     def _resize_if_needed(self, image: np.ndarray, max_width: int = 512) -> np.ndarray:
@@ -739,7 +745,7 @@ class MelanomaDetector:
                 "border": {"score": 0.0, "details": {}},
                 "color": {"score": 0.0, "details": {}},
                 "diameter": {"score": None, "details": {"reason": "no lesion detected"}},
-                "evolving": {"score": None, "details": "not assessable from a single static image"},
+                "evolving": {"score": None, "details": {"reason": "no prior check to compare against"}},
             }
 
         asymmetry_score, asymmetry_details = self._calculate_asymmetry(mask)
@@ -752,7 +758,9 @@ class MelanomaDetector:
             "border": {"score": border_score, "details": border_details},
             "color": {"score": color_score, "details": color_details},
             "diameter": {"score": diameter_score, "details": diameter_details},
-            "evolving": {"score": None, "details": "not assessable from a single static image"},
+            # Filled in by evolution.score_change() when the spot has a prior
+            # check; left unscored here because a single photo cannot show change.
+            "evolving": {"score": None, "details": {"reason": "no prior check to compare against"}},
         }
 
     def _calculate_asymmetry(self, mask: np.ndarray):
@@ -1082,10 +1090,23 @@ class MelanomaDetector:
 
         What it does:
             Combines the asymmetry, border, color, and diameter sub-scores
-            (each 0-10, treating a None diameter as 0) into a single weighted
-            sum, then normalizes that sum against the maximum it could possibly
-            reach so the final result always falls in 0-100. "Evolving" is
-            excluded from the formula entirely, since its score is always None.
+            (each 0-10) into a single weighted sum, then normalizes that sum
+            against the maximum reachable by the criteria that actually
+            produced a score, so the final result always falls in 0-100.
+            "Evolving" is excluded from the formula entirely -- it is scored
+            separately (see evolution.py), because it only exists once a spot
+            has a prior photo, and folding it in here would make a spot's first
+            check incomparable to its later ones and corrupt its risk trend.
+
+        Why the denominator adapts:
+            Diameter scoring returns None whenever hair-based mm calibration
+            isn't possible, which happens routinely (hairless skin, polarized
+            dermoscopy -- see _calculate_diameter_score). This used to divide by
+            a fixed 2.4 weight total while contributing 0 for the missing
+            criterion, which silently capped an uncalibrated photo at ~79/100
+            and made it incomparable to a calibrated one. Since those scores are
+            now compared against each other over time, the denominator only
+            counts the weights that were actually measured.
 
         Why this approach:
             The weights (asymmetry 1.3, border 0.1, color 0.5, diameter 0.5)
@@ -1112,11 +1133,19 @@ class MelanomaDetector:
             58.4
         """
         weights = {"asymmetry": 1.3, "border": 0.1, "color": 0.5, "diameter": 0.5}
-        max_weighted = sum(weights.values()) * 10.0
+
+        measured = {
+            key: weight
+            for key, weight in weights.items()
+            if abcde_scores.get(key, {}).get("score") is not None
+        }
+        if not measured:
+            return 0.0
 
         weighted_sum = sum(
-            weights[key] * (abcde_scores[key]["score"] or 0.0) for key in weights
+            weight * abcde_scores[key]["score"] for key, weight in measured.items()
         )
+        max_weighted = sum(measured.values()) * 10.0
         return round((weighted_sum / max_weighted) * 100.0, 2)
 
     def _build_abcd_visuals(self, original: np.ndarray, mask: np.ndarray, abcde_scores: dict) -> dict:

@@ -1,0 +1,164 @@
+@page "/spots"
+@rendermode InteractiveServer
+@using Microsoft.AspNetCore.Components.Web
+@using static Microsoft.AspNetCore.Components.Web.RenderMode
+@using MelanomaDetection.Web.Components
+@using MelanomaDetection.Web.Models
+@using MelanomaDetection.Web.Services
+@inject ImageProcessingService ImageProcessingService
+@inject NavigationManager NavigationManager
+
+<PageTitle>Spots - Skin Check</PageTitle>
+
+<div class="spots-page">
+    <div class="spots-header">
+        <div>
+            <h1 class="spots-title">Your spots</h1>
+            <p class="spots-count">
+                @if (IsLoading)
+                {
+                    <span>Loading…</span>
+                }
+                else
+                {
+                    <span>@AllSpots.Count tracked · @DueCount due for recheck</span>
+                }
+            </p>
+        </div>
+        <a href="/check" class="btn btn-primary">New skin check</a>
+    </div>
+
+    @if (LoadError is not null)
+    {
+        <div class="alert alert-danger" role="alert">@LoadError</div>
+    }
+    else if (IsLoading)
+    {
+        <div class="d-flex align-items-center gap-2 text-muted">
+            <div class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></div>
+            <span>Loading spots…</span>
+        </div>
+    }
+    else if (AllSpots.Count == 0)
+    {
+        <div class="card-panel empty-state">
+            <h2 class="panel-title">Nothing tracked yet</h2>
+            <p class="text-muted-small">
+                A spot is a mole or mark you want to keep an eye on. Photograph it once to start its
+                timeline; every later photo of the same spot gets compared against the last.
+            </p>
+            <a href="/check" class="btn btn-primary">Photograph your first spot</a>
+        </div>
+    }
+    else
+    {
+        <div class="spots-layout">
+            <section class="card-panel spots-map">
+                <h2 class="panel-title">Body map</h2>
+                <BodyMap SelectedRegion="@SelectedRegion" SelectedRegionChanged="ToggleRegion"
+                         RegionCounts="RegionCounts" RegionBands="RegionBands" ShowRegionList="false" />
+                @if (SelectedRegion is not null)
+                {
+                    <button type="button" class="link-button clear-filter" @onclick="() => ToggleRegion(SelectedRegion)">
+                        Show all regions
+                    </button>
+                }
+                else
+                {
+                    <p class="text-muted-small map-hint">Tap a region to filter the list.</p>
+                }
+            </section>
+
+            <section class="spots-list-section">
+                <div class="list-toolbar">
+                    <span class="list-title">
+                        @(SelectedRegion is null ? "All spots" : SelectedRegion)
+                        <span class="list-count">@VisibleSpots.Count</span>
+                    </span>
+                    <div class="segmented">
+                        <button type="button" class="segmented-option @(SortBy == "due" ? "active" : "")" @onclick='() => SortBy = "due"'>Due first</button>
+                        <button type="button" class="segmented-option @(SortBy == "risk" ? "active" : "")" @onclick='() => SortBy = "risk"'>Highest risk</button>
+                        <button type="button" class="segmented-option @(SortBy == "recent" ? "active" : "")" @onclick='() => SortBy = "recent"'>Recent</button>
+                    </div>
+                </div>
+
+                @if (VisibleSpots.Count == 0)
+                {
+                    <p class="text-muted-small">No spots tracked in this region yet.</p>
+                }
+                else
+                {
+                    <div class="spot-list">
+                        @foreach (var spot in VisibleSpots)
+                        {
+                            <SpotCard Spot="spot" />
+                        }
+                    </div>
+                }
+            </section>
+        </div>
+    }
+</div>
+
+@code {
+    [SupplyParameterFromQuery(Name = "region")]
+    public string? RegionQuery { get; set; }
+
+    private List<Spot> AllSpots = new();
+    private bool IsLoading = true;
+    private string? LoadError;
+    private string? SelectedRegion;
+    private string SortBy = "due";
+
+    private int DueCount => AllSpots.Count(s => s.IsDue);
+
+    private Dictionary<string, int> RegionCounts => AllSpots.GroupBy(s => s.BodyRegion)
+        .ToDictionary(g => g.Key, g => g.Count());
+
+    private Dictionary<string, string> RegionBands => AllSpots.Where(s => s.LastRiskScore is not null)
+        .GroupBy(s => s.BodyRegion)
+        .ToDictionary(g => g.Key, g => RiskBands.Band(g.Max(s => s.LastRiskScore)));
+
+    private List<Spot> VisibleSpots
+    {
+        get
+        {
+            var filtered = SelectedRegion is null ? AllSpots : AllSpots.Where(s => s.BodyRegion == SelectedRegion);
+            return (SortBy switch
+            {
+                "risk" => filtered.OrderByDescending(s => s.LastRiskScore ?? -1),
+                "recent" => filtered.OrderByDescending(s => s.LastCheckedAt ?? DateTimeOffset.MinValue),
+                _ => filtered
+                    .OrderByDescending(s => s.IsDue)
+                    .ThenBy(s => s.NextDueAt ?? DateTimeOffset.MaxValue),
+            }).ToList();
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            AllSpots = await ImageProcessingService.GetSpotsAsync();
+        }
+        catch (ImageProcessingApiException ex)
+        {
+            LoadError = ex.Message;
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    protected override void OnParametersSet()
+    {
+        SelectedRegion = string.IsNullOrWhiteSpace(RegionQuery) ? null : RegionQuery;
+    }
+
+    private void ToggleRegion(string region)
+    {
+        var next = SelectedRegion == region ? null : region;
+        NavigationManager.NavigateTo(next is null ? "/spots" : $"/spots?region={Uri.EscapeDataString(next)}");
+    }
+}

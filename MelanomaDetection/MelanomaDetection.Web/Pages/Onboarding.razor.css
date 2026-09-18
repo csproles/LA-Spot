@@ -1,12 +1,12 @@
-.results-page {
-    max-width: 920px;
+.onboarding-page {
+    max-width: 720px;
     margin: 0 auto;
     display: flex;
     flex-direction: column;
     gap: 20px;
 }
 
-.results-eyebrow {
+.onboarding-eyebrow {
     text-transform: uppercase;
     font-size: 12.5px;
     letter-spacing: 0.04em;
@@ -15,10 +15,24 @@
     font-weight: 600;
 }
 
-.results-title {
+.onboarding-title {
     font-family: var(--font-heading);
     font-weight: 800;
-    font-size: 30px;
+    font-size: 28px;
     color: var(--color-navy);
     margin: 0;
+}
+
+.onboarding-subtitle {
+    color: var(--color-text-muted);
+    font-size: 15px;
+    margin: 6px 0 0;
+    line-height: 1.5;
+}
+
+.onboarding-actions {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
 }

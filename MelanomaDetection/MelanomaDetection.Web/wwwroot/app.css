@@ -1,28 +1,36 @@
 :root {
-    /* Design tokens -- see MelanomaDetection/README.md "UI handoff" for source */
+    /* Design tokens. Every colour in the app comes from this block; page
+       stylesheets must not introduce new hex values. Text tokens are chosen
+       to clear WCAG AA (4.5:1) on both white and --color-cream; --color-clay
+       is a border/fill tone only (it clears the 3:1 UI-component bar, not
+       the text bar), which is why text-faint is a separate, darker value. */
     --color-white: #FFFFFF;
-    --color-alice-blue: #EEF8FC;
-    --color-azure-mist: #DCF0F8;
-    --color-steel-blue: #7C97B4;
+    --color-cream: #FBF1E4;
+    --color-sand: #EFDFC5;
+    --color-clay: #9C8468;
     --color-navy: #1B3E6F;
+    --color-navy-deep: #16335C;
     --color-goldenrod: #B6880C;
-    --color-golden-earth: #916C0A;
-    --color-taupe: #4A3D33;
+    --color-golden-earth: #7A5A08;
+    --color-moderate-bg: #FCF3DC;
+    --color-improve: #276B4E;
 
     --color-risk-red-icon: #C4291F;
     --color-risk-red-text: #B8291F;
     --color-risk-red-banner-text: #8C291F;
     --color-risk-red-bg: #FDEDEC;
 
-    --color-text: #1F2A33;
-    --color-text-muted: #4A5A68;
-    --color-text-faint: #7C97B4;
+    --color-text: #2A2420;
+    --color-text-muted: #5C5347;
+    --color-text-faint: #7A6449;
+
+    --focus-ring: 0 0 0 3px rgba(182, 136, 12, 0.55);
 
     --radius-card: 15px;
     --radius-control: 9px;
     --radius-pill: 999px;
 
-    --shadow-card: 0 1px 2px rgba(27, 62, 111, 0.05);
+    --shadow-card: 0 1px 2px rgba(120, 76, 40, 0.07);
 
     --font-heading: "Manrope", system-ui, sans-serif;
     --font-body: "Work Sans", system-ui, sans-serif;
@@ -53,8 +61,8 @@ a, .btn-link {
 }
 
 .btn-primary:hover, .btn-primary:focus {
-    background-color: #16335c;
-    border-color: #16335c;
+    background-color: var(--color-navy-deep);
+    border-color: var(--color-navy-deep);
 }
 
 .btn-outline-primary {
@@ -67,12 +75,497 @@ a, .btn-link {
     border-color: var(--color-navy);
 }
 
-.btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
-  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
+/* One focus treatment everywhere: a goldenrod ring reads clearly against
+   navy buttons, white cards and the cream backdrop alike. */
+.btn:focus-visible, .btn:active:focus-visible, .btn-link.nav-link:focus-visible,
+.form-control:focus, .form-check-input:focus, .link-button:focus-visible,
+.segmented-option:focus-visible, .switch input:focus-visible + .switch-track,
+a:focus-visible, button:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
+}
+
+.form-control:focus {
+    border-color: var(--color-goldenrod);
+}
+
+.form-control::placeholder {
+    color: var(--color-text-faint);
 }
 
 .content {
     padding-top: 1.1rem;
+}
+
+/* Motion -----------------------------------------------------------------
+   Entrance/interaction animation lives here so it stays in one place as the
+   app grows. Everything is gated behind prefers-reduced-motion: the
+   no-preference block is what actually adds movement; the reduce block
+   collapses all animation/transition duration to ~0 for anyone who has
+   asked the OS for less motion. */
+@keyframes fade-in-up {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes pop-in {
+    from {
+        opacity: 0;
+        transform: scale(0.94);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes drift-wash {
+    from {
+        background-position: 13px 13px, 0 0, 0% 20%;
+    }
+
+    to {
+        background-position: 13px 13px, 0 0, 100% 80%;
+    }
+}
+
+/* Root wrapper of every routed page (.check-page, .results-page, etc.) --
+   gives each navigation a soft fade-in instead of content popping in cold. */
+@media (prefers-reduced-motion: no-preference) {
+    .home-page, .spots-page, .spot-page, .check-page, .results-page,
+    .history-page, .profile-page, .map-page, .onboarding-page {
+        animation: fade-in-up 0.35s ease both;
+    }
+
+    .card-panel, .upload-card {
+        animation: fade-in-up 0.45s 0.05s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+
+    .risk-band-score {
+        animation: pop-in 0.4s 0.15s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+
+    .app-background {
+        background-size: 26px 26px, 26px 26px, 220% 220%;
+        animation: drift-wash 24s ease-in-out infinite alternate;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+.btn-primary, .btn-outline-primary, .btn-outline-danger {
+    transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.btn-primary:hover, .btn-outline-primary:hover, .btn-outline-danger:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(120, 76, 40, 0.16);
+}
+
+.btn-primary:active, .btn-outline-primary:active, .btn-outline-danger:active {
+    transform: translateY(0) scale(0.98);
+    box-shadow: none;
+}
+
+.btn:disabled, .btn:disabled:hover {
+    transform: none;
+    box-shadow: none;
+}
+
+.btn-spinner {
+    display: inline-block;
+    width: 13px;
+    height: 13px;
+    margin-right: 7px;
+    vertical-align: -2px;
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    border-top-color: #fff;
+    border-radius: 50%;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .btn-spinner {
+        animation: spin 0.7s linear infinite;
+    }
+}
+
+/* Shared UI primitives -- used across multiple pages/components, kept here
+   (instead of duplicated per-page .razor.css) so spacing and color stay in
+   sync as the app grows. */
+.card-panel {
+    background: var(--color-white);
+    border: 1px solid rgba(156, 132, 104, 0.14);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-card);
+    padding: 18px 20px;
+}
+
+.panel-title {
+    font-family: var(--font-heading);
+    font-weight: 700;
+    font-size: 17px;
+    color: var(--color-navy);
+    margin: 0 0 14px;
+}
+
+.text-muted-small {
+    color: var(--color-text-muted);
+    font-size: 13px;
+    margin: 0 0 12px;
+}
+
+.link-button {
+    background: none;
+    border: none;
+    padding: 0;
+    color: var(--color-navy);
+    font-size: 13.5px;
+    text-decoration: underline;
+    width: fit-content;
+}
+
+.result-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 13.5px;
+    font-weight: 600;
+    text-decoration: none;
+    color: var(--color-text-muted);
+    width: fit-content;
+    transition: color 0.15s ease;
+}
+
+.back-link:hover {
+    color: var(--color-navy);
+}
+
+.back-link svg {
+    width: 16px;
+    height: 16px;
+}
+
+.disclaimer-banner {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    background: var(--color-risk-red-bg);
+    border: 1px solid rgba(196, 41, 31, 0.32);
+    border-radius: var(--radius-card);
+    padding: 14px 16px;
+}
+
+.disclaimer-icon {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    color: var(--color-risk-red-icon);
+    margin-top: 1px;
+}
+
+.disclaimer-banner p {
+    margin: 0;
+    font-size: 13.5px;
+    color: var(--color-risk-red-banner-text);
+}
+
+/* Segmented control -- e.g. sort-by / unit toggles */
+.segmented {
+    display: inline-flex;
+    background: var(--color-cream);
+    border-radius: var(--radius-pill);
+    padding: 3px;
+}
+
+.segmented-option {
+    border: none;
+    background: none;
+    padding: 6px 14px;
+    border-radius: var(--radius-pill);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--color-text-muted);
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.segmented-option.active {
+    background: var(--color-navy);
+    color: #fff;
+}
+
+/* Risk band -- large summary panel for a 0-100 risk score. Bands come from
+   Services/RiskBands.cs (mirroring the backend's policy.py). */
+.risk-band {
+    border: 1.5px solid transparent;
+}
+
+.risk-band-low {
+    background: var(--color-cream);
+    border-color: var(--color-sand);
+    color: var(--color-navy);
+}
+
+.risk-band-moderate {
+    background: var(--color-moderate-bg);
+    border-color: rgba(182, 136, 12, 0.35);
+    color: var(--color-golden-earth);
+}
+
+.risk-band-high {
+    background: var(--color-risk-red-bg);
+    border-color: var(--color-risk-red-icon);
+    color: var(--color-risk-red-text);
+}
+
+.risk-band-label {
+    font-weight: 700;
+    font-size: 14px;
+    margin: 0 0 4px;
+}
+
+.risk-band-score {
+    font-family: var(--font-heading);
+    font-weight: 800;
+    font-size: 34px;
+    margin: 0 0 6px;
+}
+
+.risk-band-score span {
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.risk-band-recommendation {
+    margin: 0;
+    font-size: 14px;
+}
+
+/* Settings rows -- a label/description pair with a control on the right */
+.toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--color-cream);
+}
+
+.toggle-row:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.toggle-row:first-of-type {
+    padding-top: 0;
+}
+
+.toggle-label {
+    font-weight: 600;
+    font-size: 14px;
+    margin: 0;
+}
+
+.toggle-description {
+    color: var(--color-text-muted);
+    font-size: 12.5px;
+    margin: 2px 0 0;
+}
+
+/* Pill switch */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 42px;
+    height: 24px;
+    flex-shrink: 0;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.switch-track {
+    position: absolute;
+    inset: 0;
+    background: var(--color-sand);
+    border-radius: var(--radius-pill);
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.switch-track::before {
+    content: "";
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    left: 3px;
+    top: 3px;
+    background: var(--color-white);
+    border-radius: 50%;
+    transition: transform 0.15s ease;
+    box-shadow: 0 1px 2px rgba(120, 76, 40, 0.22);
+}
+
+.switch input:checked + .switch-track {
+    background: var(--color-navy);
+}
+
+.switch input:checked + .switch-track::before {
+    transform: translateX(18px);
+}
+
+/* Small status badges -- risk band, recheck status, trend arrow */
+.risk-badge {
+    display: inline-block;
+    border-radius: var(--radius-pill);
+    padding: 2px 10px;
+    font-size: 11.5px;
+    font-weight: 700;
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+.risk-badge-low {
+    background: var(--color-cream);
+    color: var(--color-navy);
+}
+
+.risk-badge-moderate {
+    background: var(--color-moderate-bg);
+    color: var(--color-golden-earth);
+}
+
+.risk-badge-high {
+    background: var(--color-risk-red-bg);
+    color: var(--color-risk-red-text);
+}
+
+.due-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    border-radius: var(--radius-pill);
+    padding: 2px 10px;
+    font-size: 11.5px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.due-badge::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+}
+
+.due-badge-overdue {
+    background: var(--color-risk-red-bg);
+    color: var(--color-risk-red-text);
+}
+
+.due-badge-soon {
+    background: var(--color-moderate-bg);
+    color: var(--color-golden-earth);
+}
+
+.due-badge-later {
+    background: var(--color-cream);
+    color: var(--color-text-muted);
+}
+
+.trend {
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.trend-up {
+    color: var(--color-risk-red-icon);
+}
+
+.trend-down {
+    color: var(--color-improve);
+}
+
+.trend-flat {
+    color: var(--color-text-faint);
+}
+
+/* Factor / score bars -- 0-10 measurement rows with a filled track */
+.factor-row {
+    margin-bottom: 14px;
+}
+
+.factor-row:last-child {
+    margin-bottom: 0;
+}
+
+.factor-row-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13.5px;
+    margin-bottom: 6px;
+}
+
+.factor-bar-track {
+    height: 8px;
+    border-radius: var(--radius-pill);
+    background: var(--color-cream);
+    overflow: hidden;
+}
+
+.factor-bar-fill {
+    height: 100%;
+    border-radius: var(--radius-pill);
+    transition: width 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@starting-style {
+    .factor-bar-fill {
+        width: 0%;
+    }
+}
+
+.factor-bar-low {
+    background: var(--color-clay);
+}
+
+.factor-bar-moderate {
+    background: var(--color-goldenrod);
+}
+
+.factor-bar-high {
+    background: var(--color-risk-red-icon);
 }
 
 /* Soft diagonal wash + two-density dot grid, used behind the main content area */
@@ -80,9 +573,9 @@ a, .btn-link {
     position: relative;
     min-height: 100vh;
     background:
-        radial-gradient(circle, rgba(124, 151, 180, 0.16) 1px, transparent 1.3px) 13px 13px / 26px 26px,
-        radial-gradient(circle, rgba(124, 151, 180, 0.28) 1px, transparent 1.3px) 0 0 / 26px 26px,
-        linear-gradient(135deg, var(--color-alice-blue) 0%, var(--color-white) 55%);
+        radial-gradient(circle, rgba(156, 132, 104, 0.16) 1px, transparent 1.3px) 13px 13px / 26px 26px,
+        radial-gradient(circle, rgba(156, 132, 104, 0.28) 1px, transparent 1.3px) 0 0 / 26px 26px,
+        linear-gradient(135deg, var(--color-cream) 0%, var(--color-white) 55%);
 }
 
 h1:focus {
@@ -90,15 +583,15 @@ h1:focus {
 }
 
 .valid.modified:not([type=checkbox]) {
-    outline: 1px solid #26b050;
+    outline: 1px solid var(--color-improve);
 }
 
 .invalid {
-    outline: 1px solid #e50000;
+    outline: 1px solid var(--color-risk-red-icon);
 }
 
 .validation-message {
-    color: #e50000;
+    color: var(--color-risk-red-icon);
 }
 
 .blazor-error-boundary {
@@ -112,7 +605,7 @@ h1:focus {
     }
 
 .darker-border-checkbox.form-check-input {
-    border-color: #929292;
+    border-color: var(--color-clay);
 }
 
 .form-floating > .form-control-plaintext::placeholder, .form-floating > .form-control::placeholder {

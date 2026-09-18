@@ -3,69 +3,65 @@
 @using MelanomaDetection.Web.Services
 @inject ImageProcessingService ImageProcessingService
 
-<h2 class="h4">Pipeline Stages</h2>
-<p class="text-muted small">Every transformation the photo passes through before scoring.</p>
-<div class="row row-cols-2 row-cols-md-3 g-3 mb-4">
-    @foreach (var tile in ImageTiles)
-    {
-        <div class="col">
-            <div class="card h-100">
-                @if (HasImage(tile.Base64))
-                {
-                    <img src="@ToDataUrl(tile.Base64!)" class="card-img-top" alt="@tile.Label" />
-                }
-                else
-                {
-                    <div class="bg-light text-muted d-flex align-items-center justify-content-center" style="height:150px;">
-                        Image not cached
-                    </div>
-                }
-                <div class="card-body py-2">
-                    <p class="card-text small mb-0">@tile.Label</p>
-                </div>
-            </div>
-        </div>
-    }
-</div>
-
-<h2 class="h4">ABCDE Scores &amp; Visual Evidence</h2>
-<p class="text-muted small">What each score is actually based on, not just the number.</p>
-<div class="row row-cols-1 row-cols-md-2 g-3 mb-4">
-    @foreach (var row in ScoreRows)
-    {
-        <div class="col">
-            <div class="card h-100">
-                @if (HasImage(row.VisualBase64))
-                {
-                    <img src="@ToDataUrl(row.VisualBase64!)" class="card-img-top" alt="@row.Label visualization" />
-                }
-                <div class="card-body">
-                    <div class="d-flex justify-content-between">
-                        <span class="fw-semibold">@row.Label</span>
-                        <span>@(row.Score is null ? "N/A" : $"{row.Score:F1} / 10")</span>
-                    </div>
-                    @if (row.Score is not null)
+<div class="breakdown">
+    <div class="card-panel">
+        <h2 class="panel-title">Pipeline stages</h2>
+        <p class="text-muted-small">Every transformation the photo passes through before scoring.</p>
+        <div class="pipeline-grid">
+            @foreach (var tile in ImageTiles)
+            {
+                <div class="pipeline-tile">
+                    @if (HasImage(tile.Base64))
                     {
-                        <div class="progress my-2" role="progressbar" aria-valuenow="@row.Score" aria-valuemin="0" aria-valuemax="10">
-                            <div class="progress-bar @GetScoreBarClass(row.Score.Value)" style="width:@((row.Score.Value / 10 * 100).ToString("F0"))%"></div>
-                        </div>
+                        <img src="@ToDataUrl(tile.Base64!)" alt="@tile.Label" class="pipeline-tile-img" />
                     }
+                    else
+                    {
+                        <div class="pipeline-tile-placeholder">Not cached</div>
+                    }
+                    <p class="pipeline-tile-label">@tile.Label</p>
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="card-panel">
+        <h2 class="panel-title">ABCDE scores &amp; visual evidence</h2>
+        <p class="text-muted-small">What each score is actually based on, not just the number.</p>
+        <div class="score-grid">
+            @foreach (var row in ScoreRows)
+            {
+                <div class="score-card">
+                    @if (HasImage(row.VisualBase64))
+                    {
+                        <img src="@ToDataUrl(row.VisualBase64!)" alt="@row.Label visualization" class="score-card-img" />
+                    }
+                    <div class="factor-row">
+                        <div class="factor-row-header">
+                            <span>@row.Label</span>
+                            <span>@(row.Score is null ? "N/A" : $"{row.Score:F1} / 10")</span>
+                        </div>
+                        @if (row.Score is not null)
+                        {
+                            <div class="factor-bar-track">
+                                <div class="factor-bar-fill factor-bar-@GetFactorBand(row.Score.Value)" style="width:@((row.Score.Value / 10 * 100).ToString("F0"))%"></div>
+                            </div>
+                        }
+                    </div>
                     @if (!string.IsNullOrEmpty(row.Detail))
                     {
-                        <p class="text-muted small mb-0 mt-1">@row.Detail</p>
+                        <p class="text-muted-small score-card-detail">@row.Detail</p>
                     }
                 </div>
-            </div>
+            }
         </div>
-    }
-</div>
+    </div>
 
-<h2 class="h4">Plain-Language Explanation</h2>
-<div class="card mb-2">
-    <div class="card-body">
+    <div class="card-panel">
+        <h2 class="panel-title">Plain-language explanation</h2>
         @if (Explanation is not null)
         {
-            <p class="mb-0" style="white-space: pre-line;">@Explanation</p>
+            <p class="explanation-text">@Explanation</p>
         }
         else if (ExplanationError is not null)
         {
@@ -73,12 +69,12 @@
         }
         else
         {
-            <p class="text-muted small">
+            <p class="text-muted-small">
                 Get an AI-generated, plain-language summary of these findings. This calls
                 an external AI service and is not itself a diagnosis.
             </p>
             <button type="button" class="btn btn-outline-primary" disabled="@IsExplaining" @onclick="GetExplanation">
-                @(IsExplaining ? "Generating..." : "Get AI Explanation")
+                @(IsExplaining ? "Generating…" : "Get AI explanation")
             </button>
         }
     </div>
@@ -180,12 +176,11 @@
         }
     }
 
-    private static string GetScoreBarClass(double score) => score switch
+    private static string GetFactorBand(double score) => score switch
     {
-        < 2.5 => "bg-success",
-        < 5 => "bg-warning",
-        < 7.5 => "bg-elevated",
-        _ => "bg-danger",
+        < 3.3 => "low",
+        < 6.6 => "moderate",
+        _ => "high",
     };
 
     private static bool HasImage(string? base64) => !string.IsNullOrEmpty(base64);

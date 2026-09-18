@@ -1,0 +1,81 @@
+@page "/onboarding"
+@rendermode InteractiveServer
+@using Microsoft.AspNetCore.Components.Web
+@using static Microsoft.AspNetCore.Components.Web.RenderMode
+@using MelanomaDetection.Web.Components
+@using MelanomaDetection.Web.Models
+@using MelanomaDetection.Web.Services
+@inject ImageProcessingService ImageProcessingService
+@inject NavigationManager NavigationManager
+
+<PageTitle>Your risk profile - Skin Check</PageTitle>
+
+<div class="onboarding-page">
+    <div class="onboarding-header">
+        <p class="onboarding-eyebrow">RISK PROFILE</p>
+        <h1 class="onboarding-title">A few questions about your skin</h1>
+        <p class="onboarding-subtitle">
+            These are the personal risk factors dermatologists screen on. They tune how often we
+            suggest rechecking each spot, and you can change them any time in Profile.
+        </p>
+    </div>
+
+    @if (ErrorMessage is not null)
+    {
+        <div class="alert alert-danger" role="alert">@ErrorMessage</div>
+    }
+
+    <RiskProfileForm @bind-Profile="Profile" />
+
+    <div class="onboarding-actions">
+        <button type="button" class="btn btn-primary" disabled="@IsSaving" @onclick="Save">
+            @if (IsSaving)
+            {
+                <span class="btn-spinner" aria-hidden="true"></span>
+            }
+            Save and continue
+        </button>
+        <a href="/" class="link-button">Skip for now</a>
+    </div>
+</div>
+
+@code {
+    private RiskProfile Profile = new();
+    private bool IsSaving;
+    private string? ErrorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var existing = await ImageProcessingService.GetProfileAsync();
+            if (existing.Configured)
+            {
+                Profile = existing;
+            }
+        }
+        catch (ImageProcessingApiException)
+        {
+            // A fresh form is fine if the profile couldn't be loaded; saving will surface any real error.
+        }
+    }
+
+    private async Task Save()
+    {
+        IsSaving = true;
+        ErrorMessage = null;
+        try
+        {
+            await ImageProcessingService.SaveProfileAsync(Profile);
+            NavigationManager.NavigateTo("/");
+        }
+        catch (ImageProcessingApiException ex)
+        {
+            ErrorMessage = ex.Message;
+        }
+        finally
+        {
+            IsSaving = false;
+        }
+    }
+}

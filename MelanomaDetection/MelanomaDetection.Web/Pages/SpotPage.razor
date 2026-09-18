@@ -1,0 +1,360 @@
+@page "/spots/{SpotId}"
+@rendermode InteractiveServer
+@using Microsoft.AspNetCore.Components.Web
+@using static Microsoft.AspNetCore.Components.Web.RenderMode
+@using MelanomaDetection.Web.Components
+@using MelanomaDetection.Web.Models
+@using MelanomaDetection.Web.Services
+@inject ImageProcessingService ImageProcessingService
+@inject NavigationManager NavigationManager
+
+<PageTitle>@(Spot?.Label ?? "Spot") - Skin Check</PageTitle>
+
+<div class="spot-page">
+    <a href="/spots" class="back-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M14.5 5.5 8 12l6.5 6.5" />
+        </svg>
+        All spots
+    </a>
+
+    @if (LoadError is not null)
+    {
+        <div class="alert alert-danger" role="alert">@LoadError</div>
+    }
+    else if (Spot is null)
+    {
+        <div class="d-flex align-items-center gap-2 text-muted">
+            <div class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></div>
+            <span>Loading spot…</span>
+        </div>
+    }
+    else
+    {
+        <div class="spot-header">
+            <div class="spot-heading">
+                @if (IsRenaming)
+                {
+                    <div class="rename-row">
+                        <input class="form-control rename-input" @bind="RenameValue" @bind:event="oninput" placeholder="Spot label" aria-label="Spot label" />
+                        <button type="button" class="btn btn-primary btn-sm" disabled="@(string.IsNullOrWhiteSpace(RenameValue) || IsSaving)" @onclick="SaveRename">Save</button>
+                        <button type="button" class="btn btn-outline-primary btn-sm" @onclick="() => IsRenaming = false">Cancel</button>
+                    </div>
+                }
+                else
+                {
+                    <h1 class="spot-title">
+                        @Spot.Label
+                        <button type="button" class="icon-button" title="Rename" aria-label="Rename spot" @onclick="StartRename">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="M4 20h4l10.5-10.5a2.1 2.1 0 0 0-3-3L5 17v3Z" />
+                                <path d="m13.5 6.5 3 3" />
+                            </svg>
+                        </button>
+                    </h1>
+                }
+                <p class="spot-region">@Spot.BodyRegion · tracked since @(Spot.CreatedAt?.ToLocalTime().ToString("MMM yyyy") ?? "recently")</p>
+                <div class="spot-badges">
+                    @if (Spot.LastRiskScore is not null)
+                    {
+                        <span class="risk-badge risk-badge-@RiskBands.Band(Spot.LastRiskScore)">@RiskBands.ShortLabel(RiskBands.Band(Spot.LastRiskScore)) risk · @Spot.LastRiskScore.Value.ToString("F0")/100</span>
+                    }
+                    @{
+                        var status = Recheck.StatusOf(Spot);
+                    }
+                    @if (status.Text is not null)
+                    {
+                        <span class="due-badge due-badge-@status.Tone">@status.Text</span>
+                    }
+                </div>
+            </div>
+            <div class="spot-actions">
+                <a href="/check?spot=@Spot.Id" class="btn btn-primary">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M4 8a2 2 0 0 1 2-2h1.2a2 2 0 0 0 1.66-.9L9.6 4a2 2 0 0 1 1.66-.9h1.48A2 2 0 0 1 14.4 4l.74 1.1A2 2 0 0 0 16.8 6H18a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z" />
+                        <circle cx="12" cy="12.5" r="3.3" />
+                    </svg>
+                    Re-check this spot
+                </a>
+            </div>
+        </div>
+
+        @if (SaveError is not null)
+        {
+            <div class="alert alert-danger" role="alert">@SaveError</div>
+        }
+
+        @if (Spot.Checks.Count == 0)
+        {
+            <div class="card-panel empty-state">
+                <h2 class="panel-title">No photos yet</h2>
+                <p class="text-muted-small">Take the first photo of this spot to start its timeline.</p>
+                <a href="/check?spot=@Spot.Id" class="btn btn-primary">Photograph this spot</a>
+            </div>
+        }
+        else
+        {
+            <div class="spot-grid">
+                <section class="card-panel">
+                    <h2 class="panel-title">Risk over time</h2>
+                    @if (Spot.Checks.Count >= 2)
+                    {
+                        <RiskSparkline Scores="RiskScores" Width="320" Height="72" />
+                        <div class="trend-summary">
+                            <span class="trend-from">@Spot.Checks[0].RiskScore.ToString("F0")</span>
+                            <span class="trend-arrow trend trend-@(Spot.Trend ?? "flat")">@TrendGlyph</span>
+                            <span class="trend-to">@Latest.RiskScore.ToString("F0")</span>
+                            <span class="trend-delta @(RiskDelta > 0 ? "is-up" : RiskDelta < 0 ? "is-down" : "")">
+                                @(RiskDelta >= 0 ? "+" : "")@RiskDelta.ToString("F0") over @Spot.Checks.Count checks
+                            </span>
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted-small">One photo so far. The trend line starts with your second check.</p>
+                    }
+                    <p class="cadence-note">@Recheck.CadenceSentence(Spot)</p>
+                </section>
+
+                <section class="card-panel">
+                    <h2 class="panel-title">Latest change</h2>
+                    @if (Spot.Checks.Count >= 2)
+                    {
+                        <div class="change-pair">
+                            <figure class="change-figure">
+                                <img src="@ToDataUrl(Previous.Thumbnail)" alt="Previous photo" />
+                                <figcaption>@Previous.ProcessedAt?.ToLocalTime().ToString("MMM d, yyyy")</figcaption>
+                            </figure>
+                            <span class="change-arrow" aria-hidden="true">→</span>
+                            <figure class="change-figure">
+                                <img src="@ToDataUrl(Latest.Thumbnail)" alt="Latest photo" />
+                                <figcaption>@Latest.ProcessedAt?.ToLocalTime().ToString("MMM d, yyyy")</figcaption>
+                            </figure>
+                        </div>
+                        <dl class="change-stats">
+                            <div>
+                                <dt>Risk score</dt>
+                                <dd>@Previous.RiskScore.ToString("F0") → @Latest.RiskScore.ToString("F0")</dd>
+                            </div>
+                            <div>
+                                <dt>Diameter</dt>
+                                <dd>@DiameterText(Previous) → @DiameterText(Latest)</dd>
+                            </div>
+                            <div>
+                                <dt>Colour variation</dt>
+                                <dd>@ScoreText(Previous.Color) → @ScoreText(Latest.Color)</dd>
+                            </div>
+                        </dl>
+                        <a href="/results/@Latest.ProcessingId" class="link-button">See the full change analysis</a>
+                    }
+                    else
+                    {
+                        <p class="text-muted-small">
+                            After your next photo of this spot, this panel shows what changed: size,
+                            shape, colour, and the overall risk score side by side.
+                        </p>
+                    }
+                </section>
+            </div>
+
+            <section class="card-panel">
+                <div class="timeline-header">
+                    <h2 class="panel-title">Timeline</h2>
+                    @if (Spot.Checks.Count >= 2)
+                    {
+                        <button type="button" class="btn @(IsCompareMode ? "btn-primary" : "btn-outline-primary") btn-sm" @onclick="ToggleCompare">
+                            @(IsCompareMode ? "Done comparing" : "Compare two")
+                        </button>
+                    }
+                </div>
+                @if (IsCompareMode)
+                {
+                    <p class="text-muted-small">Pick any two photos to view them side by side.</p>
+                }
+                <ol class="timeline">
+                    @foreach (var check in Spot.Checks.AsEnumerable().Reverse())
+                    {
+                        var isSelected = CompareSelection.Contains(check.ProcessingId);
+                        <li>
+                            <button type="button" class="timeline-item @(isSelected ? "is-selected" : "")" @onclick="() => HandleCheckClick(check)">
+                                <img src="@ToDataUrl(check.Thumbnail)" alt="" class="timeline-thumb" />
+                                <span class="timeline-text">
+                                    <span class="timeline-date">@check.ProcessedAt?.ToLocalTime().ToString("MMM d, yyyy")</span>
+                                    <span class="timeline-meta">
+                                        @DiameterText(check)
+                                        @if (check.Symptoms.Count > 0)
+                                        {
+                                            <span> · @string.Join(", ", check.Symptoms)</span>
+                                        }
+                                    </span>
+                                </span>
+                                <span class="risk-badge risk-badge-@RiskBands.Band(check.RiskScore)">@check.RiskScore.ToString("F0")</span>
+                                @if (IsCompareMode && isSelected)
+                                {
+                                    <span class="timeline-check">✓</span>
+                                }
+                            </button>
+                        </li>
+                    }
+                </ol>
+
+                @if (IsCompareMode && CompareChecks.Count == 2)
+                {
+                    <div class="compare-grid">
+                        @foreach (var check in CompareChecks)
+                        {
+                            <figure class="change-figure change-figure-large">
+                                <img src="@ToDataUrl(check.Thumbnail)" alt="Photo from @check.ProcessedAt?.ToLocalTime().ToString("MMM d, yyyy")" />
+                                <figcaption>
+                                    @check.ProcessedAt?.ToLocalTime().ToString("MMM d, yyyy") ·
+                                    <span class="risk-badge risk-badge-@RiskBands.Band(check.RiskScore)">@check.RiskScore.ToString("F0")</span>
+                                </figcaption>
+                            </figure>
+                        }
+                    </div>
+                }
+            </section>
+
+            <div class="danger-zone">
+                <button type="button" class="link-button" @onclick="ArchiveSpot" disabled="@IsSaving">
+                    @(ConfirmArchive ? "Tap again to confirm — this hides the spot and its history" : "Archive this spot")
+                </button>
+            </div>
+        }
+    }
+</div>
+
+@code {
+    [Parameter]
+    public string SpotId { get; set; } = string.Empty;
+
+    private SpotDetail? Spot;
+    private string? LoadError;
+    private string? SaveError;
+    private bool IsSaving;
+    private bool IsRenaming;
+    private string RenameValue = string.Empty;
+    private bool ConfirmArchive;
+    private bool IsCompareMode;
+    private readonly List<string> CompareSelection = new();
+
+    private SpotCheck Latest => Spot!.Checks[^1];
+    private SpotCheck Previous => Spot!.Checks[^2];
+    private double RiskDelta => Latest.RiskScore - Spot!.Checks[0].RiskScore;
+    private List<double> RiskScores => Spot!.Checks.Select(c => c.RiskScore).ToList();
+
+    private string TrendGlyph => Spot?.Trend switch
+    {
+        "up" => "▲",
+        "down" => "▼",
+        _ => "—",
+    };
+
+    private List<SpotCheck> CompareChecks => Spot!.Checks
+        .Where(c => CompareSelection.Contains(c.ProcessingId))
+        .OrderBy(c => c.ProcessedAt)
+        .ToList();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Spot?.Id == SpotId)
+        {
+            return;
+        }
+
+        Spot = null;
+        LoadError = null;
+        try
+        {
+            Spot = await ImageProcessingService.GetSpotAsync(SpotId);
+        }
+        catch (ImageProcessingApiException ex)
+        {
+            LoadError = ex.Message;
+        }
+    }
+
+    private void StartRename()
+    {
+        RenameValue = Spot!.Label;
+        IsRenaming = true;
+    }
+
+    private async Task SaveRename()
+    {
+        IsSaving = true;
+        SaveError = null;
+        try
+        {
+            var updated = await ImageProcessingService.UpdateSpotAsync(SpotId, label: RenameValue.Trim());
+            Spot!.Label = updated.Label;
+            IsRenaming = false;
+        }
+        catch (ImageProcessingApiException ex)
+        {
+            SaveError = ex.Message;
+        }
+        finally
+        {
+            IsSaving = false;
+        }
+    }
+
+    private async Task ArchiveSpot()
+    {
+        if (!ConfirmArchive)
+        {
+            ConfirmArchive = true;
+            return;
+        }
+
+        IsSaving = true;
+        SaveError = null;
+        try
+        {
+            await ImageProcessingService.UpdateSpotAsync(SpotId, archived: true);
+            NavigationManager.NavigateTo("/spots");
+        }
+        catch (ImageProcessingApiException ex)
+        {
+            SaveError = ex.Message;
+            ConfirmArchive = false;
+        }
+        finally
+        {
+            IsSaving = false;
+        }
+    }
+
+    private void ToggleCompare()
+    {
+        IsCompareMode = !IsCompareMode;
+        CompareSelection.Clear();
+    }
+
+    private void HandleCheckClick(SpotCheck check)
+    {
+        if (!IsCompareMode)
+        {
+            NavigationManager.NavigateTo($"/results/{check.ProcessingId}");
+            return;
+        }
+
+        if (!CompareSelection.Remove(check.ProcessingId))
+        {
+            if (CompareSelection.Count >= 2)
+            {
+                CompareSelection.RemoveAt(0);
+            }
+            CompareSelection.Add(check.ProcessingId);
+        }
+    }
+
+    private static string DiameterText(SpotCheck check) =>
+        check.DiameterMm is null ? "size n/a" : $"≈{check.DiameterMm:F1} mm";
+
+    private static string ScoreText(double? score) =>
+        score is null ? "n/a" : $"{score:F1}/10";
+
+    private static string ToDataUrl(string base64Png) => $"data:image/png;base64,{base64Png}";
+}

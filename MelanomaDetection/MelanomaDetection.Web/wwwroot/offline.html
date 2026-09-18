@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>You're offline - Skin Check</title>
+    <link rel="icon" type="image/png" href="favicon.png" />
+    <style>
+        :root {
+            color-scheme: light;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: "Work Sans", system-ui, sans-serif;
+            background: linear-gradient(135deg, #FBF1E4 0%, #FFFFFF 55%);
+            color: #2A2420;
+            padding: 24px;
+        }
+
+        .card {
+            max-width: 360px;
+            text-align: center;
+            background: #fff;
+            border-radius: 15px;
+            box-shadow: 0 1px 2px rgba(120, 76, 40, 0.07);
+            padding: 32px 28px;
+        }
+
+        .mark {
+            width: 56px;
+            height: 56px;
+            border-radius: 16px;
+            background: #1B3E6F;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 18px;
+        }
+
+        .mark svg {
+            width: 28px;
+            height: 28px;
+            stroke: #FBF1E4;
+        }
+
+        h1 {
+            font-family: "Manrope", system-ui, sans-serif;
+            font-size: 19px;
+            margin: 0 0 8px;
+            color: #1B3E6F;
+        }
+
+        p {
+            font-size: 14px;
+            color: #5C5347;
+            margin: 0 0 20px;
+            line-height: 1.5;
+        }
+
+        button {
+            font-family: inherit;
+            font-weight: 700;
+            font-size: 14px;
+            color: #fff;
+            background: #1B3E6F;
+            border: none;
+            border-radius: 9px;
+            padding: 10px 20px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #16335c;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="mark">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="11" cy="11" r="7" />
+                <path d="m21 21-4.3-4.3" />
+            </svg>
+        </div>
+        <h1>You're offline</h1>
+        <p>Skin Check needs a live connection to analyze photos and load your data. Reconnect and try again.</p>
+        <button type="button" onclick="location.reload()">Retry</button>
+    </div>
+</body>
+</html>

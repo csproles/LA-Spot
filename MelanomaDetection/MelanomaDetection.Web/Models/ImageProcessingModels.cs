@@ -34,6 +34,13 @@ public class HistoryEntry
     [JsonPropertyName("processingId")]
     public string ProcessingId { get; set; } = string.Empty;
 
+    /// <summary>Null for a check that was saved without being filed under a spot.</summary>
+    [JsonPropertyName("spotId")]
+    public string? SpotId { get; set; }
+
+    [JsonPropertyName("spotLabel")]
+    public string? SpotLabel { get; set; }
+
     [JsonPropertyName("location")]
     public string Location { get; set; } = string.Empty;
 
@@ -135,4 +142,143 @@ public class ImageProcessingResults
 
     [JsonPropertyName("notes")]
     public string Notes { get; set; } = string.Empty;
+
+    [JsonPropertyName("spotId")]
+    public string? SpotId { get; set; }
+
+    /// <summary>
+    /// Base64 PNG of the previous check's thumbnail for the same spot, for the
+    /// before/after comparison. Null on a spot's first check.
+    /// </summary>
+    [JsonPropertyName("priorThumbnail")]
+    public string? PriorThumbnail { get; set; }
+}
+
+/// <summary>A tracked spot with the aggregate fields the list and dashboard need.</summary>
+public class Spot
+{
+    [JsonPropertyName("id")]
+    public string Id { get; set; } = string.Empty;
+
+    [JsonPropertyName("label")]
+    public string Label { get; set; } = string.Empty;
+
+    [JsonPropertyName("bodyRegion")]
+    public string BodyRegion { get; set; } = string.Empty;
+
+    [JsonPropertyName("createdAt")]
+    public DateTimeOffset? CreatedAt { get; set; }
+
+    [JsonPropertyName("archived")]
+    public bool Archived { get; set; }
+
+    [JsonPropertyName("checkCount")]
+    public int CheckCount { get; set; }
+
+    [JsonPropertyName("firstRiskScore")]
+    public double? FirstRiskScore { get; set; }
+
+    [JsonPropertyName("lastRiskScore")]
+    public double? LastRiskScore { get; set; }
+
+    [JsonPropertyName("lastCheckedAt")]
+    public DateTimeOffset? LastCheckedAt { get; set; }
+
+    /// <summary>"up", "down", "flat", or null until the spot has two checks.</summary>
+    [JsonPropertyName("trend")]
+    public string? Trend { get; set; }
+
+    [JsonPropertyName("riskBand")]
+    public string? RiskBand { get; set; }
+
+    /// <summary>Days between rechecks for the current risk band; 0 means "now".</summary>
+    [JsonPropertyName("cadenceDays")]
+    public int? CadenceDays { get; set; }
+
+    [JsonPropertyName("nextDueAt")]
+    public DateTimeOffset? NextDueAt { get; set; }
+
+    public bool IsDue => NextDueAt is not null && NextDueAt <= DateTimeOffset.UtcNow;
+}
+
+/// <summary>A spot plus its full check timeline, oldest first.</summary>
+public class SpotDetail : Spot
+{
+    [JsonPropertyName("checks")]
+    public List<SpotCheck> Checks { get; set; } = new();
+}
+
+/// <summary>One check in a spot's timeline -- the stored numbers plus a thumbnail.</summary>
+public class SpotCheck
+{
+    [JsonPropertyName("processingId")]
+    public string ProcessingId { get; set; } = string.Empty;
+
+    [JsonPropertyName("riskScore")]
+    public double RiskScore { get; set; }
+
+    [JsonPropertyName("diameterMm")]
+    public double? DiameterMm { get; set; }
+
+    [JsonPropertyName("asymmetry")]
+    public double? Asymmetry { get; set; }
+
+    [JsonPropertyName("border")]
+    public double? Border { get; set; }
+
+    [JsonPropertyName("color")]
+    public double? Color { get; set; }
+
+    [JsonPropertyName("symptoms")]
+    public List<string> Symptoms { get; set; } = new();
+
+    [JsonPropertyName("notes")]
+    public string Notes { get; set; } = string.Empty;
+
+    [JsonPropertyName("processedAt")]
+    public DateTimeOffset? ProcessedAt { get; set; }
+
+    [JsonPropertyName("thumbnail")]
+    public string Thumbnail { get; set; } = string.Empty;
+}
+
+public class SpotsResponse
+{
+    [JsonPropertyName("spots")]
+    public List<Spot> Spots { get; set; } = new();
+}
+
+/// <summary>The user's personal risk factors; drives recheck cadence on the backend.</summary>
+public class RiskProfile
+{
+    /// <summary>False when the user has never filled the profile in.</summary>
+    [JsonPropertyName("configured")]
+    public bool Configured { get; set; }
+
+    [JsonPropertyName("fullName")]
+    public string FullName { get; set; } = string.Empty;
+
+    /// <summary>Free-text city/region, used to give context to UV and seasonal advice.</summary>
+    [JsonPropertyName("location")]
+    public string Location { get; set; } = string.Empty;
+
+    /// <summary>Self-reported average time outdoors with skin exposed: "low", "moderate", or "high".</summary>
+    [JsonPropertyName("sunExposure")]
+    public string SunExposure { get; set; } = string.Empty;
+
+    /// <summary>Fitzpatrick skin type, 1 (always burns) to 6 (never burns), or null.</summary>
+    [JsonPropertyName("fitzpatrick")]
+    public int? Fitzpatrick { get; set; }
+
+    [JsonPropertyName("familyHistory")]
+    public bool FamilyHistory { get; set; }
+
+    [JsonPropertyName("blisteringSunburns")]
+    public bool BlisteringSunburns { get; set; }
+
+    [JsonPropertyName("manyMoles")]
+    public bool ManyMoles { get; set; }
+
+    public bool HasElevatedRiskFactors =>
+        Fitzpatrick is <= 2 || FamilyHistory || BlisteringSunburns || ManyMoles || SunExposure == "high";
 }

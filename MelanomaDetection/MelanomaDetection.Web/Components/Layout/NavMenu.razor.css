@@ -1,5 +1,5 @@
 .app-nav {
-    background: var(--color-navy, #1B3E6F);
+    background: var(--color-navy);
     position: sticky;
     top: 0;
     z-index: 20;
@@ -29,27 +29,77 @@
     gap: 1px;
     padding: 6px 4px;
     border-radius: var(--radius-control);
-    color: #EAF1FA !important;
+    color: var(--color-cream) !important;
     text-decoration: none !important;
     font-family: var(--font-body);
     font-size: 11px;
     font-weight: 600;
     min-width: 0;
+    transition: background-color 0.2s ease, color 0.2s ease, transform 0.15s ease;
 }
 
 ::deep .app-nav-link:hover {
     color: #ffffff !important;
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+::deep .app-nav-link:active {
+    transform: scale(0.96);
 }
 
 ::deep .app-nav-link.active {
-    background-color: #EAF1FA;
-    color: var(--color-navy, #1B3E6F) !important;
+    background-color: var(--color-cream);
+    color: var(--color-navy) !important;
     font-weight: 700;
 }
 
 .app-nav-icon {
     width: 18px;
     height: 18px;
+    transition: transform 0.2s ease;
+}
+
+::deep .app-nav-link:hover .app-nav-icon {
+    transform: translateY(-1px) scale(1.08);
+}
+
+/* The primary "Check" action: a filled cream disc that reads as the one
+   thing to tap in the bar. */
+.app-nav-primary-mark {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: var(--color-cream);
+    color: var(--color-navy);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.app-nav-primary-mark .app-nav-icon {
+    width: 22px;
+    height: 22px;
+}
+
+::deep .app-nav-link-primary:hover {
+    background-color: transparent;
+}
+
+::deep .app-nav-link-primary:hover .app-nav-primary-mark {
+    transform: translateY(-1px) scale(1.06);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+::deep .app-nav-link-primary.active {
+    background-color: transparent;
+    color: #fff !important;
+}
+
+::deep .app-nav-link-primary.active .app-nav-primary-mark {
+    background: var(--color-goldenrod);
+    color: #fff;
 }
 
 @media (min-width: 860px) {
@@ -79,17 +129,12 @@
         }
 
     .app-nav-brand-mark {
-        width: 28px;
-        height: 28px;
-        border-radius: 8px;
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
         background: rgba(255, 255, 255, 0.14);
-        color: #fff;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-family: var(--font-heading);
-        font-weight: 800;
-        font-size: 11px;
+        object-fit: cover;
+        flex-shrink: 0;
     }
 
     .app-nav-brand-text {
@@ -118,5 +163,27 @@
     .app-nav-icon {
         width: 17px;
         height: 17px;
+    }
+
+    /* In the sidebar the primary action sits inline as a compact filled disc. */
+    .app-nav-primary-mark {
+        width: 30px;
+        height: 30px;
+        margin-left: -6px;
+        box-shadow: none;
+    }
+
+    .app-nav-primary-mark .app-nav-icon {
+        width: 17px;
+        height: 17px;
+    }
+
+    ::deep .app-nav-link-primary:hover .app-nav-primary-mark {
+        transform: scale(1.08);
+        box-shadow: none;
+    }
+
+    ::deep .app-nav-link-primary.active .app-nav-primary-mark {
+        box-shadow: none;
     }
 }

@@ -12,6 +12,9 @@ from flask import Flask, jsonify, request
 from flask.json.provider import DefaultJSONProvider
 from flask_cors import CORS
 
+import evolution
+import policy
+import store
 from image_processor import MelanomaDetector
 from llm_explainer import explain_findings
 
@@ -38,6 +41,11 @@ app.config["MAX_CONTENT_LENGTH"] = MAX_CONTENT_LENGTH
 CORS(app)
 
 detector = MelanomaDetector()
+store.init_db()
+
+# Full-size pipeline imagery for the current session only. Everything that has
+# to outlive a restart (spots, saved checks, thumbnails, masks, the risk
+# profile) lives in store.py instead.
 _results_store = {}
 _explanation_cache = {}
 
@@ -87,14 +95,64 @@ def process_image_endpoint():
         os.remove(tmp_path)
 
     processing_id = f"proc_{uuid.uuid4().hex[:12]}"
-    results["location"] = request.form.get("location", "")
+    spot_id = request.form.get("spot_id") or None
+    spot = store.get_spot(spot_id) if spot_id else None
+
+    results["spot_id"] = spot["id"] if spot else None
+    results["location"] = request.form.get("location") or (spot["bodyRegion"] if spot else "")
     results["symptoms"] = request.form.getlist("symptoms")
     results["notes"] = request.form.get("notes", "")
     results["saved"] = False
     results["processed_at"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+    # Measured now, while the segmentation mask and hair-removed image are in
+    # hand, so a later check of this spot can compare against them cheaply.
+    results["area_px"] = evolution.lesion_area_px(results["segmentation"])
+    results["lab"] = evolution.lesion_lab_mean(results["hair_removed"], results["segmentation"])
+
+    if spot:
+        _score_evolution(results)
+
     _results_store[processing_id] = results
 
     return jsonify({"processingId": processing_id})
+
+
+def _score_evolution(results: dict):
+    """Fill in the Evolving score by comparing against this spot's previous check.
+
+    Leaves the placeholder untouched when the spot has no prior check (its first
+    photo) or when that prior check predates mask storage, so the UI can show a
+    "needs a second photo" state rather than a fabricated zero.
+    """
+    prior = store.get_last_check(results["spot_id"])
+    if prior is None or not prior.get("mask"):
+        return
+
+    prior_mask = cv2.imdecode(np.frombuffer(prior["mask"], np.uint8), cv2.IMREAD_GRAYSCALE)
+    if prior_mask is None:
+        return
+
+    score, details = evolution.score_change(
+        current={
+            "mask": results["segmentation"],
+            "area_px": results["area_px"],
+            "lab": results["lab"],
+            "mm_per_px": results.get("mm_per_px"),
+            "risk_score": results["risk_score"],
+        },
+        prior={
+            "mask": prior_mask,
+            "area_px": prior["areaPx"],
+            "lab": prior["lab"],
+            "mm_per_px": prior["mmPerPx"],
+            "risk_score": prior["riskScore"],
+        },
+    )
+
+    details["compared_with"] = prior["processingId"]
+    details["compared_with_at"] = prior["processedAt"]
+    results["abcde_scores"]["evolving"] = {"score": score, "details": details}
 
 
 @app.route("/api/image/results/<processing_id>", methods=["GET"])
@@ -120,7 +178,29 @@ def get_results(processing_id):
         "location": results.get("location", ""),
         "symptoms": results.get("symptoms", []),
         "notes": results.get("notes", ""),
+        "spotId": results.get("spot_id"),
+        "priorThumbnail": _prior_thumbnail_base64(results),
     })
+
+
+def _prior_thumbnail_base64(results: dict):
+    """The previous check's thumbnail for this spot, for the before/after comparison."""
+    spot_id = results.get("spot_id")
+    if not spot_id:
+        return None
+
+    evolving_details = results.get("abcde_scores", {}).get("evolving", {}).get("details")
+    if not isinstance(evolving_details, dict):
+        return None
+
+    compared_with = evolving_details.get("compared_with")
+    if not compared_with:
+        return None
+
+    prior = store.get_check(compared_with)
+    if prior is None or not prior.get("thumbnail"):
+        return None
+    return base64.b64encode(prior["thumbnail"]).decode("utf-8")
 
 
 @app.route("/api/image/save/<processing_id>", methods=["POST"])
@@ -129,27 +209,188 @@ def save_to_history(processing_id):
     if results is None:
         return jsonify({"error": f"No results found for id '{processing_id}'"}), 404
 
+    # The spot is normally chosen before the photo is analyzed, but accept a
+    # late assignment too so a check can be filed after the fact. Symptoms and
+    # notes likewise: the client confirms the lesion outline right after the
+    # photo and collects details afterwards, so they arrive here, not at process.
+    body = request.get_json(silent=True) or {}
+    spot_id = body.get("spotId") or request.form.get("spot_id") or results.get("spot_id")
+    if spot_id and store.get_spot(spot_id) is None:
+        return jsonify({"error": f"No spot found for id '{spot_id}'"}), 404
+
+    if isinstance(body.get("symptoms"), list):
+        results["symptoms"] = [str(s) for s in body["symptoms"]]
+    if isinstance(body.get("notes"), str):
+        results["notes"] = body["notes"]
+
+    store.save_check(
+        processing_id=processing_id,
+        spot_id=spot_id,
+        risk_score=results["risk_score"],
+        abcde_scores=results["abcde_scores"],
+        location=results.get("location", ""),
+        symptoms=results.get("symptoms", []),
+        notes=results.get("notes", ""),
+        processed_at=results["processed_at"],
+        thumbnail_png=_encode_image_png(_make_thumbnail(results["original"])),
+        mask_png=_encode_image_png(results["segmentation"]),
+        mm_per_px=results.get("mm_per_px"),
+        area_px=results.get("area_px"),
+        lab=results.get("lab"),
+    )
+
     results["saved"] = True
-    return jsonify({"saved": True})
+    results["spot_id"] = spot_id
+    return jsonify({"saved": True, "spotId": spot_id})
 
 
 @app.route("/api/image/history", methods=["GET"])
 def get_history():
     entries = [
         {
-            "processingId": processing_id,
-            "location": results.get("location", ""),
-            "symptoms": results.get("symptoms", []),
-            "notes": results.get("notes", ""),
-            "riskScore": results["risk_score"],
-            "processedAt": results.get("processed_at"),
-            "thumbnail": _encode_image_base64(_make_thumbnail(results["original"])),
+            "processingId": check["processingId"],
+            "spotId": check["spotId"],
+            "spotLabel": check.get("spotLabel"),
+            "location": check.get("bodyRegion") or check["location"],
+            "symptoms": check["symptoms"],
+            "notes": check["notes"],
+            "riskScore": check["riskScore"],
+            "processedAt": check["processedAt"],
+            "thumbnail": base64.b64encode(check["thumbnail"]).decode("utf-8")
+            if check["thumbnail"]
+            else "",
         }
-        for processing_id, results in _results_store.items()
-        if results.get("saved")
+        for check in store.list_checks()
     ]
-    entries.sort(key=lambda entry: entry["processedAt"] or "", reverse=True)
     return jsonify({"entries": entries})
+
+
+# --- spots ---------------------------------------------------------------
+
+
+@app.route("/api/spots", methods=["GET"])
+def list_spots_endpoint():
+    profile = store.get_profile()
+    spots = [_with_due_date(spot, profile) for spot in store.list_spots()]
+    return jsonify({"spots": spots})
+
+
+@app.route("/api/spots", methods=["POST"])
+def create_spot_endpoint():
+    body = request.get_json(silent=True) or {}
+    label = (body.get("label") or "").strip()
+    body_region = (body.get("bodyRegion") or "").strip()
+
+    if not label:
+        return jsonify({"error": "A label is required."}), 400
+    if not body_region:
+        return jsonify({"error": "A body region is required."}), 400
+
+    spot = store.create_spot(label, body_region)
+    return jsonify(_with_due_date({**spot, **store.aggregate_checks([])}, store.get_profile())), 201
+
+
+@app.route("/api/spots/<spot_id>", methods=["GET"])
+def get_spot_endpoint(spot_id):
+    spot = store.get_spot(spot_id)
+    if spot is None:
+        return jsonify({"error": f"No spot found for id '{spot_id}'"}), 404
+
+    checks = store.get_checks_for_spot(spot_id)
+    profile = store.get_profile()
+    summary = _with_due_date({**spot, **store.aggregate_checks(_as_rows(checks))}, profile)
+
+    return jsonify({
+        **summary,
+        "checks": [
+            {
+                "processingId": check["processingId"],
+                "riskScore": check["riskScore"],
+                "diameterMm": check["diameterMm"],
+                "asymmetry": check["asymmetry"],
+                "border": check["border"],
+                "color": check["color"],
+                "symptoms": check["symptoms"],
+                "notes": check["notes"],
+                "processedAt": check["processedAt"],
+                "thumbnail": base64.b64encode(check["thumbnail"]).decode("utf-8")
+                if check["thumbnail"]
+                else "",
+            }
+            for check in checks
+        ],
+    })
+
+
+@app.route("/api/spots/<spot_id>", methods=["PATCH"])
+def update_spot_endpoint(spot_id):
+    if store.get_spot(spot_id) is None:
+        return jsonify({"error": f"No spot found for id '{spot_id}'"}), 404
+
+    body = request.get_json(silent=True) or {}
+    label = body.get("label")
+    spot = store.update_spot(
+        spot_id,
+        label=label.strip() if isinstance(label, str) and label.strip() else None,
+        archived=body.get("archived"),
+    )
+    return jsonify(spot)
+
+
+def _as_rows(checks: list) -> list:
+    """Adapt store check dicts to the key names store._aggregate expects."""
+    return [
+        {"risk_score": check["riskScore"], "processed_at": check["processedAt"]}
+        for check in checks
+    ]
+
+
+def _with_due_date(spot: dict, profile) -> dict:
+    """Layer the policy-derived recheck fields onto a spot summary."""
+    next_due = policy.next_due_at(spot.get("lastCheckedAt"), spot.get("lastRiskScore"), profile)
+    return {
+        **spot,
+        "riskBand": policy.risk_band(spot["lastRiskScore"]) if spot.get("lastRiskScore") is not None else None,
+        "cadenceDays": policy.cadence_days(spot.get("lastRiskScore"), profile)
+        if spot.get("lastCheckedAt")
+        else None,
+        "nextDueAt": next_due,
+    }
+
+
+# --- risk profile --------------------------------------------------------
+
+
+@app.route("/api/profile", methods=["GET"])
+def get_profile_endpoint():
+    profile = store.get_profile()
+    if profile is None:
+        return jsonify({"configured": False})
+    return jsonify({**profile, "configured": True})
+
+
+@app.route("/api/profile", methods=["PUT"])
+def save_profile_endpoint():
+    body = request.get_json(silent=True) or {}
+
+    fitzpatrick = body.get("fitzpatrick")
+    if fitzpatrick is not None and fitzpatrick not in range(1, 7):
+        return jsonify({"error": "fitzpatrick must be 1-6 (Fitzpatrick I-VI) or null."}), 400
+
+    sun_exposure = body.get("sunExposure") or ""
+    if sun_exposure and sun_exposure not in policy.SUN_EXPOSURE_LEVELS:
+        return jsonify({"error": "sunExposure must be one of: " + ", ".join(policy.SUN_EXPOSURE_LEVELS)}), 400
+
+    profile = store.save_profile(
+        full_name=body.get("fullName") or "",
+        location=body.get("location") or "",
+        sun_exposure=sun_exposure,
+        fitzpatrick=fitzpatrick,
+        family_history=bool(body.get("familyHistory")),
+        blistering_sunburns=bool(body.get("blisteringSunburns")),
+        many_moles=bool(body.get("manyMoles")),
+    )
+    return jsonify({**profile, "configured": True})
 
 
 @app.route("/api/image/explain/<processing_id>", methods=["POST"])
@@ -174,11 +415,16 @@ def explain_results(processing_id):
     return jsonify({"explanation": explanation})
 
 
-def _encode_image_base64(image: np.ndarray) -> str:
+def _encode_image_png(image: np.ndarray) -> bytes:
+    """PNG-encode an image to raw bytes, for storage as a SQLite BLOB."""
     success, buffer = cv2.imencode(".png", image)
     if not success:
         raise ValueError("Failed to encode image to PNG")
-    return base64.b64encode(buffer).decode("utf-8")
+    return buffer.tobytes()
+
+
+def _encode_image_base64(image: np.ndarray) -> str:
+    return base64.b64encode(_encode_image_png(image)).decode("utf-8")
 
 
 def _make_thumbnail(image: np.ndarray, max_width: int = 160) -> np.ndarray:

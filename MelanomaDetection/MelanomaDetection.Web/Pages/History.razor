@@ -7,13 +7,13 @@
 @inject ImageProcessingService ImageProcessingService
 @inject NavigationManager NavigationManager
 
-<PageTitle>History - Skin Check</PageTitle>
+<PageTitle>All checks - Skin Check</PageTitle>
 
 <div class="history-page">
     <div class="history-header">
         <div>
-            <h1 class="history-title">History</h1>
-            <p class="history-count">@Entries.Count saved check@(Entries.Count == 1 ? "" : "s")</p>
+            <h1 class="history-title">All checks</h1>
+            <p class="history-count">@Entries.Count saved check@(Entries.Count == 1 ? "" : "s") across every spot · <a href="/spots">view by spot</a></p>
         </div>
         @if (Entries.Count > 0)
         {
@@ -38,7 +38,7 @@
     {
         <div class="card-panel empty-state">
             <p>No saved checks yet. Analyze a photo and save it to see it here.</p>
-            <a href="/" class="btn btn-primary">New skin check</a>
+            <a href="/check" class="btn btn-primary">New skin check</a>
         </div>
     }
     else
@@ -75,10 +75,10 @@
                     </div>
                     <div class="history-card-body">
                         <div class="history-card-top">
-                            <span class="history-location">@(string.IsNullOrEmpty(entry.Location) ? "Unspecified" : entry.Location)</span>
-                            <span class="risk-badge risk-badge-@GetRiskBand(entry.RiskScore)">@GetRiskLabel(entry.RiskScore)</span>
+                            <span class="history-location">@(entry.SpotLabel ?? (string.IsNullOrEmpty(entry.Location) ? "Unfiled" : entry.Location))</span>
+                            <span class="risk-badge risk-badge-@RiskBands.Band(entry.RiskScore)">@RiskBands.ShortLabel(RiskBands.Band(entry.RiskScore))</span>
                         </div>
-                        <p class="history-date">@FormatDate(entry.ProcessedAt)</p>
+                        <p class="history-date">@(entry.SpotLabel is not null ? $"{entry.Location} · " : "")@FormatDate(entry.ProcessedAt)</p>
                         @if (!string.IsNullOrWhiteSpace(entry.Notes))
                         {
                             <p class="history-note">@entry.Notes</p>
@@ -97,8 +97,8 @@
                     {
                         <div class="compare-item">
                             <img src="@ToDataUrl(entry.Thumbnail)" alt="Comparison thumbnail" class="compare-thumb" />
-                            <p class="history-location">@(string.IsNullOrEmpty(entry.Location) ? "Unspecified" : entry.Location)</p>
-                            <span class="risk-badge risk-badge-@GetRiskBand(entry.RiskScore)">@GetRiskLabel(entry.RiskScore)</span>
+                            <p class="history-location">@(entry.SpotLabel ?? (string.IsNullOrEmpty(entry.Location) ? "Unfiled" : entry.Location))</p>
+                            <span class="risk-badge risk-badge-@RiskBands.Band(entry.RiskScore)">@RiskBands.ShortLabel(RiskBands.Band(entry.RiskScore))</span>
                             <p class="history-date">@FormatDate(entry.ProcessedAt)</p>
                             <p class="compare-score">Risk score: @entry.RiskScore.ToString("F0")/100</p>
                         </div>
@@ -183,20 +183,6 @@
 
     private static string FormatDate(DateTimeOffset? dt) =>
         dt?.ToLocalTime().ToString("MMM d, yyyy") ?? "Unknown date";
-
-    private static string GetRiskBand(double riskScore) => riskScore switch
-    {
-        < 35 => "low",
-        < 65 => "moderate",
-        _ => "high",
-    };
-
-    private static string GetRiskLabel(double riskScore) => GetRiskBand(riskScore) switch
-    {
-        "low" => "Low",
-        "moderate" => "Moderate",
-        _ => "High",
-    };
 
     private static string ToDataUrl(string base64Png) => $"data:image/png;base64,{base64Png}";
 }
