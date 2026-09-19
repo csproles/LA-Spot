@@ -189,6 +189,10 @@ public class ImageProcessingService
                 familyHistory = profile.FamilyHistory,
                 blisteringSunburns = profile.BlisteringSunburns,
                 manyMoles = profile.ManyMoles,
+                recheckReminders = profile.RecheckReminders,
+                highRiskAlerts = profile.HighRiskAlerts,
+                shareWithDermatologist = profile.ShareWithDermatologist,
+                anonymousAnalytics = profile.AnonymousAnalytics,
             }));
 
         var result = await response.Content.ReadFromJsonAsync<RiskProfile>();

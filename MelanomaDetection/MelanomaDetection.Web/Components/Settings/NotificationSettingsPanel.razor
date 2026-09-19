@@ -1,17 +1,28 @@
-@* Reminder preferences. Local to the session until notification delivery is
-   wired up on the backend. *@
+@* Reminder preferences. Mutates the bound RiskProfile in place and raises
+   ProfileChanged, so the host (Profile.razor) drives its own save button. *@
 
 <div class="card-panel">
     <p class="panel-title">Notifications</p>
     <ToggleRow Label="Recheck reminders"
                Description="Get reminded when a tracked spot is due for another photo."
-               @bind-Value="RecheckReminders" />
+               Value="Profile.RecheckReminders"
+               ValueChanged="value => Set(profile => profile.RecheckReminders = value)" />
     <ToggleRow Label="High-risk alerts"
                Description="Get notified right away for a high-risk result."
-               @bind-Value="HighRiskAlerts" />
+               Value="Profile.HighRiskAlerts"
+               ValueChanged="value => Set(profile => profile.HighRiskAlerts = value)" />
 </div>
 
 @code {
-    private bool RecheckReminders = true;
-    private bool HighRiskAlerts = true;
+    [Parameter, EditorRequired]
+    public RiskProfile Profile { get; set; } = new();
+
+    [Parameter]
+    public EventCallback<RiskProfile> ProfileChanged { get; set; }
+
+    private async Task Set(Action<RiskProfile> mutate)
+    {
+        mutate(Profile);
+        await ProfileChanged.InvokeAsync(Profile);
+    }
 }

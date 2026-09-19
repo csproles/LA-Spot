@@ -1,17 +1,30 @@
-@* Sharing and analytics choices. Local to the session until provider sharing
-   is wired up on the backend. *@
+@* Sharing and analytics choices. Mutates the bound RiskProfile in place and
+   raises ProfileChanged, so the host (Profile.razor) drives its own save
+   button. "Share with my dermatologist" records the person's consent choice;
+   there is no linked-provider feature yet for it to actually gate. *@
 
 <div class="card-panel">
     <p class="panel-title">Privacy &amp; data</p>
     <ToggleRow Label="Share with my dermatologist"
                Description="Let a linked provider view your saved checks."
-               @bind-Value="ShareWithDermatologist" />
+               Value="Profile.ShareWithDermatologist"
+               ValueChanged="value => Set(profile => profile.ShareWithDermatologist = value)" />
     <ToggleRow Label="Anonymous usage analytics"
                Description="Help improve the app with anonymized usage data."
-               @bind-Value="AnonymousAnalytics" />
+               Value="Profile.AnonymousAnalytics"
+               ValueChanged="value => Set(profile => profile.AnonymousAnalytics = value)" />
 </div>
 
 @code {
-    private bool ShareWithDermatologist = true;
-    private bool AnonymousAnalytics;
+    [Parameter, EditorRequired]
+    public RiskProfile Profile { get; set; } = new();
+
+    [Parameter]
+    public EventCallback<RiskProfile> ProfileChanged { get; set; }
+
+    private async Task Set(Action<RiskProfile> mutate)
+    {
+        mutate(Profile);
+        await ProfileChanged.InvokeAsync(Profile);
+    }
 }

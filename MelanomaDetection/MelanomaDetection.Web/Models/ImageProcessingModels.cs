@@ -279,6 +279,18 @@ public class RiskProfile
     [JsonPropertyName("manyMoles")]
     public bool ManyMoles { get; set; }
 
+    [JsonPropertyName("recheckReminders")]
+    public bool RecheckReminders { get; set; } = true;
+
+    [JsonPropertyName("highRiskAlerts")]
+    public bool HighRiskAlerts { get; set; } = true;
+
+    [JsonPropertyName("shareWithDermatologist")]
+    public bool ShareWithDermatologist { get; set; } = true;
+
+    [JsonPropertyName("anonymousAnalytics")]
+    public bool AnonymousAnalytics { get; set; }
+
     public bool HasElevatedRiskFactors =>
         Fitzpatrick is <= 2 || FamilyHistory || BlisteringSunburns || ManyMoles || SunExposure == "high";
 }

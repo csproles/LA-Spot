@@ -35,9 +35,9 @@
         <RiskProfileForm Profile="Model" IsLoading="IsLoading" ProfileChanged="_ => IsDirty = true" />
     </section>
 
-    <NotificationSettingsPanel />
+    <NotificationSettingsPanel Profile="Model" ProfileChanged="_ => IsDirty = true" />
 
-    <PrivacySettingsPanel />
+    <PrivacySettingsPanel Profile="Model" ProfileChanged="_ => IsDirty = true" />
 
     <AppPreferencesPanel />
 

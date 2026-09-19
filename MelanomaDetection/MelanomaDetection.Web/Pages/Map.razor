@@ -21,7 +21,8 @@
         <MapCanvas ApiKey="@ApiKey" />
 
         <ProviderDirectory Providers="Providers" IsLoading="IsLoading"
-                           LoadError="@LoadError" RegionLabel="@CurrentRegionLabel" />
+                           LoadError="@LoadError" RegionLabel="@CurrentRegionLabel"
+                           SelectedIndex="SelectedIndex" OnProviderSelected="OnProviderSelected" />
     }
 </div>
 
@@ -33,12 +34,25 @@
     private string? LoadError;
     private string? CurrentRegionLabel;
     private List<DermatologyProvider> Providers = [];
+    private int? SelectedIndex;
+
+    private async Task OnProviderSelected(int index)
+    {
+        if (index < 0 || index >= Providers.Count)
+        {
+            return;
+        }
+
+        SelectedIndex = index;
+        await JS.InvokeVoidAsync("skinCheckMap.focusProvider", index);
+    }
 
     private async Task OnParishChanged(string parish)
     {
         SelectedParish = parish;
         LoadError = null;
         Providers = [];
+        SelectedIndex = null;
 
         var region = LouisianaRegions.ForParish(string.IsNullOrEmpty(parish) ? null : parish);
         if (region is null)
@@ -65,9 +79,19 @@
         {
             center = new { lat = region.Lat, lng = region.Lng },
             zoom = region.Zoom,
+            // id is the provider's index in Providers, which is how a card click
+            // finds its pin again (see skinCheckMap.focusProvider).
             providers = Providers
-                .Where(provider => provider.Lat.HasValue && provider.Lng.HasValue)
-                .Select(provider => new { name = provider.Name, lat = provider.Lat, lng = provider.Lng }),
+                .Select((provider, index) => new
+                {
+                    id = index,
+                    name = provider.Name,
+                    address = provider.Address,
+                    phone = provider.Phone,
+                    lat = provider.Lat,
+                    lng = provider.Lng,
+                })
+                .Where(provider => provider.lat.HasValue && provider.lng.HasValue),
         });
 
         StateHasChanged();

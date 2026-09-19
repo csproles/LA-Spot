@@ -22,6 +22,7 @@
         case CheckStep.Capture:
             <CaptureStep IsRecheck="@(SelectedSpot?.CheckCount > 0)" RetakeHint="@RetakeHint"
                          OnFileSelected="HandleFileSelected"
+                         OnPhotoCaptured="HandlePhotoCaptured"
                          OnChangeSpot="() => CurrentStep = CheckStep.Spot" />
             break;
 
@@ -215,16 +216,43 @@
             using var memoryStream = new MemoryStream();
             await stream.CopyToAsync(memoryStream);
 
-            SelectedFileBytes = memoryStream.ToArray();
-            PreviewDataUrl = $"data:{file.ContentType};base64,{Convert.ToBase64String(SelectedFileBytes)}";
-            SelectedFileName = file.Name;
-            SelectedFileSize = file.Size;
-            CurrentStep = CheckStep.Confirm;
+            AcceptImage(memoryStream.ToArray(), file.ContentType, file.Name);
         }
         catch (IOException)
         {
             ErrorMessage = "File is too large to read. Maximum allowed size is 5 MB.";
         }
+    }
+
+    /// <summary>A JPEG frame from the in-app camera viewfinder (<see cref="CameraCapture"/>).</summary>
+    private void HandlePhotoCaptured(byte[] bytes)
+    {
+        ErrorMessage = null;
+        RetakeHint = null;
+        PreviewDataUrl = null;
+
+        if (bytes.Length == 0)
+        {
+            ErrorMessage = "The camera didn't return a photo. Please try again.";
+            return;
+        }
+
+        if (bytes.Length > MaxFileSizeBytes)
+        {
+            ErrorMessage = $"Captured photo is too large ({bytes.Length / (1024.0 * 1024.0):F2} MB). Maximum allowed size is 5 MB.";
+            return;
+        }
+
+        AcceptImage(bytes, "image/jpeg", $"camera-capture-{DateTime.Now:yyyyMMdd-HHmmss}.jpg");
+    }
+
+    private void AcceptImage(byte[] bytes, string contentType, string fileName)
+    {
+        SelectedFileBytes = bytes;
+        PreviewDataUrl = $"data:{contentType};base64,{Convert.ToBase64String(bytes)}";
+        SelectedFileName = fileName;
+        SelectedFileSize = bytes.Length;
+        CurrentStep = CheckStep.Confirm;
     }
 
     private async Task AnalyzeImage()

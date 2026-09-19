@@ -10,15 +10,29 @@ MelanomaDetector's actual output shape (0-10 scores + rich "details" dicts) into
 the flagged/score JSON shape this prompt was originally designed around, since
 this pipeline's schema evolved independently of the original prototype's.
 
+Grounding: the reply is constrained to what the analysis data shows and to a
+small set of National Cancer Institute passages (see knowledge.py). The model
+must cite passage ids and quote them exactly; the reply is checked in code, and
+if it can't pass that check after one retry, an explanation is built straight
+from the passages instead (knowledge.fallback_data). SYSTEM_PROMPT itself is
+left untouched; GROUNDING_PROMPT is added after it and only narrows what the
+model may say.
+
 Requires an OPENAI_API_KEY in a .env file. This repo keeps that .env at the
 repository root (see load_dotenv() call below) rather than duplicating it here.
 """
 
+import json
+import logging
 import os
 from pathlib import Path
 
 from dotenv import load_dotenv
 from openai import OpenAI
+
+import knowledge
+
+logger = logging.getLogger(__name__)
 
 _ANCESTORS = Path(__file__).resolve().parents
 _REPO_ROOT_ENV = _ANCESTORS[2] / ".env" if len(_ANCESTORS) > 2 else None
@@ -114,13 +128,59 @@ Silence on an unflagged field is correct; describing it, even neutrally,
 is not.
 """
 
-USER_PROMPT_TEMPLATE = """Here is the ABCDE analysis output from the image pipeline:
+GROUNDING_PROMPT = """GROUNDING RULES -- these are added to the STRICT RULES above and never relax
+any of them.
+
+G1. You may state only two kinds of things: (a) what the ANALYSIS DATA in the
+    user message shows (basis "analysis"), and (b) what one of the REFERENCE
+    PASSAGES in the user message says (basis "booklet"). Nothing else. Do not
+    use outside medical knowledge, statistics, causes, survival or treatment
+    information, or comparisons, even if you are sure they are true.
+
+G2. Every "booklet" statement must list the ids of the passages it relies on
+    in "source_ids", and copy into "quote" one exact, contiguous excerpt (at
+    least a full clause) from one of those passages, word for word. Never cite
+    an id that was not provided.
+
+G3. Every "analysis" statement must have "source_ids": [] and "quote": null,
+    and may only describe the flagged features in the analysis data.
+
+G4. Only write a number if it appears in the analysis data or in a passage you
+    cite.
+
+G5. If the data and passages do not support a statement, leave it out. A
+    shorter answer is always acceptable; an unsupported one never is.
+
+OUTPUT FORMAT -- this REPLACES the plain-text "Output format" section above.
+Return only a JSON object, with no markdown and no other keys:
+
+{
+  "noticed": [
+    {"text": "one plain sentence", "basis": "analysis", "source_ids": [], "quote": null},
+    {"text": "one plain sentence", "basis": "booklet", "source_ids": ["<id>"], "quote": "<exact excerpt>"}
+  ],
+  "next_steps": [ ...same item shape... ]
+}
+
+"noticed" holds 1 to 6 items and "next_steps" holds 2 to 4. Each "text" is one
+plain sentence with no markdown. At least one next step must recommend seeing
+a licensed dermatologist or healthcare provider.
+"""
+
+USER_PROMPT_TEMPLATE = """ANALYSIS DATA from the image pipeline:
 
 {abcde_json}
 
+REFERENCE PASSAGES (the only outside information you may use), each shown as
+[id] (page) "text":
+
+{passages}
+
 Explain this to the person who uploaded the photo, following your system
-instructions exactly.
+instructions and the grounding rules exactly.
 """
+
+MAX_ATTEMPTS = 2
 
 
 def _map_to_llm_schema(abcde_scores: dict) -> dict:
@@ -177,22 +237,56 @@ def _map_to_llm_schema(abcde_scores: dict) -> dict:
     return payload
 
 
-def explain_findings(abcde_scores: dict) -> str:
-    """Send ABCDE JSON to the LLM layer and return a plain-language explanation."""
-    import json
+def explain_findings(abcde_scores: dict, client=None) -> str:
+    """Return a plain-language, source-grounded explanation of the ABCDE output.
 
-    client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+    Model failures (a missing key, a network error) propagate to the caller. A
+    reply that merely fails validation does not: it is retried once with the
+    problems listed, then replaced by knowledge.fallback_data.
+
+    `client` is injectable so tests can supply a fake OpenAI client.
+    """
+    client = client or OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
     payload = _map_to_llm_schema(abcde_scores)
+    source, _ = knowledge.load()
+    passages = knowledge.select_passages(payload)
 
-    response = client.chat.completions.create(
-        model=MODEL,
-        max_tokens=600,
-        messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
+    base_messages = [
+        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "system", "content": GROUNDING_PROMPT},
+        {
+            "role": "user",
+            "content": USER_PROMPT_TEMPLATE.format(
+                abcde_json=json.dumps(payload, indent=2),
+                passages=knowledge.format_passages_for_prompt(passages),
+            ),
+        },
+    ]
+    messages = list(base_messages)
+
+    for attempt in range(1, MAX_ATTEMPTS + 1):
+        response = client.chat.completions.create(
+            model=MODEL,
+            max_tokens=900,
+            temperature=0,
+            response_format={"type": "json_object"},
+            messages=messages,
+        )
+        content = response.choices[0].message.content
+        data, problems = knowledge.parse_and_validate(content, payload, passages)
+        if data is not None:
+            return knowledge.render_explanation(data, source, passages)
+
+        logger.warning("Explanation attempt %d rejected: %s", attempt, "; ".join(problems))
+        messages = base_messages + [
+            {"role": "assistant", "content": content or ""},
             {
                 "role": "user",
-                "content": USER_PROMPT_TEMPLATE.format(abcde_json=json.dumps(payload, indent=2)),
+                "content": "Your reply was rejected for these reasons:\n- "
+                + "\n- ".join(problems)
+                + "\nReturn a corrected JSON object that fixes every one of them.",
             },
-        ],
-    )
-    return response.choices[0].message.content
+        ]
+
+    logger.warning("Falling back to a passage-only explanation after %d rejected attempts.", MAX_ATTEMPTS)
+    return knowledge.render_explanation(knowledge.fallback_data(payload, passages), source, passages)

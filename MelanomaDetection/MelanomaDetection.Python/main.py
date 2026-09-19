@@ -444,6 +444,10 @@ def save_profile_endpoint():
         family_history=bool(body.get("familyHistory")),
         blistering_sunburns=bool(body.get("blisteringSunburns")),
         many_moles=bool(body.get("manyMoles")),
+        recheck_reminders=bool(body.get("recheckReminders", True)),
+        high_risk_alerts=bool(body.get("highRiskAlerts", True)),
+        share_with_dermatologist=bool(body.get("shareWithDermatologist", True)),
+        anonymous_analytics=bool(body.get("anonymousAnalytics", False)),
     )
     return jsonify({**profile, "configured": True})
 

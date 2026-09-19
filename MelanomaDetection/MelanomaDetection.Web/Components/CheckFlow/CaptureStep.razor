@@ -14,10 +14,7 @@
     }
 
     <div class="capture-actions">
-        <CaptureTile IconName="camera" Variant="primary" Title="Take a photo" Subtitle="Opens the rear camera">
-            <InputFile OnChange="OnFileSelected" accept="image/*" capture="environment"
-                       class="capture-input" aria-label="Take a photo" />
-        </CaptureTile>
+        <CameraCapture OnFileSelected="OnFileSelected" OnCaptured="OnPhotoCaptured" />
 
         <CaptureTile IconName="gallery" Title="Choose from gallery" Subtitle="JPEG, PNG or WebP, up to 5 MB">
             <InputFile OnChange="OnFileSelected" accept="image/*"
@@ -40,6 +37,10 @@
 
     [Parameter, EditorRequired]
     public EventCallback<InputFileChangeEventArgs> OnFileSelected { get; set; }
+
+    /// <summary>A JPEG frame captured from the in-app camera viewfinder.</summary>
+    [Parameter, EditorRequired]
+    public EventCallback<byte[]> OnPhotoCaptured { get; set; }
 
     [Parameter, EditorRequired]
     public EventCallback OnChangeSpot { get; set; }

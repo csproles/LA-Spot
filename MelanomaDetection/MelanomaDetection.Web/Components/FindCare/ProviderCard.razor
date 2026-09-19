@@ -1,15 +1,42 @@
-@* One dermatology practice from the NPI Registry. *@
+@* One dermatology practice from the NPI Registry. When the practice was
+   geocoded it has a pin on the map, and the card becomes a button that asks
+   the map to show it. Without coordinates there is no pin to show. *@
 
-<li class="provider-card">
-    <p class="provider-name">@Provider.Name</p>
-    <p class="provider-address">@Provider.Address</p>
-    @if (!string.IsNullOrWhiteSpace(Provider.Phone))
+<li class="provider-card @(IsSelected ? "is-selected" : "")">
+    @if (HasPin)
     {
-        <p class="provider-phone">@Provider.Phone</p>
+        <button type="button" class="provider-card-button" aria-pressed="@IsSelected" @onclick="OnSelect">
+            @Details
+            <span class="provider-map-hint">Show on map</span>
+        </button>
+    }
+    else
+    {
+        @Details
+        <span class="provider-map-hint provider-map-hint-off">Not available on the map</span>
     }
 </li>
 
 @code {
     [Parameter, EditorRequired]
     public DermatologyProvider Provider { get; set; } = null!;
+
+    [Parameter]
+    public bool IsSelected { get; set; }
+
+    /// <summary>Raised when the person picks this practice; only fires for one with a pin.</summary>
+    [Parameter]
+    public EventCallback OnSelect { get; set; }
+
+    private bool HasPin => Provider.Lat.HasValue && Provider.Lng.HasValue;
+
+    // Spans, not paragraphs: a <button> may only hold phrasing content.
+    private RenderFragment Details => @<text>
+        <span class="provider-name">@Provider.Name</span>
+        <span class="provider-address">@Provider.Address</span>
+        @if (!string.IsNullOrWhiteSpace(Provider.Phone))
+        {
+            <span class="provider-phone">@Provider.Phone</span>
+        }
+    </text>;
 }

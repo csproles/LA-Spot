@@ -75,17 +75,32 @@ CREATE INDEX IF NOT EXISTS idx_checks_spot ON checks(spot_id, processed_at);
 
 -- One row per user (the web app's account id), not a singleton.
 CREATE TABLE IF NOT EXISTS profile (
-    user_id             TEXT PRIMARY KEY,
-    full_name           TEXT NOT NULL DEFAULT '',
-    location            TEXT NOT NULL DEFAULT '',
-    sun_exposure        TEXT NOT NULL DEFAULT '',
-    fitzpatrick         INTEGER,
-    family_history      INTEGER NOT NULL DEFAULT 0,
-    blistering_sunburns INTEGER NOT NULL DEFAULT 0,
-    many_moles          INTEGER NOT NULL DEFAULT 0,
-    updated_at          TEXT NOT NULL
+    user_id                   TEXT PRIMARY KEY,
+    full_name                 TEXT NOT NULL DEFAULT '',
+    location                  TEXT NOT NULL DEFAULT '',
+    sun_exposure              TEXT NOT NULL DEFAULT '',
+    fitzpatrick               INTEGER,
+    family_history            INTEGER NOT NULL DEFAULT 0,
+    blistering_sunburns       INTEGER NOT NULL DEFAULT 0,
+    many_moles                INTEGER NOT NULL DEFAULT 0,
+    recheck_reminders         INTEGER NOT NULL DEFAULT 1,
+    high_risk_alerts          INTEGER NOT NULL DEFAULT 1,
+    share_with_dermatologist  INTEGER NOT NULL DEFAULT 1,
+    anonymous_analytics       INTEGER NOT NULL DEFAULT 0,
+    updated_at                TEXT NOT NULL
 );
 """
+
+# Columns added after SCHEMA_VERSION 2 shipped, for _migrate_profile_columns to
+# backfill on an existing database without touching its rows. Keyed by column
+# name so the migration can skip ones a fresh v3+ database already has (the
+# CREATE TABLE above already includes them).
+_PROFILE_COLUMNS_ADDED_IN_V3 = {
+    "recheck_reminders": "INTEGER NOT NULL DEFAULT 1",
+    "high_risk_alerts": "INTEGER NOT NULL DEFAULT 1",
+    "share_with_dermatologist": "INTEGER NOT NULL DEFAULT 1",
+    "anonymous_analytics": "INTEGER NOT NULL DEFAULT 0",
+}
 
 
 @contextlib.contextmanager
@@ -110,7 +125,14 @@ def _connect():
 
 # Bumped whenever _SCHEMA changes shape. Stored in the database's user_version
 # pragma so init_db can tell an old file from a current one.
-SCHEMA_VERSION = 2
+#
+# Versions before 2 are recreated rather than migrated (see init_db's
+# docstring) -- that schema was always wiped at startup, so there was never
+# anything in one worth keeping. From 2 onward, rows are real user data
+# (spots, checks, a filled-in risk profile) and init_db must never drop them;
+# a version bump from here on has to ship with an additive migration instead
+# (see _migrate_profile_columns for the 2 -> 3 example).
+SCHEMA_VERSION = 3
 
 
 def init_db():
@@ -118,7 +140,7 @@ def init_db():
 
     Called once at process startup (main.py), not per-request. People's spots
     and checks are real records now that every row belongs to a signed-in
-    account, so this never discards a current-version database. (Until
+    account, so this never discards a current-version (>= 2) database. (Until
     2026-09-18 it wiped the file on every start to keep demos fresh; the demo
     account in the web app now serves that purpose instead.)
 
@@ -129,13 +151,30 @@ def init_db():
     os.makedirs(os.path.dirname(os.path.abspath(DB_PATH)), exist_ok=True)
     with _connect() as connection:
         version = connection.execute("PRAGMA user_version").fetchone()[0]
-        if 0 < version < SCHEMA_VERSION:
+        if 0 < version < 2:
             _drop_all(connection)
         elif version == 0 and _has_tables(connection):
             # Pre-versioning file (the wiped-on-start era): same treatment.
             _drop_all(connection)
         connection.executescript(_SCHEMA)
+        _migrate_profile_columns(connection)
         connection.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
+
+
+def _migrate_profile_columns(connection):
+    """Add columns introduced after v2 to an existing profile table in place.
+
+    CREATE TABLE IF NOT EXISTS (in _SCHEMA, run just before this) only creates
+    the table when it's entirely missing -- it does nothing to a table that
+    already exists with an older shape, so a file upgrading from v2 needs its
+    new columns added explicitly. Checking PRAGMA table_info first makes this
+    idempotent: safe to run on every startup, including against a database
+    _SCHEMA just created fresh (which already has every column).
+    """
+    existing = {row["name"] for row in connection.execute("PRAGMA table_info(profile)")}
+    for column, ddl in _PROFILE_COLUMNS_ADDED_IN_V3.items():
+        if column not in existing:
+            connection.execute(f"ALTER TABLE profile ADD COLUMN {column} {ddl}")
 
 
 def reset_db():
@@ -459,6 +498,10 @@ def get_profile(user_id: str):
         "familyHistory": bool(row["family_history"]),
         "blisteringSunburns": bool(row["blistering_sunburns"]),
         "manyMoles": bool(row["many_moles"]),
+        "recheckReminders": bool(row["recheck_reminders"]),
+        "highRiskAlerts": bool(row["high_risk_alerts"]),
+        "shareWithDermatologist": bool(row["share_with_dermatologist"]),
+        "anonymousAnalytics": bool(row["anonymous_analytics"]),
         "updatedAt": row["updated_at"],
     }
 
@@ -472,14 +515,20 @@ def save_profile(
     family_history: bool = False,
     blistering_sunburns: bool = False,
     many_moles: bool = False,
+    recheck_reminders: bool = True,
+    high_risk_alerts: bool = True,
+    share_with_dermatologist: bool = True,
+    anonymous_analytics: bool = False,
 ) -> dict:
     """Insert or replace the user's risk profile, and return it."""
     with _connect() as connection:
         connection.execute(
             """
             INSERT INTO profile (user_id, full_name, location, sun_exposure, fitzpatrick,
-                                 family_history, blistering_sunburns, many_moles, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                 family_history, blistering_sunburns, many_moles,
+                                 recheck_reminders, high_risk_alerts,
+                                 share_with_dermatologist, anonymous_analytics, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(user_id) DO UPDATE SET
                 full_name = excluded.full_name,
                 location = excluded.location,
@@ -488,6 +537,10 @@ def save_profile(
                 family_history = excluded.family_history,
                 blistering_sunburns = excluded.blistering_sunburns,
                 many_moles = excluded.many_moles,
+                recheck_reminders = excluded.recheck_reminders,
+                high_risk_alerts = excluded.high_risk_alerts,
+                share_with_dermatologist = excluded.share_with_dermatologist,
+                anonymous_analytics = excluded.anonymous_analytics,
                 updated_at = excluded.updated_at
             """,
             (
@@ -499,6 +552,10 @@ def save_profile(
                 1 if family_history else 0,
                 1 if blistering_sunburns else 0,
                 1 if many_moles else 0,
+                1 if recheck_reminders else 0,
+                1 if high_risk_alerts else 0,
+                1 if share_with_dermatologist else 0,
+                1 if anonymous_analytics else 0,
                 _utc_now_iso(),
             ),
         )

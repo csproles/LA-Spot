@@ -31,9 +31,12 @@
     {
         <p class="provider-panel-title">Dermatology providers near @RegionLabel</p>
         <ul class="provider-list">
-            @foreach (var provider in Providers)
+            @for (var index = 0; index < Providers.Count; index++)
             {
-                <ProviderCard Provider="provider" />
+                var providerIndex = index;
+                <ProviderCard Provider="Providers[providerIndex]"
+                              IsSelected="@(SelectedIndex == providerIndex)"
+                              OnSelect="() => OnProviderSelected.InvokeAsync(providerIndex)" />
             }
         </ul>
         <p class="provider-source">
@@ -54,6 +57,14 @@
 
     [Parameter]
     public string? RegionLabel { get; set; }
+
+    /// <summary>Index into <see cref="Providers"/> of the practice currently shown on the map.</summary>
+    [Parameter]
+    public int? SelectedIndex { get; set; }
+
+    /// <summary>Raised with the index of the practice the person clicked.</summary>
+    [Parameter]
+    public EventCallback<int> OnProviderSelected { get; set; }
 
     [Parameter]
     public int SkeletonCount { get; set; } = 4;
