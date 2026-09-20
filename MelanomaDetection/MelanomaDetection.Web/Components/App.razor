@@ -5,6 +5,15 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <base href="/" />
+    <!--
+        theme-color-meta must appear before theme.js's <script> tag below: that script runs
+        synchronously (no defer) so it can set data-theme before first paint, which means it
+        executes while the parser is still partway through <head> - an element declared after
+        the script tag doesn't exist in the DOM yet when the script runs, so
+        document.getElementById would silently return null and the meta tag would never
+        update. Keep this above theme.js, not just above ImportMap/manifest/icons.
+    -->
+    <meta id="theme-color-meta" name="theme-color" content="#2A3B31" />
     <ResourcePreloader />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -18,7 +27,6 @@
     <link rel="manifest" href="manifest.json" />
     <link rel="icon" type="image/png" href="favicon.png" />
     <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
-    <meta name="theme-color" content="#1B3E6F" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />

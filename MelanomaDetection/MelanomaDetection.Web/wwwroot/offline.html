@@ -7,7 +7,7 @@
     <link rel="icon" type="image/png" href="favicon.png" />
     <style>
         :root {
-            color-scheme: light;
+            color-scheme: light dark;
         }
 
         body {
@@ -17,17 +17,17 @@
             align-items: center;
             justify-content: center;
             font-family: "Work Sans", system-ui, sans-serif;
-            background: linear-gradient(135deg, #FBF1E4 0%, #FFFFFF 55%);
-            color: #2A2420;
+            background: light-dark(#F3EFE3, #12161A);
+            color: light-dark(#1F2937, #F4F6F5);
             padding: 24px;
         }
 
         .card {
             max-width: 360px;
             text-align: center;
-            background: #fff;
+            background: light-dark(#FFFFFF, #1E252B);
             border-radius: 15px;
-            box-shadow: 0 1px 2px rgba(120, 76, 40, 0.07);
+            box-shadow: 0 1px 2px light-dark(rgba(47, 74, 60, 0.1), rgba(0, 0, 0, 0.3));
             padding: 32px 28px;
         }
 
@@ -35,29 +35,26 @@
             width: 56px;
             height: 56px;
             border-radius: 16px;
-            background: #1B3E6F;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            overflow: hidden;
             margin: 0 auto 18px;
         }
 
-        .mark svg {
-            width: 28px;
-            height: 28px;
-            stroke: #FBF1E4;
+        .mark img {
+            width: 100%;
+            height: 100%;
+            display: block;
         }
 
         h1 {
             font-family: "Manrope", system-ui, sans-serif;
             font-size: 19px;
             margin: 0 0 8px;
-            color: #1B3E6F;
+            color: light-dark(#2F4A3C, #9EC2AE);
         }
 
         p {
             font-size: 14px;
-            color: #5C5347;
+            color: light-dark(#24323F, #C2CAD1);
             margin: 0 0 20px;
             line-height: 1.5;
         }
@@ -66,8 +63,8 @@
             font-family: inherit;
             font-weight: 700;
             font-size: 14px;
-            color: #fff;
-            background: #1B3E6F;
+            color: light-dark(#F6F8F5, #0B0F13);
+            background: light-dark(#2F4A3C, #9EC2AE);
             border: none;
             border-radius: 9px;
             padding: 10px 20px;
@@ -75,17 +72,14 @@
         }
 
         button:hover {
-            background: #16335c;
+            background: light-dark(#243A2E, #B2D2C0);
         }
     </style>
 </head>
 <body>
     <div class="card">
         <div class="mark">
-            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <circle cx="11" cy="11" r="7" />
-                <path d="m21 21-4.3-4.3" />
-            </svg>
+            <img src="icons/icon-192.png" alt="" width="56" height="56" />
         </div>
         <h1>You're offline</h1>
         <p>Skin Check needs a live connection to analyze photos and load your data. Reconnect and try again.</p>
