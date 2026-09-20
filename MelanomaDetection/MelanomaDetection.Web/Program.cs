@@ -1,7 +1,9 @@
+﻿using System.Net;
 using MelanomaDetection.Web.Components;
 using MelanomaDetection.Web.Services;
 using MelanomaDetection.Web.Services.Account;
 using MelanomaDetection.Web.Services.RateLimiting;
+using Microsoft.AspNetCore.HttpOverrides;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -11,6 +13,33 @@ builder.Services.AddRazorComponents()
 
 // Accounts database, session cookie and Google sign-in.
 builder.Services.AddSkinCheckAccounts(builder.Configuration, builder.Environment);
+
+// Behind a reverse proxy the real client address is only in X-Forwarded-For, and
+// the rate limits are keyed on it (without this, everyone shares the proxy's
+// address). That header is trusted only from the proxies named here, never from
+// arbitrary callers, so it can't be used to dodge a limit. Leave both lists empty
+// when nothing sits in front of the app.
+var trustedProxies = builder.Configuration.GetSection("ReverseProxy:KnownProxies").Get<string[]>() ?? [];
+var trustedNetworks = builder.Configuration.GetSection("ReverseProxy:KnownNetworks").Get<string[]>() ?? [];
+var behindProxy = trustedProxies.Length + trustedNetworks.Length > 0;
+if (behindProxy)
+{
+    builder.Services.Configure<ForwardedHeadersOptions>(options =>
+    {
+        options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+        options.KnownProxies.Clear();
+        options.KnownIPNetworks.Clear();
+        foreach (var proxy in trustedProxies)
+        {
+            options.KnownProxies.Add(IPAddress.Parse(proxy));
+        }
+
+        foreach (var network in trustedNetworks)
+        {
+            options.KnownIPNetworks.Add(System.Net.IPNetwork.Parse(network));
+        }
+    });
+}
 
 // Request rate limits (sign-in, account endpoints, a global ceiling) plus the
 // per-person caps on expensive actions that happen over the Blazor circuit.
@@ -46,6 +75,14 @@ builder.Services.AddHttpClient<NpiProviderService>(client =>
 });
 
 var app = builder.Build();
+
+if (behindProxy)
+{
+    // First, so everything after it sees the real client address and scheme.
+    app.UseForwardedHeaders();
+}
+
+app.UseSkinCheckSecurityHeaders();
 
 await app.MigrateAccountsDatabaseAsync();
 

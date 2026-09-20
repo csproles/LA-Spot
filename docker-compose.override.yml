@@ -1,0 +1,12 @@
+# Local development. `docker compose up` merges this file into docker-compose.yml
+# automatically. It is NOT used when you name the base file explicitly, which is
+# how a real deployment should be started:
+#     docker compose -f docker-compose.yml up -d --build
+
+services:
+  web:
+    environment:
+      # Development: developer error pages, cookies that also work over plain http
+      # on localhost, and the "Try the demo" button (no Google sign-in needed).
+      - ASPNETCORE_ENVIRONMENT=Development
+      - Demo__Enabled=true

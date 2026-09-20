@@ -12,7 +12,6 @@ import cv2
 import numpy as np
 from flask import Flask, g, jsonify, request
 from flask.json.provider import DefaultJSONProvider
-from flask_cors import CORS
 
 import evolution
 import policy
@@ -21,6 +20,7 @@ import validation
 from image_processor import MelanomaDetector
 from llm_explainer import explain_findings
 from ratelimit import RateLimiter
+from resultstore import ResultStore
 from validation import ValidationError
 
 ALLOWED_EXTENSIONS = {".png", ".jpg", ".jpeg", ".bmp"}
@@ -43,7 +43,6 @@ class NumpyJSONProvider(DefaultJSONProvider):
 app = Flask(__name__)
 app.json = NumpyJSONProvider(app)
 app.config["MAX_CONTENT_LENGTH"] = MAX_CONTENT_LENGTH
-CORS(app)
 
 detector = MelanomaDetector()
 store.init_db()
@@ -51,9 +50,10 @@ store.init_db()
 # Full-size pipeline imagery for the current session only. Everything that has
 # to outlive a restart (spots, saved checks, thumbnails, masks, the risk
 # profile) lives in store.py instead. Each entry records the user_id it was
-# produced for and is only ever handed back to that user.
-_results_store = {}
-_explanation_cache = {}
+# produced for and is only ever handed back to that user. It is bounded --
+# results expire and are capped per user and overall (see resultstore.py) --
+# because each holds several MB and this API is reachable by every account.
+_results_store = ResultStore()
 
 # --- caller identity -----------------------------------------------------
 #
@@ -69,10 +69,20 @@ INTERNAL_KEY_HEADER = "X-Internal-Api-Key"
 INTERNAL_KEY = os.environ.get("SKINCHECK_INTERNAL_KEY", "")
 _USER_ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
 
+# Without the key, X-User-Id is trusted from any caller, which lets whoever can
+# reach this port act as any user. So refuse to start that way unless local
+# development explicitly opts in.
+ALLOW_NO_KEY = os.environ.get("SKINCHECK_ALLOW_NO_KEY") == "1"
+
 if not INTERNAL_KEY:
+    if not ALLOW_NO_KEY:
+        raise RuntimeError(
+            "SKINCHECK_INTERNAL_KEY is not set. Set it to a long random string (the web app "
+            "needs the same value), or set SKINCHECK_ALLOW_NO_KEY=1 for local development only."
+        )
     app.logger.warning(
         "SKINCHECK_INTERNAL_KEY is not set: the %s header is trusted from any caller. "
-        "Fine for local development only.",
+        "Local development only.",
         USER_ID_HEADER,
     )
 
@@ -518,8 +528,8 @@ def explain_results(processing_id):
     if results is None:
         return jsonify({"error": f"No results found for id '{processing_id}'"}), 404
 
-    if processing_id in _explanation_cache:
-        return jsonify({"explanation": _explanation_cache[processing_id]})
+    if "explanation" in results:
+        return jsonify({"explanation": results["explanation"]})
 
     try:
         explanation = explain_findings(results["abcde_scores"])
@@ -530,7 +540,7 @@ def explain_results(processing_id):
                      "OpenAI API key is configured correctly and try again.",
         }), 502
 
-    _explanation_cache[processing_id] = explanation
+    results["explanation"] = explanation
     return jsonify({"explanation": explanation})
 
 
@@ -548,12 +558,9 @@ def delete_account_endpoint():
     """Erase the caller's stored data and any in-memory results of theirs."""
     removed = store.delete_user_data(g.user_id)
 
-    owned = [pid for pid, results in list(_results_store.items()) if results.get("user_id") == g.user_id]
-    for processing_id in owned:
-        _results_store.pop(processing_id, None)
-        _explanation_cache.pop(processing_id, None)
+    pending = _results_store.delete_user(g.user_id)
 
-    return jsonify({"deleted": True, **removed, "pendingResults": len(owned)})
+    return jsonify({"deleted": True, **removed, "pendingResults": pending})
 
 
 def _encode_image_png(image: np.ndarray) -> bytes:

@@ -44,7 +44,7 @@ else:
     # environment in that case.
     load_dotenv()
 
-MODEL = "gpt-4o"
+MODEL = "gpt-5.6-terra"
 
 SYSTEM_PROMPT = """You are a plain-language explainer for a skin lesion screening
 tool used in a hackathon prototype (not a diagnostic medical device).
@@ -265,9 +265,13 @@ def explain_findings(abcde_scores: dict, client=None) -> str:
     messages = list(base_messages)
 
     for attempt in range(1, MAX_ATTEMPTS + 1):
+        # GPT-5.6 rejects max_tokens, and only accepts temperature=0 when reasoning
+        # is off. Off is what we want anyway: the reply is a short, checked JSON
+        # object, so there's nothing to gain from paying for hidden reasoning tokens.
         response = client.chat.completions.create(
             model=MODEL,
-            max_tokens=900,
+            max_completion_tokens=900,
+            reasoning_effort="none",
             temperature=0,
             response_format={"type": "json_object"},
             messages=messages,

@@ -1,2 +1,12 @@
 bin/
 obj/
+.vs/
+Dockerfile
+.dockerignore
+
+# Local data and secrets must never be baked into an image
+.env
+*.env
+*.db
+*.db-shm
+*.db-wal

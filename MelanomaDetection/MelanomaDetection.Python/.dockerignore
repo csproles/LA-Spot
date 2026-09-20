@@ -1,0 +1,19 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+
+# Local data and secrets must never be baked into an image
+.env
+*.env
+*.db
+*.db-shm
+*.db-wal
+
+# Not needed at runtime
+tests/
+conftest.py
+validate_accuracy.py
+Dockerfile
+.dockerignore

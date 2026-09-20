@@ -77,6 +77,9 @@ def test_request_is_deterministic_json_and_carries_the_grounding_rules():
     call = client.calls[0]
 
     assert call["temperature"] == 0
+    assert call["reasoning_effort"] == "none"
+    assert call["max_completion_tokens"] == 900
+    assert "max_tokens" not in call
     assert call["response_format"] == {"type": "json_object"}
     system_text = " ".join(m["content"] for m in call["messages"] if m["role"] == "system")
     assert llm_explainer.SYSTEM_PROMPT in system_text

@@ -1,4 +1,12 @@
 # Place this file at the REPO ROOT (same level as .env.example)
+#
+# This file is the safe-by-default setup (Production, demo mode off, sign-in via
+# Google required). For everyday local use, docker-compose.override.yml sits next
+# to it and `docker compose up` merges it in automatically, switching on
+# Development mode and the "Try the demo" button.
+#
+# To deploy for real, ignore the override:
+#     docker compose -f docker-compose.yml up -d --build
 
 services:
   python-api:
@@ -12,14 +20,22 @@ services:
     expose:
       - "5002"
     env_file:
-      - .env   # provides OPENAI_API_KEY (only for "Get AI Explanation") and SKINCHECK_INTERNAL_KEY
+      - .env   # provides OPENAI_API_KEY (only for "Get AI Explanation")
     environment:
       # Tracked spots, saved checks and risk profiles live in this SQLite file
       # on the named volume below, so they survive container rebuilds. Use the
       # web app's demo account for a clean-slate walkthrough.
       - SKINCHECK_DB=/app/data/skincheck.db
+      # Required: compose refuses to start without it, and Flask refuses to run
+      # without it, so the X-User-Id header is never trusted from an anonymous caller.
+      - SKINCHECK_INTERNAL_KEY=${SKINCHECK_INTERNAL_KEY:?Set SKINCHECK_INTERNAL_KEY in .env (any long random string)}
     volumes:
       - skincheck-data:/app/data
+    # Analysis results are held in memory (bounded, see resultstore.py); this is the backstop.
+    mem_limit: 1g
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5002/health')"]
       interval: 10s
@@ -41,14 +57,22 @@ services:
       - FlaskApi__BaseUrl=http://python-api:5002
       # The same secret Flask reads as SKINCHECK_INTERNAL_KEY, so Flask can trust
       # the X-User-Id header this app sends.
-      - FlaskApi__InternalKey=${SKINCHECK_INTERNAL_KEY}
+      - FlaskApi__InternalKey=${SKINCHECK_INTERNAL_KEY:?Set SKINCHECK_INTERNAL_KEY in .env (any long random string)}
       # Accounts database and cookie-encryption keys live on the volume below, so
       # sign-ins survive a container rebuild.
       - ConnectionStrings__SkinCheck=Data Source=/app/data/skincheck-users.db
       - DataProtection__KeysDirectory=/app/data/keys
-      - ASPNETCORE_ENVIRONMENT=Development
+      # Production: no developer error pages, HTTPS-only cookies, and startup
+      # fails loudly if Google sign-in or the shared key is missing. Sign-in
+      # cookies are HTTPS-only here, so put a TLS-terminating proxy in front (see README).
+      - ASPNETCORE_ENVIRONMENT=Production
+      - Demo__Enabled=false
     volumes:
       - web-data:/app/data
+    mem_limit: 1g
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
     depends_on:
       python-api:
         condition: service_healthy

@@ -14,7 +14,7 @@
     <link rel="stylesheet" href="@Assets["MelanomaDetection.Web.styles.css"]" />
     <script src="@Assets["theme.js"]"></script>
     <script src="@Assets["cameraCapture.js"]"></script>
-    <ImportMap />
+    <ImportMap Nonce="@Nonce" />
     <link rel="manifest" href="manifest.json" />
     <link rel="icon" type="image/png" href="favicon.png" />
     <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
@@ -30,13 +30,15 @@
     <Routes />
     <ReconnectModal />
     <script src="@Assets["_framework/blazor.web.js"]"></script>
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('service-worker.js');
-            });
-        }
-    </script>
+    <script src="@Assets["registerServiceWorker.js"]"></script>
 </body>
 
 </html>
+
+@code {
+    [CascadingParameter]
+    private HttpContext? HttpContext { get; set; }
+
+    /// <summary>The per-request nonce the Content-Security-Policy allows for the framework's inline import map.</summary>
+    private string? Nonce => HttpContext?.Items[SecurityHeaders.NonceKey] as string;
+}

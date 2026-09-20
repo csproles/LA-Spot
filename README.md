@@ -130,8 +130,8 @@ sign-in is free.
 account that starts with no spots, so a walkthrough always begins at the
 onboarding flow without touching anyone's real data. Ending the demo (or
 signing out) erases that account; abandoned demos are swept after 8 hours.
-It is on in Development (which Docker Compose uses) and off elsewhere unless
-`Demo:Enabled` is `true`. Real accounts keep their spots across restarts —
+It is on in Development (which Docker Compose's local override uses) and off
+elsewhere unless `Demo:Enabled` is `true`. Real accounts keep their spots across restarts —
 the Flask database on the `skincheck-data` volume is no longer wiped at
 startup.
 
@@ -146,8 +146,10 @@ that header is only trusted when it arrives with the secret in
 `SKINCHECK_INTERNAL_KEY` (Flask) / `FlaskApi:InternalKey` (web). Set both to
 the same random string — `.env` covers both under Docker Compose; locally use
 `dotnet user-secrets set "FlaskApi:InternalKey" "..."` and export
-`SKINCHECK_INTERNAL_KEY` before `python main.py`. Leaving it unset is allowed
-in Development only (Flask logs a warning).
+`SKINCHECK_INTERNAL_KEY` before `python main.py` (Flask also reads it from the
+repo-root `.env`). Flask refuses to start without it; for throwaway local
+development only, set `SKINCHECK_ALLOW_NO_KEY=1` to run without (it logs a
+warning and trusts `X-User-Id` from any caller).
 
 **API keys and the browser.** Only the Google Maps key ever reaches the browser
 — Google's map script has to load there, so it can't be hidden, only locked
@@ -159,7 +161,8 @@ way is useless to anyone who copies it. It is never in the shipped JavaScript or
 HTML — the server hands it to the page at runtime. Everything else stays on the
 server: the OpenAI key and `SKINCHECK_INTERNAL_KEY` live only in the Flask
 process, and the Google sign-in secret and cookie keys only in the web process.
-Under Docker Compose the Flask port isn't published to the host at all.
+Under Docker Compose the Flask port isn't published to the host at all, and
+both containers run as unprivileged users with a memory limit.
 
 **Rate limits and input validation.** Both services throttle per account, so
 one person can't run up the OpenAI bill or tie up the analysis service: the web
@@ -171,6 +174,14 @@ Uploads are checked by content, not just file name (real PNG/JPEG/BMP, under
 25 megapixels), and every text field has a length cap (`InputLimits.cs` on the
 web side, `validation.py` in Flask — keep the two in step). Limits are held in
 memory, so they reset on restart and assume a single instance of each service.
+
+**Browser hardening.** Every response carries a Content-Security-Policy (only
+this site's scripts run; only Google Maps, Fonts and profile pictures load from
+elsewhere), plus `X-Content-Type-Options`, `Referrer-Policy` and a
+`Permissions-Policy` that allows the camera for this site only
+(`Services/SecurityHeaders.cs`). If you add a script, stylesheet or image from a
+new host, add it there or the browser will block it. `AllowedHosts` is
+`localhost`; set it to your real hostname when deploying.
 
 ## Setup with Docker (alternative)
 
@@ -199,6 +210,11 @@ Copy-Item .env.example .env    # macOS/Linux: cp .env.example .env
 docker compose up --build
 ```
 
+This runs the **local** setup: `docker-compose.override.yml` (merged in
+automatically) switches on Development mode and the **Try the demo** button.
+The base `docker-compose.yml` on its own is the safe-by-default setup — see
+[Deploying for real](#deploying-for-real).
+
 The first build takes a few minutes. When the logs settle, open
 **`http://localhost:7001`** (plain `http`, not `https`) and click **Try the demo**.
 
@@ -215,8 +231,40 @@ The first build takes a few minutes. When the logs settle, open
 Your data lives in Docker volumes, so it survives restarts and rebuilds; only
 `down -v` erases it.
 
+Both containers restart on their own after Docker Desktop or your computer
+restarts; `docker compose down` stops them until you run `up` again.
+
+### Deploying for real
+
+Don't use the local override for anything other people can reach. Start from the
+base file only:
+
+```powershell
+docker compose -f docker-compose.yml up -d --build
+```
+
+That runs in Production: no developer error pages, demo mode off, and the app
+refuses to start unless Google sign-in and `SKINCHECK_INTERNAL_KEY` are set.
+Before you expose it:
+
+- **HTTPS.** Sign-in cookies are HTTPS-only in Production, so put a
+  TLS-terminating reverse proxy (Caddy, nginx, a cloud load balancer) in front
+  of port 7001. Plain `http://localhost:7001` won't hold a session outside
+  Development.
+- **Trust the proxy, and only the proxy.** In `.env`, set
+  `ReverseProxy__KnownNetworks__0` to the network the proxy is on (see
+  `.env.example`). Without it every visitor looks like the proxy's address and
+  shares one sign-in rate limit; with it, only that proxy may say who the client is.
+- **Hostname.** Set `AllowedHosts` in `.env` to your domain.
+- **Data at rest.** Health data (thumbnails, notes, profiles) sits unencrypted in
+  SQLite on the Docker volumes, next to the cookie keys. Put those volumes on an
+  encrypted disk and treat backups accordingly.
+- **Google OAuth.** Add your real redirect URI (`https://your.domain/signin-google`).
+
 **Troubleshooting**
 
+- *Compose says "required variable SKINCHECK_INTERNAL_KEY is missing":* add it
+  to `.env` (any long random string). Both containers refuse to run without it.
 - *Port already in use:* something else is on 7001 (or 5002 for a local
   `python main.py`), usually an earlier `dotnet run` or `python main.py`. Stop it, or find it with
   `Get-NetTCPConnection -LocalPort 7001,5002 -State Listen`.
@@ -303,8 +351,10 @@ History or Profile, which show no analysis output of their own.
   and the risk profile (including its notification and privacy toggles) are
   all persisted to SQLite (see Setup), but the full-size intermediate
   visualizations (denoised, hair-removed, segmented, etc.) live in a plain
-  Python dict in the Flask process — restarting `main.py` clears those
-  (thumbnails shown in History are unaffected).
+  in-memory store in the Flask process — restarting `main.py` clears those, and
+  even without a restart they expire after 4 hours and are capped at 12 per
+  person (80 overall), oldest first, so memory can't fill up (thumbnails shown
+  in History are unaffected).
 - **The AI explanation is grounded, not guaranteed.** Every claim must quote
   a booklet passage and the reply is validated in code, but code can confirm a
   quote is real, not that the model's paraphrase around it is faithful. The
