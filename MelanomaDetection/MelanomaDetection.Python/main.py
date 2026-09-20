@@ -17,10 +17,10 @@ import evolution
 import policy
 import store
 import validation
-from image_processor import MelanomaDetector
 from llm_explainer import explain_findings
 from ratelimit import RateLimiter
 from resultstore import ResultStore
+from v4_detector import V4Detector
 from validation import ValidationError
 
 ALLOWED_EXTENSIONS = {".png", ".jpg", ".jpeg", ".bmp"}
@@ -44,7 +44,7 @@ app = Flask(__name__)
 app.json = NumpyJSONProvider(app)
 app.config["MAX_CONTENT_LENGTH"] = MAX_CONTENT_LENGTH
 
-detector = MelanomaDetector()
+detector = V4Detector()
 store.init_db()
 
 # Full-size pipeline imagery for the current session only. Everything that has
@@ -297,6 +297,9 @@ def get_results(processing_id):
         "diameter_visual": _encode_image_base64(results["diameter_visual"]),
         "abcde_scores": results["abcde_scores"],
         "risk_score": results["risk_score"],
+        "overall_visual_concern": results.get("overall_visual_concern"),
+        "num_lesion_instances": results.get("num_lesion_instances"),
+        "multi_lesion_detected": results.get("multi_lesion_detected", False),
         "location": results.get("location", ""),
         "symptoms": results.get("symptoms", []),
         "notes": results.get("notes", ""),
