@@ -24,3 +24,6 @@ obj/
 
 # SQLite store for tracked spots / saved checks (MelanomaDetection.Python/store.py)
 *.db
+
+# Claude
+CLAUDE.md
