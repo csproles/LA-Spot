@@ -8,9 +8,6 @@ public record DermatologyProvider(string Name, string Address, string? Phone, do
 /// <summary>Shape of https://npiregistry.cms.hhs.gov/api/ (version 2.1) responses.</summary>
 public class NpiSearchResponse
 {
-    [JsonPropertyName("result_count")]
-    public int ResultCount { get; set; }
-
     [JsonPropertyName("results")]
     public List<NpiResult> Results { get; set; } = [];
 }

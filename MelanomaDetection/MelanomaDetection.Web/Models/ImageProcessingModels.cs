@@ -22,12 +22,6 @@ public class ExplainResponse
     public string Explanation { get; set; } = string.Empty;
 }
 
-public class SaveResponse
-{
-    [JsonPropertyName("saved")]
-    public bool Saved { get; set; }
-}
-
 /// <summary>One row in the History list -- a saved check, with a small thumbnail.</summary>
 public class HistoryEntry
 {
@@ -169,14 +163,8 @@ public class Spot
     [JsonPropertyName("createdAt")]
     public DateTimeOffset? CreatedAt { get; set; }
 
-    [JsonPropertyName("archived")]
-    public bool Archived { get; set; }
-
     [JsonPropertyName("checkCount")]
     public int CheckCount { get; set; }
-
-    [JsonPropertyName("firstRiskScore")]
-    public double? FirstRiskScore { get; set; }
 
     [JsonPropertyName("lastRiskScore")]
     public double? LastRiskScore { get; set; }
@@ -187,9 +175,6 @@ public class Spot
     /// <summary>"up", "down", "flat", or null until the spot has two checks.</summary>
     [JsonPropertyName("trend")]
     public string? Trend { get; set; }
-
-    [JsonPropertyName("riskBand")]
-    public string? RiskBand { get; set; }
 
     /// <summary>Days between rechecks for the current risk band; 0 means "now".</summary>
     [JsonPropertyName("cadenceDays")]

@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using System.Text.Json;
+using MelanomaDetection.Web.Services.RateLimiting;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
@@ -33,13 +34,18 @@ public static class AccountEndpoints
                 };
                 return TypedResults.Challenge(properties, [GoogleDefaults.AuthenticationScheme]);
             })
-            .AllowAnonymous();
+            .AllowAnonymous()
+            .RequireRateLimiting(RateLimitPolicies.SignIn);
 
-        auth.MapPost("/login/demo", StartDemoAsync).AllowAnonymous();
+        auth.MapPost("/login/demo", StartDemoAsync)
+            .AllowAnonymous()
+            .RequireRateLimiting(RateLimitPolicies.SignIn);
 
         auth.MapPost("/logout", LogoutAsync).RequireAuthorization();
 
-        var account = endpoints.MapGroup("/account").RequireAuthorization();
+        var account = endpoints.MapGroup("/account")
+            .RequireAuthorization()
+            .RequireRateLimiting(RateLimitPolicies.AccountData);
 
         account.MapGet("/export", ExportAsync);
         account.MapPost("/delete", DeleteAsync);

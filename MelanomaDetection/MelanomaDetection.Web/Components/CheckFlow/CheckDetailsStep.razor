@@ -18,7 +18,7 @@
         <SymptomChipRow Selected="Symptoms" SelectedChanged="SymptomsChanged" />
 
         <p class="field-label">Notes</p>
-        <textarea class="form-control notes-textarea" rows="3"
+        <textarea class="form-control notes-textarea" rows="3" maxlength="@InputLimits.NotesMax"
                   placeholder="Anything else worth mentioning? (optional)"
                   value="@Notes"
                   @oninput="e => NotesChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty)"></textarea>

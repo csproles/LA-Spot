@@ -1,8 +1,11 @@
 @page "/map"
+@using MelanomaDetection.Web.Services.RateLimiting
 @rendermode InteractiveServer
 @inject IConfiguration Configuration
 @inject IJSRuntime JS
 @inject NpiProviderService NpiService
+@inject CurrentUser CurrentUser
+@inject OperationRateLimiter RateLimiter
 
 <PageTitle>Map - Skin Check</PageTitle>
 
@@ -63,6 +66,16 @@
         }
 
         CurrentRegionLabel = region.CityLabel;
+
+        // Each lookup that isn't already cached fans out to the government registries.
+        var userId = await CurrentUser.GetUserIdAsync();
+        if (userId is not null && RateLimiter.TryAcquire(LimitedOperation.FindProviders, userId.Value) is { } retryAfter)
+        {
+            LoadError = OperationRateLimiter.WaitMessage(retryAfter);
+            await JS.InvokeVoidAsync("skinCheckMap.reset");
+            return;
+        }
+
         IsLoading = true;
         StateHasChanged();
 

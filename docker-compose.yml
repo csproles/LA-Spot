@@ -5,8 +5,12 @@ services:
     build:
       context: ./MelanomaDetection/MelanomaDetection.Python
       dockerfile: Dockerfile
-    ports:
-      - "5002:5002"
+    # Not published to the host: only the web container calls this API, over the
+    # compose network. That keeps SKINCHECK_INTERNAL_KEY from being the only thing
+    # standing between the internet and people's data. To poke at it from the host
+    # while debugging, temporarily add:  ports: ["127.0.0.1:5002:5002"]
+    expose:
+      - "5002"
     env_file:
       - .env   # provides OPENAI_API_KEY (only for "Get AI Explanation") and SKINCHECK_INTERNAL_KEY
     environment:

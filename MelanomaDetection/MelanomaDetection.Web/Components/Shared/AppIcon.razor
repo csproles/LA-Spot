@@ -3,7 +3,7 @@
    colour from the parent, so callers tint them by setting `color` on the
    element they sit in rather than reaching into this component. *@
 
-<svg class="app-icon app-icon-@Size @Class" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+<svg class="app-icon app-icon-@Size" viewBox="0 0 24 24" fill="none" stroke="currentColor"
      stroke-width="@StrokeWidth.ToString(System.Globalization.CultureInfo.InvariantCulture)"
      stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
     @Shape
@@ -21,9 +21,6 @@
     /// </summary>
     [Parameter]
     public string Size { get; set; } = "md";
-
-    [Parameter]
-    public string? Class { get; set; }
 
     [Parameter]
     public double StrokeWidth { get; set; } = 1.8;

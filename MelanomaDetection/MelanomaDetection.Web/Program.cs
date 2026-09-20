@@ -1,6 +1,7 @@
 using MelanomaDetection.Web.Components;
 using MelanomaDetection.Web.Services;
 using MelanomaDetection.Web.Services.Account;
+using MelanomaDetection.Web.Services.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,6 +11,10 @@ builder.Services.AddRazorComponents()
 
 // Accounts database, session cookie and Google sign-in.
 builder.Services.AddSkinCheckAccounts(builder.Configuration, builder.Environment);
+
+// Request rate limits (sign-in, account endpoints, a global ceiling) plus the
+// per-person caps on expensive actions that happen over the Blazor circuit.
+builder.Services.AddSkinCheckRateLimiting();
 
 // Flask image-processing API (MelanomaDetection.Python/main.py), default port 5002.
 // FlaskApi:InternalKey is the shared secret Flask uses to trust the X-User-Id
@@ -55,6 +60,10 @@ app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages:
 app.UseHttpsRedirection();
 
 app.UseAuthentication();
+
+// After authentication so limits can be per account rather than per address.
+app.UseRateLimiter();
+
 app.UseAuthorization();
 
 // Antiforgery has to follow authentication: tokens are bound to the signed-in identity.

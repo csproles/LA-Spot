@@ -17,8 +17,11 @@ from flask_cors import CORS
 import evolution
 import policy
 import store
+import validation
 from image_processor import MelanomaDetector
 from llm_explainer import explain_findings
+from ratelimit import RateLimiter
+from validation import ValidationError
 
 ALLOWED_EXTENSIONS = {".png", ".jpg", ".jpeg", ".bmp"}
 MAX_CONTENT_LENGTH = 5 * 1024 * 1024  # 5 MB, matches the Blazor client-side limit
@@ -74,22 +77,65 @@ if not INTERNAL_KEY:
     )
 
 
+# --- rate limits ---------------------------------------------------------
+#
+# Per account (X-User-Id), per minute. Analysis costs CPU and the explanation
+# costs an OpenAI call each, so those are far tighter than ordinary reads. The
+# web app enforces slightly lower numbers first so people see a friendly
+# message; these are the backstop for anything that reaches this port directly.
+RATE_WINDOW_SECONDS = 60
+DEFAULT_RATE_LIMIT = 120
+ENDPOINT_RATE_LIMITS = {
+    "process_image_endpoint": ("analyze", 10),
+    "explain_results": ("explain", 5),
+    "export_account_endpoint": ("account", 5),
+    "delete_account_endpoint": ("account", 5),
+}
+# Wrong-key attempts per client address. Keeps guessing SKINCHECK_INTERNAL_KEY impractical.
+AUTH_FAILURE_LIMIT = 20
+
+limiter = RateLimiter()
+
+
+def _too_many_requests(retry_after: int):
+    response = jsonify({"error": "Too many requests. Please wait a moment and try again."})
+    response.status_code = 429
+    response.headers["Retry-After"] = str(retry_after)
+    return response
+
+
+def _reject_unauthorized(message: str):
+    """401, or 429 once this client address has failed too many times."""
+    retry_after = limiter.hit("auth-failure", request.remote_addr or "unknown", AUTH_FAILURE_LIMIT, RATE_WINDOW_SECONDS)
+    if retry_after is not None:
+        return _too_many_requests(retry_after)
+    return jsonify({"error": message}), 401
+
+
 @app.before_request
 def require_user():
-    """Reject any data request that doesn't identify its user (and prove it may)."""
+    """Reject any data request that doesn't identify its user (and prove it may), then rate-limit it."""
     if request.path == "/health" or request.method == "OPTIONS":
         return None
 
     if INTERNAL_KEY:
         presented = request.headers.get(INTERNAL_KEY_HEADER, "")
         if not hmac.compare_digest(presented, INTERNAL_KEY):
-            return jsonify({"error": "Missing or invalid internal API key."}), 401
+            return _reject_unauthorized("Missing or invalid internal API key.")
 
     user_id = request.headers.get(USER_ID_HEADER, "")
     if not _USER_ID_PATTERN.match(user_id):
-        return jsonify({"error": f"Missing or invalid {USER_ID_HEADER} header."}), 401
+        return _reject_unauthorized(f"Missing or invalid {USER_ID_HEADER} header.")
 
     g.user_id = user_id
+
+    retry_after = limiter.hit("default", user_id, DEFAULT_RATE_LIMIT, RATE_WINDOW_SECONDS)
+    if retry_after is None and request.endpoint in ENDPOINT_RATE_LIMITS:
+        rule, limit = ENDPOINT_RATE_LIMITS[request.endpoint]
+        retry_after = limiter.hit(rule, user_id, limit, RATE_WINDOW_SECONDS)
+    if retry_after is not None:
+        return _too_many_requests(retry_after)
+
     return None
 
 
@@ -99,6 +145,11 @@ def _owned_results(processing_id):
     if results is None or results.get("user_id") != g.user_id:
         return None
     return results
+
+
+@app.errorhandler(ValidationError)
+def handle_validation_error(error):
+    return jsonify({"error": str(error)}), 400
 
 
 @app.errorhandler(413)
@@ -129,9 +180,19 @@ def process_image_endpoint():
     if ext not in ALLOWED_EXTENSIONS:
         return jsonify({"error": f"Unsupported file type: {ext}"}), 400
 
+    # The extension is only a claim. Check the bytes really are a reasonably
+    # sized PNG/JPEG/BMP before OpenCV is asked to decode them.
+    data = uploaded.read()
+    validation.check_image_upload(data)
+
+    spot_id = validation.clean_spot_id(request.form.get("spot_id"))
+    location = validation.clean_text(request.form.get("location"), "location", validation.LOCATION_MAX)
+    symptoms = validation.clean_symptoms(request.form.getlist("symptoms"))
+    notes = validation.clean_text(request.form.get("notes"), "notes", validation.NOTES_MAX, multiline=True)
+
     fd, tmp_path = tempfile.mkstemp(suffix=ext)
-    os.close(fd)
-    uploaded.save(tmp_path)
+    with os.fdopen(fd, "wb") as tmp_file:
+        tmp_file.write(data)
 
     try:
         results = detector.process_image(tmp_path)
@@ -146,14 +207,13 @@ def process_image_endpoint():
         os.remove(tmp_path)
 
     processing_id = f"proc_{uuid.uuid4().hex[:12]}"
-    spot_id = request.form.get("spot_id") or None
     spot = store.get_spot(g.user_id, spot_id) if spot_id else None
 
     results["user_id"] = g.user_id
     results["spot_id"] = spot["id"] if spot else None
-    results["location"] = request.form.get("location") or (spot["bodyRegion"] if spot else "")
-    results["symptoms"] = request.form.getlist("symptoms")
-    results["notes"] = request.form.get("notes", "")
+    results["location"] = location or (spot["bodyRegion"] if spot else "")
+    results["symptoms"] = symptoms
+    results["notes"] = notes
     results["saved"] = False
     results["processed_at"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
 
@@ -265,15 +325,19 @@ def save_to_history(processing_id):
     # late assignment too so a check can be filed after the fact. Symptoms and
     # notes likewise: the client confirms the lesion outline right after the
     # photo and collects details afterwards, so they arrive here, not at process.
-    body = request.get_json(silent=True) or {}
-    spot_id = body.get("spotId") or request.form.get("spot_id") or results.get("spot_id")
+    body = validation.json_object(request.get_json(silent=True))
+    spot_id = (
+        validation.clean_spot_id(body.get("spotId"))
+        or validation.clean_spot_id(request.form.get("spot_id"))
+        or results.get("spot_id")
+    )
     if spot_id and store.get_spot(g.user_id, spot_id) is None:
         return jsonify({"error": f"No spot found for id '{spot_id}'"}), 404
 
-    if isinstance(body.get("symptoms"), list):
-        results["symptoms"] = [str(s) for s in body["symptoms"]]
-    if isinstance(body.get("notes"), str):
-        results["notes"] = body["notes"]
+    if body.get("symptoms") is not None:
+        results["symptoms"] = validation.clean_symptoms(body["symptoms"])
+    if body.get("notes") is not None:
+        results["notes"] = validation.clean_text(body["notes"], "notes", validation.NOTES_MAX, multiline=True)
 
     store.save_check(
         user_id=g.user_id,
@@ -330,14 +394,11 @@ def list_spots_endpoint():
 
 @app.route("/api/spots", methods=["POST"])
 def create_spot_endpoint():
-    body = request.get_json(silent=True) or {}
-    label = (body.get("label") or "").strip()
-    body_region = (body.get("bodyRegion") or "").strip()
-
-    if not label:
-        return jsonify({"error": "A label is required."}), 400
-    if not body_region:
-        return jsonify({"error": "A body region is required."}), 400
+    body = validation.json_object(request.get_json(silent=True))
+    label = validation.clean_text(body.get("label"), "label", validation.LABEL_MAX, required=True)
+    body_region = validation.clean_text(
+        body.get("bodyRegion"), "bodyRegion", validation.BODY_REGION_MAX, required=True
+    )
 
     spot = store.create_spot(g.user_id, label, body_region)
     return jsonify(_with_due_date({**spot, **store.aggregate_checks([])}, store.get_profile(g.user_id))), 201
@@ -380,14 +441,12 @@ def update_spot_endpoint(spot_id):
     if store.get_spot(g.user_id, spot_id) is None:
         return jsonify({"error": f"No spot found for id '{spot_id}'"}), 404
 
-    body = request.get_json(silent=True) or {}
-    label = body.get("label")
-    spot = store.update_spot(
-        g.user_id,
-        spot_id,
-        label=label.strip() if isinstance(label, str) and label.strip() else None,
-        archived=body.get("archived"),
-    )
+    body = validation.json_object(request.get_json(silent=True))
+    label = validation.clean_text(body.get("label"), "label", validation.LABEL_MAX)
+    archived = body.get("archived")
+    if archived is not None and not isinstance(archived, bool):
+        raise ValidationError("archived must be true or false.")
+    spot = store.update_spot(g.user_id, spot_id, label=label or None, archived=archived)
     return jsonify(spot)
 
 
@@ -425,29 +484,30 @@ def get_profile_endpoint():
 
 @app.route("/api/profile", methods=["PUT"])
 def save_profile_endpoint():
-    body = request.get_json(silent=True) or {}
+    body = validation.json_object(request.get_json(silent=True))
 
-    fitzpatrick = body.get("fitzpatrick")
-    if fitzpatrick is not None and fitzpatrick not in range(1, 7):
+    try:
+        fitzpatrick = validation.optional_int_in_range(body.get("fitzpatrick"), "fitzpatrick", 1, 6)
+    except ValidationError:
         return jsonify({"error": "fitzpatrick must be 1-6 (Fitzpatrick I-VI) or null."}), 400
 
-    sun_exposure = body.get("sunExposure") or ""
+    sun_exposure = validation.clean_text(body.get("sunExposure"), "sunExposure", 20)
     if sun_exposure and sun_exposure not in policy.SUN_EXPOSURE_LEVELS:
         return jsonify({"error": "sunExposure must be one of: " + ", ".join(policy.SUN_EXPOSURE_LEVELS)}), 400
 
     profile = store.save_profile(
         user_id=g.user_id,
-        full_name=body.get("fullName") or "",
-        location=body.get("location") or "",
+        full_name=validation.clean_text(body.get("fullName"), "fullName", validation.FULL_NAME_MAX),
+        location=validation.clean_text(body.get("location"), "location", validation.LOCATION_MAX),
         sun_exposure=sun_exposure,
         fitzpatrick=fitzpatrick,
-        family_history=bool(body.get("familyHistory")),
-        blistering_sunburns=bool(body.get("blisteringSunburns")),
-        many_moles=bool(body.get("manyMoles")),
-        recheck_reminders=bool(body.get("recheckReminders", True)),
-        high_risk_alerts=bool(body.get("highRiskAlerts", True)),
-        share_with_dermatologist=bool(body.get("shareWithDermatologist", True)),
-        anonymous_analytics=bool(body.get("anonymousAnalytics", False)),
+        family_history=validation.optional_bool(body, "familyHistory", False),
+        blistering_sunburns=validation.optional_bool(body, "blisteringSunburns", False),
+        many_moles=validation.optional_bool(body, "manyMoles", False),
+        recheck_reminders=validation.optional_bool(body, "recheckReminders", True),
+        high_risk_alerts=validation.optional_bool(body, "highRiskAlerts", True),
+        share_with_dermatologist=validation.optional_bool(body, "shareWithDermatologist", True),
+        anonymous_analytics=validation.optional_bool(body, "anonymousAnalytics", False),
     )
     return jsonify({**profile, "configured": True})
 

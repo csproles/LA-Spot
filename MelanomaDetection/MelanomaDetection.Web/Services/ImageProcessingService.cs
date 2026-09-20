@@ -1,8 +1,8 @@
 using System.Net.Http.Headers;
-using System.Net.Http.Json;
 using System.Text.Json;
 using MelanomaDetection.Web.Models;
 using MelanomaDetection.Web.Services.Account;
+using MelanomaDetection.Web.Services.RateLimiting;
 
 namespace MelanomaDetection.Web.Services;
 
@@ -25,6 +25,11 @@ public class ImageProcessingApiException : Exception
 /// or writes by it. The browser never talks to Flask directly, so this header
 /// (together with the shared key set on the HttpClient) is the whole identity
 /// story between the two services.
+///
+/// Inputs are checked here against <see cref="InputLimits"/> before anything is
+/// sent, and the costly calls (analysis, explanation) are capped per person by
+/// <see cref="OperationRateLimiter"/>. Both surface as
+/// <see cref="ImageProcessingApiException"/>, so pages show them like any other error.
 /// </summary>
 public class ImageProcessingService
 {
@@ -33,11 +38,13 @@ public class ImageProcessingService
 
     private readonly HttpClient _httpClient;
     private readonly CurrentUser _currentUser;
+    private readonly OperationRateLimiter _limiter;
 
-    public ImageProcessingService(HttpClient httpClient, CurrentUser currentUser)
+    public ImageProcessingService(HttpClient httpClient, CurrentUser currentUser, OperationRateLimiter limiter)
     {
         _httpClient = httpClient;
         _currentUser = currentUser;
+        _limiter = limiter;
     }
 
     /// <summary>
@@ -50,6 +57,27 @@ public class ImageProcessingService
         byte[] data, string filename, string? spotId = null, string? location = null,
         IEnumerable<string>? symptoms = null, string? notes = null)
     {
+        if (data.Length == 0)
+        {
+            throw new ImageProcessingApiException("The photo is empty. Please choose another one.");
+        }
+
+        if (data.Length > InputLimits.ImageMaxBytes)
+        {
+            throw new ImageProcessingApiException("The photo is too large. Maximum allowed size is 5 MB.");
+        }
+
+        if (!InputLimits.LooksLikeImage(data))
+        {
+            throw new ImageProcessingApiException("That file doesn't look like a photo. Please use a JPEG, PNG or BMP image.");
+        }
+
+        location = RequireText(location, "Location", InputLimits.LocationMax);
+        notes = RequireText(notes, "Notes", InputLimits.NotesMax, multiline: true);
+        var checkedSymptoms = RequireSymptoms(symptoms);
+
+        await ThrottleAsync(LimitedOperation.AnalyzePhoto);
+
         using var content = new MultipartFormDataContent();
         using var fileContent = new ByteArrayContent(data);
         fileContent.Headers.ContentType = new MediaTypeHeaderValue(GetContentType(filename));
@@ -65,7 +93,7 @@ public class ImageProcessingService
             content.Add(new StringContent(location), "location");
         }
 
-        foreach (var symptom in symptoms ?? Enumerable.Empty<string>())
+        foreach (var symptom in checkedSymptoms)
         {
             content.Add(new StringContent(symptom), "symptoms");
         }
@@ -99,6 +127,8 @@ public class ImageProcessingService
     /// </summary>
     public async Task<string> ExplainAsync(string processingId)
     {
+        await ThrottleAsync(LimitedOperation.ExplainResults);
+
         using var response = await SendAsync(() =>
             _httpClient.PostAsync($"/api/image/explain/{Uri.EscapeDataString(processingId)}", null));
 
@@ -113,10 +143,13 @@ public class ImageProcessingService
     /// </summary>
     public async Task SaveToHistoryAsync(string processingId, IEnumerable<string>? symptoms = null, string? notes = null)
     {
+        var checkedSymptoms = symptoms is null ? null : RequireSymptoms(symptoms);
+        var checkedNotes = notes is null ? null : RequireText(notes, "Notes", InputLimits.NotesMax, multiline: true);
+
         using var response = await SendAsync(() =>
             _httpClient.PostAsJsonAsync(
                 $"/api/image/save/{Uri.EscapeDataString(processingId)}",
-                new { symptoms = symptoms?.ToList(), notes }));
+                new { symptoms = checkedSymptoms, notes = checkedNotes }));
     }
 
     /// <summary>Maps to GET /api/image/history -- all saved checks, newest first.</summary>
@@ -150,6 +183,9 @@ public class ImageProcessingService
     /// <summary>Maps to POST /api/spots.</summary>
     public async Task<Spot> CreateSpotAsync(string label, string bodyRegion)
     {
+        label = RequireText(label, "Label", InputLimits.SpotLabelMax, required: true)!;
+        bodyRegion = RequireText(bodyRegion, "Body region", InputLimits.BodyRegionMax, required: true)!;
+
         using var response = await SendAsync(() =>
             _httpClient.PostAsJsonAsync("/api/spots", new { label, bodyRegion }));
 
@@ -160,6 +196,8 @@ public class ImageProcessingService
     /// <summary>Maps to PATCH /api/spots/{id} -- rename and/or archive.</summary>
     public async Task<Spot> UpdateSpotAsync(string spotId, string? label = null, bool? archived = null)
     {
+        label = RequireText(label, "Label", InputLimits.SpotLabelMax);
+
         using var response = await SendAsync(() =>
             _httpClient.PatchAsJsonAsync($"/api/spots/{Uri.EscapeDataString(spotId)}", new { label, archived }));
 
@@ -179,11 +217,14 @@ public class ImageProcessingService
     /// <summary>Maps to PUT /api/profile.</summary>
     public async Task<RiskProfile> SaveProfileAsync(RiskProfile profile)
     {
+        var fullName = RequireText(profile.FullName, "Name", InputLimits.FullNameMax);
+        var location = RequireText(profile.Location, "Location", InputLimits.LocationMax);
+
         using var response = await SendAsync(() =>
             _httpClient.PutAsJsonAsync("/api/profile", new
             {
-                fullName = profile.FullName,
-                location = profile.Location,
+                fullName,
+                location,
                 sunExposure = profile.SunExposure,
                 fitzpatrick = profile.Fitzpatrick,
                 familyHistory = profile.FamilyHistory,
@@ -219,6 +260,59 @@ public class ImageProcessingService
     public async Task DeleteUserDataAsync(Guid userId)
     {
         using var response = await SendAsync(() => _httpClient.DeleteAsync("/api/account"), userId);
+    }
+
+    /// <summary>
+    /// Trimmed text, or null when blank. Throws (with a message fit to show) for a
+    /// value that is too long, has control characters, or is blank when required.
+    /// </summary>
+    private static string? RequireText(string? value, string field, int maxLength, bool required = false, bool multiline = false)
+    {
+        var text = value?.Trim();
+
+        if (string.IsNullOrEmpty(text))
+        {
+            return required ? throw new ImageProcessingApiException($"{field} is required.") : null;
+        }
+
+        if (text.Length > maxLength)
+        {
+            throw new ImageProcessingApiException($"{field} must be {maxLength} characters or fewer.");
+        }
+
+        var allowed = multiline ? (Func<char, bool>)(c => c is '\n' or '\r' or '\t') : c => c == '\t';
+        if (text.Any(c => char.IsControl(c) && !allowed(c)))
+        {
+            throw new ImageProcessingApiException($"{field} contains characters that aren't allowed.");
+        }
+
+        return text;
+    }
+
+    private static List<string> RequireSymptoms(IEnumerable<string>? symptoms)
+    {
+        var list = (symptoms ?? Enumerable.Empty<string>()).ToList();
+        if (list.Count > InputLimits.SymptomsMaxCount)
+        {
+            throw new ImageProcessingApiException($"Please choose at most {InputLimits.SymptomsMaxCount} symptoms.");
+        }
+
+        return list
+            .Select(symptom => RequireText(symptom, "Each symptom", InputLimits.SymptomMax))
+            .OfType<string>()
+            .ToList();
+    }
+
+    /// <summary>Counts one use of a costly action against the signed-in person's cap, or throws asking them to wait.</summary>
+    private async Task ThrottleAsync(LimitedOperation operation)
+    {
+        var userId = await _currentUser.GetUserIdAsync()
+            ?? throw new ImageProcessingApiException("Your session has ended. Sign in again to continue.");
+
+        if (_limiter.TryAcquire(operation, userId) is { } retryAfter)
+        {
+            throw new ImageProcessingApiException(OperationRateLimiter.WaitMessage(retryAfter));
+        }
     }
 
     /// <summary>

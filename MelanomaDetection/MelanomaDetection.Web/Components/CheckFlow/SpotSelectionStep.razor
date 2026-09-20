@@ -41,7 +41,7 @@
                 <label class="field-label" for="spot-label">Name this spot</label>
                 <input id="spot-label" class="form-control spot-label-input"
                        placeholder='e.g. "dark mole near elbow"'
-                       @bind="NewSpotLabel" @bind:event="oninput" maxlength="60" />
+                       @bind="NewSpotLabel" @bind:event="oninput" maxlength="@InputLimits.SpotLabelMax" />
 
                 @if (Spots.Count > 0)
                 {

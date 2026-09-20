@@ -7,7 +7,7 @@
         {
             <div class="rename-row">
                 <input class="form-control rename-input" @bind="RenameValue" @bind:event="oninput"
-                       placeholder="Spot label" aria-label="Spot label" />
+                       placeholder="Spot label" aria-label="Spot label" maxlength="@InputLimits.SpotLabelMax" />
                 <button type="button" class="btn btn-primary btn-sm"
                         disabled="@(string.IsNullOrWhiteSpace(RenameValue) || IsSaving)"
                         @onclick="SubmitRename">
