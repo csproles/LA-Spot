@@ -6,7 +6,7 @@
     {
         <img src="@ImageData.PngUrl(Visual!)" alt="@($"{Label} visualization")" class="score-card-img" />
     }
-    <FactorBar Label="@Label" Score="Score" Detail="@Detail" />
+    <FactorBar Label="@Label" Score="Score" Detail="@Detail" DetailTooltip="@DetailTooltip" />
 </div>
 
 @code {
@@ -21,4 +21,7 @@
 
     [Parameter]
     public string? Detail { get; set; }
+
+    [Parameter]
+    public string? DetailTooltip { get; set; }
 }

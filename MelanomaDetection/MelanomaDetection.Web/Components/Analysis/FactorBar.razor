@@ -16,7 +16,7 @@
     }
     @if (!string.IsNullOrEmpty(Detail))
     {
-        <p class="factor-row-detail">@Detail</p>
+        <p class="factor-row-detail" title="@DetailTooltip">@Detail</p>
     }
 </div>
 
@@ -30,6 +30,13 @@
     /// <summary>The raw measurement behind the score, when it's worth showing.</summary>
     [Parameter]
     public string? Detail { get; set; }
+
+    /// <summary>Optional extended explanation shown as a hover tooltip on
+    /// Detail -- for cases (diameter's px/relative-size display) that need
+    /// more room than the one-line caption has. Empty/null for every other
+    /// criterion, which renders no title attribute.</summary>
+    [Parameter]
+    public string? DetailTooltip { get; set; }
 
     private string PercentWidth =>
         $"{(Score!.Value / 10 * 100).ToString("F0", System.Globalization.CultureInfo.InvariantCulture)}%";

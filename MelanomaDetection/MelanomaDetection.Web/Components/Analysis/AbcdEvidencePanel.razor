@@ -13,7 +13,8 @@
         <ScoreEvidenceCard Label="Color Variation" Score="Scores.Color.Score" Visual="@Results.ColorVisual"
                            Detail="@AbcdeDetails.Caption("color", Scores.Color)" />
         <ScoreEvidenceCard Label="Diameter" Score="Scores.Diameter.Score" Visual="@Results.DiameterVisual"
-                           Detail="@AbcdeDetails.Caption("diameter", Scores.Diameter)" />
+                           Detail="@AbcdeDetails.Caption("diameter", Scores.Diameter)"
+                           DetailTooltip="@AbcdeDetails.Tooltip("diameter", Scores.Diameter)" />
         <ScoreEvidenceCard Label="Evolving" Score="Scores.Evolving.Score"
                            Detail="Not assessable from a single static image." />
     </div>

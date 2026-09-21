@@ -79,15 +79,37 @@ STRICT RULES -- follow every one of these, no exceptions:
    aside. If a component wasn't flagged, act as if it wasn't mentioned in
    the input at all.
 
-4a. The "D" (diameter) component may be entirely absent from the input if
-    the pipeline couldn't detect hair to calibrate its pixel-to-millimeter
-    scale. If diameter is missing, say plainly that size could not be
-    measured for this image rather than guessing or omitting the gap
+4a. The "D" (diameter) component may be entirely absent from the input
+    because this pipeline has no physical scale reference (no ruler or
+    similar object in the photo), so it reports pixel-based/relative-to-photo
+    size only, never millimeters. If diameter is missing, say plainly that a
+    physical size measurement is not available for this image (never invent
+    or imply a millimeter figure) rather than guessing or omitting the gap
     silently.
 
 4b. Component C (color) is calibrated to the person's own skin tone from
     the image itself, not a generic skin-tone default -- if useful, this can
     be mentioned as a reason the color assessment is specific to this photo.
+
+4c. The input may include an "overall_result" field: "elevated", "lower", or
+    "not_available", the screening tool's own authoritative result for this
+    photo, arrived at from many measurements considered together, not a
+    simple count of the flagged components below. Treat it as the headline
+    fact, and the flagged components as supporting detail, not the reverse:
+    - If "overall_result" is "elevated" but no individual component below is
+      flagged, add one sentence noting that this photo's overall visual
+      pattern crossed this tool's screening threshold even though no single
+      feature was individually flagged -- do not guess or invent which
+      feature caused it.
+    - If "overall_result" is "lower", do not describe the photo in alarming
+      terms even if one individual component happens to be flagged; you may
+      still name that flagged component per rule 4, just without implying it
+      changes the overall result.
+    - If "overall_result" is "not_available" or absent, say nothing about an
+      overall result at all -- describe only the individual components.
+    - Never state or imply a percentage, probability, or numeric score for
+      "overall_result" itself; it is a category, not a number (rule 6 already
+      forbids inventing numbers not present in the input).
 
 5. End with 2-4 concrete, doable next steps (e.g., "photograph the spot
    monthly to track changes", "bring this analysis to a dermatology
@@ -183,15 +205,18 @@ instructions and the grounding rules exactly.
 MAX_ATTEMPTS = 2
 
 
-def _map_to_llm_schema(abcde_scores: dict) -> dict:
-    """Adapt MelanomaDetector's abcde_scores dict into this prompt's expected shape.
+def _map_to_llm_schema(abcde_scores: dict, overall_visual_concern=None) -> dict:
+    """Adapt the detector's abcde_scores dict (plus V5's own overall verdict)
+    into this prompt's expected shape.
 
-    MelanomaDetector reports each letter as {"score": 0-10, "details": {...}},
-    with a "concern" bool and raw (pre-scaled) measurement inside "details".
-    The prompt above expects a simpler {"score": raw 0-1 value, "flagged": bool}
-    shape per letter (matching the original prototype's own output format), plus
-    a couple of color-specific fields. This function bridges the two without
-    changing the prompt itself.
+    The detector reports each letter as {"score": 0-10, "details": {...}},
+    with a "concern" bool and raw (pre-scaled) measurement inside "details" --
+    these are per-feature reference thresholds, NOT V5's actual decision (see
+    pipeline_v5/decision_model.py). The prompt above expects a simpler
+    {"score": raw 0-1 value, "flagged": bool} shape per letter (matching the
+    original prototype's own output format), plus a couple of color-specific
+    fields and an "overall_result" field carrying V5's real verdict -- see
+    rule 4c. This function bridges the two without changing the prompt itself.
     """
     asymmetry = abcde_scores["asymmetry"]["details"]
     border = abcde_scores["border"]["details"]
@@ -227,18 +252,33 @@ def _map_to_llm_schema(abcde_scores: dict) -> dict:
 
     diameter_mm = diameter.get("diameter_mm")
     if diameter_mm is not None:
+        # Legacy only -- V5 (and V4 before it) never sets this key. Kept so a
+        # pre-V4 saved check's explanation still renders correctly.
         payload["diameter_mm"] = {
             "value": diameter_mm,
             "flagged": diameter.get("concern", False),
             "measured": True,
         }
     # else: omit diameter_mm entirely, per rule 4a -- absence, not a null value.
+    # V5 always takes this branch (diameter_mm is always None); the pixel/
+    # relative-size figures shown in the UI (AbcdeDetails.cs) are deliberately
+    # NOT sent here, since rule 4a's job is simply "say size isn't available
+    # as mm," not to describe the pixel proxy.
+
+    concern_map = {"ELEVATED VISUAL CONCERN": "elevated", "LOWER VISUAL CONCERN": "lower"}
+    payload["overall_result"] = concern_map.get(overall_visual_concern, "not_available")
 
     return payload
 
 
-def explain_findings(abcde_scores: dict, client=None) -> str:
+def explain_findings(abcde_scores: dict, overall_visual_concern=None, client=None) -> str:
     """Return a plain-language, source-grounded explanation of the ABCDE output.
+
+    `overall_visual_concern` is V5's own authoritative "LOWER VISUAL CONCERN"
+    / "ELEVATED VISUAL CONCERN" result for this check (or None) -- passed
+    through so the explanation can't describe a photo in terms that
+    contradict V5's real verdict (see rule 4c). It is never itself presented
+    as a number or probability.
 
     Model failures (a missing key, a network error) propagate to the caller. A
     reply that merely fails validation does not: it is retried once with the
@@ -247,7 +287,7 @@ def explain_findings(abcde_scores: dict, client=None) -> str:
     `client` is injectable so tests can supply a fake OpenAI client.
     """
     client = client or OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
-    payload = _map_to_llm_schema(abcde_scores)
+    payload = _map_to_llm_schema(abcde_scores, overall_visual_concern)
     source, _ = knowledge.load()
     passages = knowledge.select_passages(payload)
 

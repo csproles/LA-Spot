@@ -376,6 +376,7 @@ def save_to_history(processing_id):
         area_px=results.get("area_px"),
         lab=results.get("lab"),
         overall_visual_concern=results.get("overall_visual_concern"),
+        num_lesion_instances=results.get("num_lesion_instances"),
     )
 
     results["saved"] = True
@@ -394,6 +395,8 @@ def get_history():
             "symptoms": check["symptoms"],
             "notes": check["notes"],
             "riskScore": check["riskScore"],
+            "overallVisualConcern": check.get("overallVisualConcern"),
+            "numLesionInstances": check.get("numLesionInstances"),
             "processedAt": check["processedAt"],
             "thumbnail": base64.b64encode(check["thumbnail"]).decode("utf-8")
             if check["thumbnail"]
@@ -442,6 +445,8 @@ def get_spot_endpoint(spot_id):
             {
                 "processingId": check["processingId"],
                 "riskScore": check["riskScore"],
+                "overallVisualConcern": check.get("overallVisualConcern"),
+                "numLesionInstances": check.get("numLesionInstances"),
                 "diameterMm": check["diameterMm"],
                 "asymmetry": check["asymmetry"],
                 "border": check["border"],
@@ -555,7 +560,7 @@ def explain_results(processing_id):
         return jsonify({"explanation": results["explanation"]})
 
     try:
-        explanation = explain_findings(results["abcde_scores"])
+        explanation = explain_findings(results["abcde_scores"], results.get("overall_visual_concern"))
     except Exception:
         app.logger.exception("LLM explanation request failed")
         return jsonify({

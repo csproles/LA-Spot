@@ -15,7 +15,7 @@
                        Label="@(TotalChecks == 1 ? "check saved" : "checks saved")" />
 
     <DashboardStatTile IsLoading="IsLoading"
-                       Tone="@(HighestRisk is null ? "muted" : RiskBands.Band(HighestRisk))"
+                       Tone="@HighestRiskTone"
                        Value="@(HighestRisk?.ToString("F0") ?? "—")"
                        Label="@(HighestRisk is null ? "no scores yet" : "highest risk score")" />
 </div>
@@ -34,4 +34,21 @@
     private double? HighestRisk => Spots
         .Where(spot => spot.LastRiskScore is not null)
         .Max(spot => spot.LastRiskScore);
+
+    /// <summary>Coloured by whether any spot's own authoritative concern is
+    /// elevated -- NEVER by a band cut on HighestRisk itself, so this tile
+    /// can't show a calm colour while a spot the results page called
+    /// "Elevated" sits in the list (V4/V5 never produce a "moderate" concern,
+    /// so there is no middle tone to represent here).</summary>
+    private string HighestRiskTone
+    {
+        get
+        {
+            if (HighestRisk is null)
+            {
+                return "muted";
+            }
+            return Spots.Any(spot => spot.LastOverallVisualConcern == VisualConcern.Elevated) ? "high" : "low";
+        }
+    }
 }

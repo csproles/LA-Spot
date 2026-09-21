@@ -8,7 +8,7 @@
             <span class="timeline-date">@Date</span>
             <span class="timeline-meta">@Meta</span>
         </span>
-        <RiskScoreBadge Score="Check.RiskScore" />
+        <RiskScoreBadge Score="Check.RiskScore" Concern="Check.OverallVisualConcern" />
         @if (Selected)
         {
             <span class="timeline-check" aria-hidden="true">&#10003;</span>
@@ -33,7 +33,13 @@
         get
         {
             var size = Check.DiameterMm is null ? "size n/a" : $"≈{Check.DiameterMm:F1} mm";
-            return Check.Symptoms.Count > 0 ? $"{size} · {string.Join(", ", Check.Symptoms)}" : size;
+            var parts = new List<string> { size };
+            if (Check.NumLesionInstances is > 1)
+            {
+                parts.Add($"{Check.NumLesionInstances} spots detected");
+            }
+            parts.AddRange(Check.Symptoms);
+            return string.Join(" · ", parts);
         }
     }
 }

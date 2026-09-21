@@ -20,25 +20,42 @@
     color: var(--color-alert-ink);
 }
 
+.risk-band-muted {
+    background: var(--color-surface-alt);
+    border-color: var(--color-border);
+    color: var(--color-text-muted);
+}
+
 .risk-band-label {
     font-weight: 700;
+    font-size: 20px;
+    margin: 0 0 6px;
+}
+
+.risk-band-recommendation {
+    margin: 0 0 14px;
     font-size: 14px;
-    margin: 0 0 4px;
+}
+
+.risk-band-score-block {
+    border-top: 1px solid var(--color-border-subtle);
+    padding-top: 10px;
 }
 
 .risk-band-score {
     font-family: var(--font-heading);
-    font-weight: 800;
-    font-size: 34px;
-    margin: 0 0 6px;
+    font-weight: 700;
+    font-size: 20px;
+    margin: 0 0 2px;
 }
 
 .risk-band-score-total {
-    font-size: 16px;
+    font-size: 13px;
     font-weight: 600;
 }
 
-.risk-band-recommendation {
+.risk-band-score-caption {
     margin: 0;
-    font-size: 14px;
+    font-size: 12px;
+    color: var(--color-text-faint);
 }

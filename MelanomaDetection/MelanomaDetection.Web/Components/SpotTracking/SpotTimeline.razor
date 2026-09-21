@@ -38,7 +38,7 @@
                              Alt="@($"Photo from {DateOf(check)}")">
                     <Caption>
                         @DateOf(check) ·
-                        <RiskScoreBadge Score="check.RiskScore" />
+                        <RiskScoreBadge Score="check.RiskScore" Concern="check.OverallVisualConcern" />
                     </Caption>
                 </PhotoFigure>
             }

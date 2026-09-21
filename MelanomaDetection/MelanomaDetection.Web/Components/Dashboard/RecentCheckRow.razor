@@ -7,7 +7,7 @@
             <span class="recent-title">@(Entry.SpotLabel ?? "Unfiled check")</span>
             <span class="recent-meta">@Entry.Location · @Recheck.Ago(Entry.ProcessedAt)</span>
         </span>
-        <RiskScoreBadge Score="Entry.RiskScore" />
+        <RiskScoreBadge Score="Entry.RiskScore" Concern="Entry.OverallVisualConcern" />
     </a>
 </li>
 

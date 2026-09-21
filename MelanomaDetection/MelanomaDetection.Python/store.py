@@ -50,10 +50,12 @@ CREATE TABLE IF NOT EXISTS checks (
     user_id       TEXT NOT NULL,
     spot_id       TEXT REFERENCES spots(id),
     risk_score    REAL NOT NULL,
-    -- V5's own "LOWER VISUAL CONCERN" / "ELEVATED VISUAL CONCERN" result (or
-    -- NULL for a check with no detection, or one saved before this column
-    -- existed). This, not a band cut on risk_score, is what recheck cadence
-    -- and the UI's headline verdict are keyed on -- see policy.py.
+    -- V5's own "LOWER VISUAL CONCERN" / "ELEVATED VISUAL CONCERN" /
+    -- "NO_DETECTION" result. NULL is reserved exclusively for a check saved
+    -- before this column existed -- a no-detection result is NEVER NULL,
+    -- it is the literal string "NO_DETECTION" (see policy.CONCERN_NO_DETECTION).
+    -- This, not a band cut on risk_score, is what recheck cadence and the
+    -- UI's headline verdict are keyed on -- see policy.py.
     overall_visual_concern TEXT,
     diameter_mm   REAL,
     mm_per_px     REAL,
@@ -116,6 +118,15 @@ _CHECKS_COLUMNS_ADDED_IN_V4 = {
     "overall_visual_concern": "TEXT",
 }
 
+# NULL-able: an existing row simply never recorded this (single-instance
+# results and pre-V5 rows alike). Lets a reloaded saved check still show the
+# "multiple spots were detected, only the primary was analyzed" caveat
+# (MultiLesionNotice.razor) instead of losing it on reload -- see
+# v5_detector.py's result packaging.
+_CHECKS_COLUMNS_ADDED_IN_V5 = {
+    "num_lesion_instances": "INTEGER",
+}
+
 
 @contextlib.contextmanager
 def _connect():
@@ -146,7 +157,7 @@ def _connect():
 # (spots, checks, a filled-in risk profile) and init_db must never drop them;
 # a version bump from here on has to ship with an additive migration instead
 # (see _migrate_profile_columns for the 2 -> 3 example).
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 5
 
 
 def init_db():
@@ -195,7 +206,7 @@ def _migrate_profile_columns(connection):
 def _migrate_checks_columns(connection):
     """Add columns introduced after v3 to an existing checks table in place. See _migrate_profile_columns."""
     existing = {row["name"] for row in connection.execute("PRAGMA table_info(checks)")}
-    for column, ddl in _CHECKS_COLUMNS_ADDED_IN_V4.items():
+    for column, ddl in {**_CHECKS_COLUMNS_ADDED_IN_V4, **_CHECKS_COLUMNS_ADDED_IN_V5}.items():
         if column not in existing:
             connection.execute(f"ALTER TABLE checks ADD COLUMN {column} {ddl}")
 
@@ -384,6 +395,7 @@ def save_check(
     area_px=None,
     lab=None,
     overall_visual_concern=None,
+    num_lesion_instances=None,
 ):
     """Persist one analyzed check. Re-saving the same processing_id is a no-op update."""
     diameter = abcde_scores.get("diameter", {}).get("details")
@@ -394,9 +406,10 @@ def save_check(
         connection.execute(
             """
             INSERT INTO checks (processing_id, user_id, spot_id, risk_score, overall_visual_concern,
+                                num_lesion_instances,
                                 diameter_mm, mm_per_px, asymmetry, border, color, area_px, lab_l, lab_a, lab_b,
                                 location, symptoms, notes, processed_at, thumbnail, mask)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(processing_id) DO UPDATE SET
                 spot_id = excluded.spot_id,
                 location = excluded.location,
@@ -410,6 +423,7 @@ def save_check(
                 spot_id,
                 risk_score,
                 overall_visual_concern,
+                num_lesion_instances,
                 diameter_mm,
                 mm_per_px,
                 _score_of(abcde_scores, "asymmetry"),
@@ -501,6 +515,7 @@ def _check_row_to_dict(row) -> dict:
         "spotId": row["spot_id"],
         "riskScore": row["risk_score"],
         "overallVisualConcern": row["overall_visual_concern"],
+        "numLesionInstances": row["num_lesion_instances"],
         "diameterMm": row["diameter_mm"],
         "mmPerPx": row["mm_per_px"],
         "asymmetry": row["asymmetry"],

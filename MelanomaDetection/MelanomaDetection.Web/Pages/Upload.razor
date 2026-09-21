@@ -34,6 +34,7 @@
 
         case CheckStep.Outline when AnalysisResults is not null:
             <OutlineConfirmStep BorderVisual="@AnalysisResults.BorderVisual"
+                                NoDetection="@AnalysisResults.NoDetection"
                                 OnAccept="() => CurrentStep = CheckStep.Details"
                                 OnReject="RejectOutline" />
             break;
