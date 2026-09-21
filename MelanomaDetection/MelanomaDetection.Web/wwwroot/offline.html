@@ -31,18 +31,15 @@
             padding: 32px 28px;
         }
 
+        /* The mascot is a mask filled with the brand green, so it sits straight
+           on the card in either theme (same treatment as the app's sign-in page). */
         .mark {
-            width: 56px;
-            height: 56px;
-            border-radius: 16px;
-            overflow: hidden;
-            margin: 0 auto 18px;
-        }
-
-        .mark img {
-            width: 100%;
-            height: 100%;
-            display: block;
+            width: 88px;
+            height: 88px;
+            margin: 0 auto 14px;
+            background-color: light-dark(#2F4A3C, #9EC2AE);
+            -webkit-mask: url(icons/mascot.png) center / contain no-repeat;
+            mask: url(icons/mascot.png) center / contain no-repeat;
         }
 
         h1 {
@@ -78,9 +75,7 @@
 </head>
 <body>
     <div class="card">
-        <div class="mark">
-            <img src="icons/icon-192.png" alt="" width="56" height="56" />
-        </div>
+        <div class="mark" aria-hidden="true"></div>
         <h1>You're offline</h1>
         <p>LA Spot needs a live connection to analyze photos and load your data. Reconnect and try again.</p>
         <button type="button" onclick="location.reload()">Retry</button>
