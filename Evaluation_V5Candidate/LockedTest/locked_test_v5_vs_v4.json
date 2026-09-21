@@ -1,0 +1,82 @@
+{
+  "locked_test_total_images": 786,
+  "coverage": {
+    "SINGLE_LESION_EVALUABLE": 615,
+    "MULTI_LESION_AMBIGUOUS": 118,
+    "NO_DETECTION": 53,
+    "FAILED": 0
+  },
+  "evaluable_total": 615,
+  "common_paired_population": 615,
+  "v5_rows_dropped_missing_features": 0,
+  "V4": {
+    "threshold": 0.25,
+    "roc_auc": 0.7484,
+    "TP": 95,
+    "TN": 336,
+    "FP": 141,
+    "FN": 43,
+    "n": 615,
+    "sensitivity": 0.6884,
+    "specificity": 0.7044,
+    "precision": 0.4025,
+    "f1": 0.508,
+    "accuracy": 0.7008,
+    "balanced_accuracy": 0.6964
+  },
+  "V4_on_common_population": {
+    "threshold": 0.25,
+    "roc_auc": 0.7484,
+    "TP": 95,
+    "TN": 336,
+    "FP": 141,
+    "FN": 43,
+    "n": 615,
+    "sensitivity": 0.6884,
+    "specificity": 0.7044,
+    "precision": 0.4025,
+    "f1": 0.508,
+    "accuracy": 0.7008,
+    "balanced_accuracy": 0.6964
+  },
+  "V5": {
+    "threshold": 0.25,
+    "roc_auc": 0.7981,
+    "TP": 98,
+    "TN": 340,
+    "FP": 137,
+    "FN": 40,
+    "n": 615,
+    "sensitivity": 0.7101,
+    "specificity": 0.7128,
+    "precision": 0.417,
+    "f1": 0.5255,
+    "accuracy": 0.7122,
+    "balanced_accuracy": 0.7115
+  },
+  "paired_shift": {
+    "fn_rescued": 16,
+    "fn_introduced": 13,
+    "fp_corrected": 37,
+    "fp_introduced": 33,
+    "net_tp": 3,
+    "net_tn": 4,
+    "net_fp": -4,
+    "net_fn": -3
+  },
+  "paired_roc_auc_diff": 0.0498,
+  "paired_balanced_accuracy_diff": 0.0151,
+  "bootstrap": {
+    "n_bootstrap": 2000,
+    "auc_diff_mean": 0.0498,
+    "auc_diff_ci95": [
+      0.0218,
+      0.0791
+    ],
+    "balacc_diff_mean": 0.0151,
+    "balacc_diff_ci95": [
+      -0.027,
+      0.0557
+    ]
+  }
+}
