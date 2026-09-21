@@ -37,7 +37,9 @@ public static class AbcdeDetails
         }
 
         var threshold = Threshold(details, 0.20);
-        return $"Mirror-overlap mismatch ratio: {ratio.GetDouble():F2} (concern threshold: {threshold:F2})";
+        return $"Mirror-overlap mismatch ratio: {ratio.GetDouble():F2} "
+            + $"(feature reference threshold: {threshold:F2} -- flags this one feature for review; "
+            + "it is not the model's overall decision rule)";
     }
 
     private static string BorderCaption(JsonElement details)
@@ -48,7 +50,9 @@ public static class AbcdeDetails
         }
 
         var threshold = Threshold(details, 0.50);
-        return $"Border irregularity: {raw.GetDouble():F2} (concern threshold: {threshold:F2})";
+        return $"Border irregularity: {raw.GetDouble():F2} "
+            + $"(feature reference threshold: {threshold:F2} -- flags this one feature for review; "
+            + "it is not the model's overall decision rule)";
     }
 
     private static string ColorCaption(JsonElement details)

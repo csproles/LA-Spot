@@ -42,6 +42,31 @@ from pipeline_v4.decision_model import v4_predict_from_row, load_frozen_pipeline
 CONF = 0.25  # YOLO acceptance threshold -- UNCHANGED, matches every prior V4 evaluation
 
 
+_PRIMARY_OUTLINE_COLOR = (0, 215, 255)   # BGR gold -- the instance V4 actually analyzed
+_OTHER_OUTLINE_COLOR = (255, 200, 0)     # BGR cyan -- detected by YOLO, not analyzed
+
+
+def _build_multi_instance_overlay(original, rows):
+    """One image outlining EVERY YOLO-detected instance, so a multi-lesion
+    photo doesn't look like only one spot was found. Outline only, never
+    filled and never scored -- this never implies an instance other than
+    `rows[0]` (the primary) was analyzed, only that YOLO found it. Only
+    called when there's more than one instance; the single-instance and
+    no-detection paths are untouched by this function entirely.
+    """
+    overlay = original.copy()
+    w = original.shape[1]
+    thickness_primary = max(3, w // 200)
+    thickness_other = max(2, w // 350)
+    for i, row in enumerate(rows):
+        contours, _ = cv2.findContours(row["mask"], cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+        if i == 0:
+            cv2.drawContours(overlay, contours, -1, _PRIMARY_OUTLINE_COLOR, thickness_primary)
+        else:
+            cv2.drawContours(overlay, contours, -1, _OTHER_OUTLINE_COLOR, thickness_other)
+    return overlay
+
+
 def _empty_abcde_scores(reason: str) -> dict:
     """Mirrors MelanomaDetector._compute_abcde_scores's own no-lesion shape,
     so downstream code (evolution, storage, the LLM schema mapper) sees the
@@ -189,10 +214,14 @@ class V4Detector:
         risk_score = round(decision_score * 100, 1)
 
         visuals = self._legacy._build_abcd_visuals(original, mask, abcde_scores)
+        multi_instance_overlay = (
+            _build_multi_instance_overlay(original, rows) if multi_lesion_detected else None
+        )
 
         result = self._package(
             original, bilateral_filtered, median_filtered, hair_removed, mask, edges,
             visuals, abcde_scores, risk_score, num_instances, multi_lesion_detected,
+            multi_instance_overlay,
         )
         result["overall_visual_concern"] = "ELEVATED VISUAL CONCERN" if elevated else "LOWER VISUAL CONCERN"
         result["v4_decision_score"] = round(decision_score, 4)
@@ -202,18 +231,30 @@ class V4Detector:
 
     @staticmethod
     def _package(original, bilateral_filtered, noise_removed, hair_removed, mask, edges,
-                 visuals, abcde_scores, risk_score, num_instances, multi_lesion_detected):
+                 visuals, abcde_scores, risk_score, num_instances, multi_lesion_detected,
+                 multi_instance_overlay=None):
         return {
             "original": original,
             "bilateral_filtered": bilateral_filtered,
             "noise_removed": noise_removed,
             "hair_removed": hair_removed,
+            # The primary (highest-confidence) instance's mask ONLY -- unchanged
+            # for single-instance and no-detection results. When more than one
+            # instance was detected, multi_instance_overlay (below) additionally
+            # shows every one of them; this field itself never changes shape or
+            # meaning, so evolution.lesion_area_px and everything else that reads
+            # it as "the analyzed lesion's mask" keeps working exactly as before.
             "segmentation": mask,
             "edges": edges,
             "asymmetry_visual": visuals["asymmetry"],
             "border_visual": visuals["border"],
             "color_visual": visuals["color"],
             "diameter_visual": visuals["diameter"],
+            # Present only when more than one instance was detected -- every
+            # YOLO-detected instance outlined on the original photo (primary
+            # in one color, the rest in another), never filled, never scored.
+            # None (never sent) for single-instance and no-detection results.
+            "multi_instance_overlay": multi_instance_overlay,
             "abcde_scores": abcde_scores,
             "risk_score": risk_score,
             # Always None: no hair-width (or any other) physical calibration

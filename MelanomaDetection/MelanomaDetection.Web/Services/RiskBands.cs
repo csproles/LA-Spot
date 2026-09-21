@@ -1,12 +1,17 @@
 namespace MelanomaDetection.Web.Services;
 
 /// <summary>
-/// Maps a 0-100 risk score to its band and user-facing copy.
+/// Maps a 0-100 risk score to a band, for coloring trend visualizations only
+/// (the Spots dashboard sparkline, body map, stat tiles) that plot a bare
+/// historical score at a glance across many checks.
 ///
-/// Thresholds are kept in sync by hand with MelanomaDetection.Python/policy.py,
-/// which is the source of truth (it also drives recheck cadence). The client
-/// needs its own copy so it can colour and label a score it already holds
-/// without a round trip. Change both or neither.
+/// This is NOT used for the check-result headline verdict or for recheck
+/// cadence -- V4's own overall_visual_concern is authoritative for both (see
+/// Services/VisualConcern.cs and MelanomaDetection.Python/policy.py). These
+/// 35/65 thresholds were calibrated for the old classical detector's
+/// weighted-sum score and do not line up with V4's decision-model score
+/// (whose own operating threshold, 0.25, falls inside this "low" band), so
+/// they must never be presented as a medical verdict.
 /// </summary>
 public static class RiskBands
 {
@@ -21,25 +26,11 @@ public static class RiskBands
         _ => "high",
     };
 
-    public static string Label(string band) => band switch
-    {
-        "low" => "Low risk indicators",
-        "moderate" => "Some risk indicators present",
-        _ => "High risk indicators",
-    };
-
     public static string ShortLabel(string band) => band switch
     {
         "low" => "Low",
         "moderate" => "Moderate",
         _ => "High",
-    };
-
-    public static string Recommendation(string band) => band switch
-    {
-        "low" => "No immediate action needed. Continue routine skin self-exams and keep up with annual dermatologist checkups.",
-        "moderate" => "Consider scheduling a dermatologist visit in the coming months to have this spot evaluated.",
-        _ => "See a dermatologist as soon as possible for a professional evaluation of this spot.",
     };
 
     /// <summary>Band for a single 0-10 ABCD sub-score, for the factor bars.</summary>

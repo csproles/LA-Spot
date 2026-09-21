@@ -37,8 +37,8 @@ public static class Recheck
     public static string CadenceSentence(Spot spot) => spot.CadenceDays switch
     {
         null => "Take a first photo to start tracking this spot.",
-        0 => "High risk indicators: see a dermatologist rather than waiting for a recheck.",
-        var days => $"Rechecked every {days} days at this risk level.",
+        0 => "This spot's last check points to seeing a dermatologist now, rather than waiting for a scheduled recheck.",
+        var days => $"Rechecked every {days} days at this cadence.",
     };
 
     public static string Ago(DateTimeOffset? at, DateTimeOffset? now = null)

@@ -122,11 +122,35 @@ public class ImageProcessingResults
     [JsonPropertyName("diameter_visual")]
     public string DiameterVisual { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Every YOLO-detected instance outlined on the original photo (present
+    /// only when MultiLesionDetected is true). The primary instance -- the
+    /// only one analyzed -- is drawn distinctly from the others, which are
+    /// outlined only, never analyzed.
+    /// </summary>
+    [JsonPropertyName("multi_instance_overlay")]
+    public string? MultiInstanceOverlay { get; set; }
+
     [JsonPropertyName("abcde_scores")]
     public AbcdeScores AbcdeScores { get; set; } = new();
 
     [JsonPropertyName("risk_score")]
     public double RiskScore { get; set; }
+
+    /// <summary>
+    /// V4's own screening result -- "LOWER VISUAL CONCERN" or "ELEVATED
+    /// VISUAL CONCERN" -- or null when no lesion could be detected. This is
+    /// the authoritative verdict; see Services/VisualConcern.cs. It is not a
+    /// diagnosis and RiskScore is not a probability of one.
+    /// </summary>
+    [JsonPropertyName("overall_visual_concern")]
+    public string? OverallVisualConcern { get; set; }
+
+    [JsonPropertyName("num_lesion_instances")]
+    public int NumLesionInstances { get; set; }
+
+    [JsonPropertyName("multi_lesion_detected")]
+    public bool MultiLesionDetected { get; set; }
 
     [JsonPropertyName("location")]
     public string Location { get; set; } = string.Empty;
@@ -168,6 +192,10 @@ public class Spot
 
     [JsonPropertyName("lastRiskScore")]
     public double? LastRiskScore { get; set; }
+
+    /// <summary>V4's result on the spot's most recent check, or null if unknown/no detection.</summary>
+    [JsonPropertyName("lastOverallVisualConcern")]
+    public string? LastOverallVisualConcern { get; set; }
 
     [JsonPropertyName("lastCheckedAt")]
     public DateTimeOffset? LastCheckedAt { get; set; }
