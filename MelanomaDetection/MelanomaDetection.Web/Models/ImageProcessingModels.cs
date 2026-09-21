@@ -190,11 +190,11 @@ public class Spot
 public class SpotDetail : Spot
 {
     [JsonPropertyName("checks")]
-    public List<SpotCheck> Checks { get; set; } = new();
+    public List<LASpot> Checks { get; set; } = new();
 }
 
 /// <summary>One check in a spot's timeline -- the stored numbers plus a thumbnail.</summary>
-public class SpotCheck
+public class LASpot
 {
     [JsonPropertyName("processingId")]
     public string ProcessingId { get; set; } = string.Empty;

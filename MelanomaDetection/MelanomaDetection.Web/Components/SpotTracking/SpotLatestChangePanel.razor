@@ -37,16 +37,16 @@
 
 @code {
     [Parameter, EditorRequired]
-    public IReadOnlyList<SpotCheck> Checks { get; set; } = Array.Empty<SpotCheck>();
+    public IReadOnlyList<LASpot> Checks { get; set; } = Array.Empty<LASpot>();
 
-    private SpotCheck Latest => Checks[^1];
+    private LASpot Latest => Checks[^1];
 
-    private SpotCheck Previous => Checks[^2];
+    private LASpot Previous => Checks[^2];
 
-    private static string DateOf(SpotCheck check) =>
+    private static string DateOf(LASpot check) =>
         check.ProcessedAt?.ToLocalTime().ToString("MMM d, yyyy") ?? "Unknown date";
 
-    private static string DiameterOf(SpotCheck check) =>
+    private static string DiameterOf(LASpot check) =>
         check.DiameterMm is null ? "size n/a" : $"≈{check.DiameterMm:F1} mm";
 
     private static string ScoreOf(double? score) =>

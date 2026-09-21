@@ -3,7 +3,7 @@
 @inject ImageProcessingService ImageProcessingService
 @inject NavigationManager NavigationManager
 
-<PageTitle>@(Spot?.Label ?? "Spot") - Skin Check</PageTitle>
+<PageTitle>@(Spot?.Label ?? "Spot") - LA Spot</PageTitle>
 
 <div class="spot-page">
     <BackLink Href="/spots" Text="All spots" />
@@ -123,6 +123,6 @@
         }
     }
 
-    private void OpenCheck(SpotCheck check) =>
+    private void OpenCheck(LASpot check) =>
         NavigationManager.NavigateTo($"/results/{check.ProcessingId}");
 }

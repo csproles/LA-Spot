@@ -31,7 +31,7 @@
     [Parameter, EditorRequired]
     public SpotDetail Spot { get; set; } = null!;
 
-    private List<SpotCheck> Checks => Spot.Checks;
+    private List<LASpot> Checks => Spot.Checks;
 
     private List<double> Scores => Checks.Select(check => check.RiskScore).ToList();
 

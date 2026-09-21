@@ -48,16 +48,16 @@
 
 @code {
     [Parameter, EditorRequired]
-    public IReadOnlyList<SpotCheck> Checks { get; set; } = Array.Empty<SpotCheck>();
+    public IReadOnlyList<LASpot> Checks { get; set; } = Array.Empty<LASpot>();
 
     /// <summary>Raised when a check is tapped outside compare mode.</summary>
     [Parameter]
-    public EventCallback<SpotCheck> OnOpenCheck { get; set; }
+    public EventCallback<LASpot> OnOpenCheck { get; set; }
 
     private bool IsCompareMode;
     private readonly List<string> SelectedIds = new();
 
-    private List<SpotCheck> ComparedChecks => Checks
+    private List<LASpot> ComparedChecks => Checks
         .Where(check => SelectedIds.Contains(check.ProcessingId))
         .OrderBy(check => check.ProcessedAt)
         .ToList();
@@ -68,7 +68,7 @@
         SelectedIds.Clear();
     }
 
-    private async Task HandleEntryClick(SpotCheck check)
+    private async Task HandleEntryClick(LASpot check)
     {
         if (!IsCompareMode)
         {
@@ -86,6 +86,6 @@
         }
     }
 
-    private static string DateOf(SpotCheck check) =>
+    private static string DateOf(LASpot check) =>
         check.ProcessedAt?.ToLocalTime().ToString("MMM d, yyyy") ?? "Unknown date";
 }

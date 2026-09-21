@@ -18,13 +18,13 @@
 
 @code {
     [Parameter, EditorRequired]
-    public SpotCheck Check { get; set; } = null!;
+    public LASpot Check { get; set; } = null!;
 
     [Parameter]
     public bool Selected { get; set; }
 
     [Parameter]
-    public EventCallback<SpotCheck> OnClick { get; set; }
+    public EventCallback<LASpot> OnClick { get; set; }
 
     private string Date => Check.ProcessedAt?.ToLocalTime().ToString("MMM d, yyyy") ?? "Unknown date";
 
