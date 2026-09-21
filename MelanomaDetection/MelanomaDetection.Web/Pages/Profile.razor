@@ -1,6 +1,8 @@
 @page "/profile"
 @rendermode InteractiveServer
+@implements IDisposable
 @inject ImageProcessingService ImageProcessingService
+@inject ChatPageContext ChatPageContext
 
 <PageTitle>Profile - LA Spot</PageTitle>
 
@@ -57,6 +59,7 @@
         try
         {
             Model = await ImageProcessingService.GetProfileAsync();
+            SetChatContext();
         }
         catch (ImageProcessingApiException ex)
         {
@@ -66,6 +69,24 @@
         {
             IsLoading = false;
         }
+    }
+
+    /// <summary>
+    /// Lets the chat widget answer questions about the risk profile the person is looking
+    /// at -- only the risk-relevant fields, never the name or free-text location.
+    /// </summary>
+    private void SetChatContext()
+    {
+        ChatPageContext.Set("profile", new Dictionary<string, object?>
+        {
+            ["configured"] = Model.Configured,
+            ["sunExposure"] = Model.SunExposure,
+            ["fitzpatrick"] = Model.Fitzpatrick,
+            ["familyHistory"] = Model.FamilyHistory,
+            ["blisteringSunburns"] = Model.BlisteringSunburns,
+            ["manyMoles"] = Model.ManyMoles,
+            ["hasElevatedRiskFactors"] = Model.HasElevatedRiskFactors,
+        });
     }
 
     private void UpdateFullName(string fullName)
@@ -82,6 +103,7 @@
         {
             Model = await ImageProcessingService.SaveProfileAsync(Model);
             IsDirty = false;
+            SetChatContext();
         }
         catch (ImageProcessingApiException ex)
         {
@@ -92,4 +114,6 @@
             IsSaving = false;
         }
     }
+
+    public void Dispose() => ChatPageContext.Clear();
 }

@@ -82,6 +82,70 @@ class TestSymptoms:
             validation.clean_symptoms([1])
 
 
+class TestChatHistory:
+    def test_none_is_empty(self):
+        assert validation.clean_chat_history(None) == []
+
+    def test_cleans_valid_turns(self):
+        turns = [{"role": "user", "text": " hi "}, {"role": "assistant", "text": "hello"}]
+        assert validation.clean_chat_history(turns) == [
+            {"role": "user", "text": "hi"},
+            {"role": "assistant", "text": "hello"},
+        ]
+
+    def test_rejects_non_list(self):
+        with pytest.raises(ValidationError):
+            validation.clean_chat_history("hi")
+
+    def test_rejects_too_many_turns(self):
+        turns = [{"role": "user", "text": "hi"}] * (validation.CHAT_HISTORY_MAX_TURNS + 1)
+        with pytest.raises(ValidationError, match="at most"):
+            validation.clean_chat_history(turns)
+
+    def test_rejects_bad_role(self):
+        with pytest.raises(ValidationError, match="role"):
+            validation.clean_chat_history([{"role": "system", "text": "hi"}])
+
+    def test_rejects_extra_or_missing_keys(self):
+        with pytest.raises(ValidationError):
+            validation.clean_chat_history([{"role": "user", "text": "hi", "extra": 1}])
+        with pytest.raises(ValidationError):
+            validation.clean_chat_history([{"role": "user"}])
+
+    def test_rejects_oversized_text(self):
+        with pytest.raises(ValidationError):
+            validation.clean_chat_history([{"role": "user", "text": "a" * (validation.CHAT_QUESTION_MAX + 1)}])
+
+
+class TestPageContext:
+    def test_none_is_none(self):
+        assert validation.clean_page_context(None) is None
+
+    def test_cleans_primitive_values(self):
+        raw = {"page": "results", "data": {"riskScore": 42, "riskBand": "moderate", "flagged": ["asymmetry", "border"]}}
+        assert validation.clean_page_context(raw) == raw
+
+    def test_null_data_becomes_empty_dict(self):
+        assert validation.clean_page_context({"page": "results", "data": None}) == {"page": "results", "data": {}}
+
+    def test_rejects_missing_page(self):
+        with pytest.raises(ValidationError):
+            validation.clean_page_context({"data": {}})
+
+    def test_rejects_extra_keys(self):
+        with pytest.raises(ValidationError):
+            validation.clean_page_context({"page": "results", "data": {}, "extra": 1})
+
+    def test_rejects_nested_objects_in_data(self):
+        with pytest.raises(ValidationError):
+            validation.clean_page_context({"page": "results", "data": {"nested": {"a": 1}}})
+
+    def test_rejects_too_many_data_entries(self):
+        data = {f"k{i}": i for i in range(validation.CHAT_PAGE_CONTEXT_MAX_ENTRIES + 1)}
+        with pytest.raises(ValidationError, match="at most"):
+            validation.clean_page_context({"page": "results", "data": data})
+
+
 class TestIdsAndTypes:
     def test_spot_id_shape(self):
         assert validation.clean_spot_id("spot_0123456789ab") == "spot_0123456789ab"

@@ -16,6 +16,7 @@ public static class InputLimits
     public const int NotesMax = 2000;
     public const int SymptomMax = 60;
     public const int SymptomsMaxCount = 20;
+    public const int ChatQuestionMax = 500;
 
     public const long ImageMaxBytes = 5 * 1024 * 1024;
 

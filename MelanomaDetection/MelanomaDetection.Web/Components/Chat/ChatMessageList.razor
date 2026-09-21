@@ -1,0 +1,45 @@
+@* Message bubbles, oldest first. A refusal gets a distinct, calm style (not an
+   error) so "I can't answer that from the textbook" reads as expected
+   behaviour rather than a failure. *@
+
+<div class="chat-message-list" role="log" aria-live="polite">
+    @if (Messages.Count == 0 && !IsSending)
+    {
+        <p class="chat-message-empty">
+            Ask a question about the textbook. Answers are limited to what it covers.
+        </p>
+    }
+
+    @foreach (var message in Messages)
+    {
+        <div class="chat-message chat-message-@RoleClass(message) @(message.Refused ? "chat-message-refused" : "")">
+            <p class="chat-message-text">@message.Text</p>
+            @if (message.Sources.Count > 0)
+            {
+                @* Each entry is already "Book Title: page N, page M" (or a bare name like "App
+                   Help"); "; " separates entries so a page list's commas never read as if they
+                   belonged to the next source. *@
+                <p class="chat-message-sources">Sources: @string.Join("; ", message.Sources)</p>
+            }
+        </div>
+    }
+
+    @if (IsSending)
+    {
+        <div class="chat-message chat-message-assistant chat-message-pending">
+            <LoadingRegion Label="Thinking">
+                <SkeletonLines Lines="2" LineHeight="11px" LastLineWidth="55%" />
+            </LoadingRegion>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public IReadOnlyList<ChatMessage> Messages { get; set; } = Array.Empty<ChatMessage>();
+
+    [Parameter]
+    public bool IsSending { get; set; }
+
+    private static string RoleClass(ChatMessage message) => message.Role == ChatRole.User ? "user" : "assistant";
+}

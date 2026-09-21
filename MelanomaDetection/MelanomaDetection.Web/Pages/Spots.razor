@@ -1,7 +1,9 @@
 @page "/spots"
 @rendermode InteractiveServer
+@implements IDisposable
 @inject ImageProcessingService ImageProcessingService
 @inject NavigationManager NavigationManager
+@inject ChatPageContext ChatPageContext
 
 <PageTitle>Spots - LA Spot</PageTitle>
 
@@ -109,11 +111,24 @@
         {
             IsLoading = false;
         }
+        SetChatContext();
     }
 
     protected override void OnParametersSet()
     {
         SelectedRegion = string.IsNullOrWhiteSpace(RegionQuery) ? null : RegionQuery;
+        SetChatContext();
+    }
+
+    /// <summary>Lets the chat widget answer questions about the spots list the person is looking at.</summary>
+    private void SetChatContext()
+    {
+        ChatPageContext.Set("spots", new Dictionary<string, object?>
+        {
+            ["totalSpots"] = AllSpots.Count,
+            ["dueSpots"] = DueCount,
+            ["selectedRegion"] = SelectedRegion,
+        });
     }
 
     private void ToggleRegion(string region)
@@ -121,4 +136,6 @@
         var next = SelectedRegion == region ? null : region;
         NavigationManager.NavigateTo(next is null ? "/spots" : $"/spots?region={Uri.EscapeDataString(next)}");
     }
+
+    public void Dispose() => ChatPageContext.Clear();
 }

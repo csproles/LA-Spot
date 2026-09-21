@@ -2,6 +2,7 @@
 using MelanomaDetection.Web.Components;
 using MelanomaDetection.Web.Services;
 using MelanomaDetection.Web.Services.Account;
+using MelanomaDetection.Web.Services.Chat;
 using MelanomaDetection.Web.Services.RateLimiting;
 using Microsoft.AspNetCore.HttpOverrides;
 
@@ -56,6 +57,21 @@ if (string.IsNullOrWhiteSpace(flaskInternalKey) && !builder.Environment.IsDevelo
 }
 
 builder.Services.AddHttpClient<ImageProcessingService>(client =>
+{
+    var baseUrl = builder.Configuration["FlaskApi:BaseUrl"] ?? "http://localhost:5002";
+    client.BaseAddress = new Uri(baseUrl);
+    client.Timeout = TimeSpan.FromSeconds(30);
+    if (!string.IsNullOrWhiteSpace(flaskInternalKey))
+    {
+        client.DefaultRequestHeaders.Add(ImageProcessingService.InternalKeyHeader, flaskInternalKey);
+    }
+});
+
+// The chat widget's per-page "what's on screen" context (see ChatPageContext's summary);
+// scoped like CurrentUser so it never crosses between people sharing the server.
+builder.Services.AddScoped<ChatPageContext>();
+
+builder.Services.AddHttpClient<ChatService>(client =>
 {
     var baseUrl = builder.Configuration["FlaskApi:BaseUrl"] ?? "http://localhost:5002";
     client.BaseAddress = new Uri(baseUrl);

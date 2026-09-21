@@ -22,6 +22,11 @@ FULL_NAME_MAX = 120
 NOTES_MAX = 2000
 SYMPTOM_MAX = 60
 SYMPTOMS_MAX_COUNT = 20
+CHAT_QUESTION_MAX = 500
+CHAT_HISTORY_MAX_TURNS = 6
+CHAT_PAGE_CONTEXT_MAX_ENTRIES = 20
+CHAT_PAGE_NAME_MAX = 40
+_CHAT_ROLES = {"user", "assistant"}
 
 MAX_IMAGE_PIXELS = 25_000_000  # ~5000x5000; a small PNG can otherwise inflate to gigabytes when decoded
 
@@ -73,6 +78,72 @@ def clean_symptoms(values) -> list:
         raise ValidationError(f"symptoms can have at most {SYMPTOMS_MAX_COUNT} entries.")
     cleaned = [clean_text(item, "Each symptom", SYMPTOM_MAX) for item in values]
     return [item for item in cleaned if item]
+
+
+def clean_chat_history(values) -> list:
+    """A list of prior {role, text} turns for the chat feature. None means none."""
+    if values is None:
+        return []
+    if not isinstance(values, (list, tuple)):
+        raise ValidationError("history must be a list.")
+    if len(values) > CHAT_HISTORY_MAX_TURNS:
+        raise ValidationError(f"history can have at most {CHAT_HISTORY_MAX_TURNS} turns.")
+    cleaned = []
+    for turn in values:
+        if not isinstance(turn, dict) or set(turn) != {"role", "text"}:
+            raise ValidationError('Each history turn must be an object with exactly "role" and "text".')
+        role = turn["role"]
+        if role not in _CHAT_ROLES:
+            raise ValidationError('Each history turn\'s role must be "user" or "assistant".')
+        text = clean_text(turn["text"], "history text", CHAT_QUESTION_MAX, multiline=True)
+        cleaned.append({"role": role, "text": text})
+    return cleaned
+
+
+_PAGE_CONTEXT_SCALAR = (str, int, float, bool, type(None))
+
+
+def _clean_page_context_value(value, field: str):
+    if isinstance(value, _PAGE_CONTEXT_SCALAR):
+        if isinstance(value, str) and len(value) > CHAT_PAGE_NAME_MAX * 4:
+            raise ValidationError(f"{field} is too long.")
+        return value
+    if isinstance(value, (list, tuple)):
+        if len(value) > CHAT_PAGE_CONTEXT_MAX_ENTRIES:
+            raise ValidationError(f"{field} has too many entries.")
+        return [_clean_page_context_value(item, field) for item in value]
+    raise ValidationError(f"{field} must be text, a number, a boolean, null, or a list of those.")
+
+
+def clean_page_context(value):
+    """The chat feature's optional {"page": str, "data": {...}} summary of what's on screen.
+
+    Only primitive values (or lists of them) are allowed in "data" -- this is
+    forwarded into an LLM prompt, so arbitrary nested client-supplied structure
+    is rejected rather than passed through.
+    """
+    if value is None:
+        return None
+    if not isinstance(value, dict) or set(value) != {"page", "data"}:
+        raise ValidationError('pageContext must be an object with exactly "page" and "data".')
+
+    page = clean_text(value["page"], "pageContext.page", CHAT_PAGE_NAME_MAX, required=True)
+
+    data = value["data"]
+    if data is None:
+        data = {}
+    if not isinstance(data, dict):
+        raise ValidationError("pageContext.data must be an object.")
+    if len(data) > CHAT_PAGE_CONTEXT_MAX_ENTRIES:
+        raise ValidationError(f"pageContext.data can have at most {CHAT_PAGE_CONTEXT_MAX_ENTRIES} entries.")
+
+    cleaned_data = {}
+    for key, entry in data.items():
+        if not isinstance(key, str) or len(key) > CHAT_PAGE_NAME_MAX:
+            raise ValidationError("pageContext.data has an invalid key.")
+        cleaned_data[key] = _clean_page_context_value(entry, f"pageContext.data.{key}")
+
+    return {"page": page, "data": cleaned_data}
 
 
 def clean_spot_id(value):

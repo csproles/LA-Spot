@@ -1,0 +1,86 @@
+{
+  "source": {
+    "title": "Melanomas",
+    "publisher": "Salem Health: Cancer (Online Edition), EBSCO",
+    "edition": "2026 (author: Crowder, Charlotte, MPH, ELS)",
+    "caveat": "Subscription database article, accessed via an institutional (university) EBSCO login -- (c) EBSCO Industries, Inc. Excerpts only, for this app's own grounded-answer use; do not treat as freely redistributable if this repo is made public."
+  },
+  "notice": "Source: scripts/textbook_pages/Melanomas..html, a clean, well-formed article export -- no OCR or LLM respacing needed, just tag-stripping (see scripts/extract_html_article.py). This source has no page numbers, so each passage's \"page\" field is a section name instead of a page number (textbook_chat.Passage accepts either).",
+  "passages": [
+    {
+      "id": "salem-definition",
+      "page": "Definition",
+      "text": "Melanomas are malignant tumors of the skin that occur in the melanocytes, the cells that produce melanin (skin pigment)."
+    },
+    {
+      "id": "salem-risk-factors",
+      "page": "Risk factors",
+      "text": "Melanomas occur most commonly in fair-skinned people, particularly natural blonds and redheads, especially those with a history of sun exposure or multiple severe sunburns. A history of serious sunburns in childhood is a particular risk. Risk for the disease is strongly related to family history, which is characteristic of about 1 in 10 patients with melanoma."
+    },
+    {
+      "id": "salem-etiology",
+      "page": "Etiology and the disease process",
+      "text": "Repeat exposure to harmful ultraviolet rays from the sun or artificial sources such as sunlamps or tanning booths appears to be the most significant factor contributing to melanoma development."
+    },
+    {
+      "id": "salem-early-detection",
+      "page": "Etiology and the disease process",
+      "text": "Melanoma starts with abnormal skin growth, which is generally quite small. When discovered early, melanomas can be easily removed and the cancer cured. If the growth is not removed, it thickens and invades surrounding tissue and nearby lymph nodes."
+    },
+    {
+      "id": "salem-incidence",
+      "page": "Incidence",
+      "text": "Skin cancer is consistently the most common form of cancer in the United States. Around 2.2 percent of Americans will receive a skin cancer diagnosis at some point."
+    },
+    {
+      "id": "salem-symptoms-abcd",
+      "page": "Symptoms",
+      "text": "Melanoma generally first appears as a new mole or a change in an existing mole's shape, size, or color. The American Cancer Society describes the warning signals regarding the mnemonic ABCD. \"A\" for asymmetry, meaning that the mole is not uniformly round; \"B\" for border, in that the edges of the mole are irregular; \"C\" for color, referring to the varied colors (generally in tones of tan, brown, and black) throughout the mole; and \"D\" for diameter, meaning that the mole is larger than 6 millimeters (mm)."
+    },
+    {
+      "id": "salem-screening-diagnosis",
+      "page": "Screening and diagnosis",
+      "text": "People with serious risk factors or symptoms should have regular full-body exams by a dermatologist to identify any skin abnormalities. Baseline photographs should be taken so that any changes can be tracked. Suspect moles or skin abnormalities should be removed and analyzed for cancer cells."
+    },
+    {
+      "id": "salem-stage-0",
+      "page": "Stages of melanoma",
+      "text": "Localized, Stage 0: These melanomas involve only the top layer of skin, the epidermis."
+    },
+    {
+      "id": "salem-stage-1-2",
+      "page": "Stages of melanoma",
+      "text": "Localized, Stages I and II: These melanomas involve the underlying layer of skin, the dermis, and are rated according to the depth they penetrate the skin (known as the Breslow depth) and their degree of ulceration."
+    },
+    {
+      "id": "salem-stage-3",
+      "page": "Stages of melanoma",
+      "text": "Regional, Stage III: These melanomas include those in which the cancer has spread to nearby lymph nodes."
+    },
+    {
+      "id": "salem-stage-4",
+      "page": "Stages of melanoma",
+      "text": "Advanced, Stage IV: These melanomas include those where cancer has spread beyond the region of the skin growth to distant sites in the body, including internal organs and distant lymph nodes."
+    },
+    {
+      "id": "salem-treatment-early",
+      "page": "Treatment and therapy",
+      "text": "Removal of localized growths (Stages 0-II) can be done one of three ways -- surgically, cutting out the suspect tissue; by electrodesiccation and curettage; or by cryosurgery, which freezes the tissue. About 80 percent of melanomas are diagnosed in these early stages, while the cancer is still confined to the primary skin growth."
+    },
+    {
+      "id": "salem-treatment-advanced",
+      "page": "Treatment and therapy",
+      "text": "If the growth is extensive, the surgeon will remove lymph nodes in a sentinel lymph node biopsy (SLNB) to determine if the cancer has spread. After their removal, Stage III and IV melanomas may be treated with radiation or immunotherapy or chemotherapy."
+    },
+    {
+      "id": "salem-prognosis-survival",
+      "page": "Prognosis, prevention, and outcomes",
+      "text": "The five-year survival rate for all skin cancer patients is 94.1 percent. A patient's tumor's thickness is the best indicator of the prognosis. After removing melanomas of less than 0.76 mm, about 96 to 99 percent of patients are cured."
+    },
+    {
+      "id": "salem-prevention",
+      "page": "Prognosis, prevention, and outcomes",
+      "text": "Recommended measures to prevent melanoma include avoiding excessive direct sunlight, especially from midmorning to midafternoon; using sunscreen and protective clothing to prevent sunburn; and avoiding sunlamps, tanning booths, or other artificial sources of ultraviolet light."
+    }
+  ]
+}

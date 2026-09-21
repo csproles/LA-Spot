@@ -1,7 +1,9 @@
 @page "/spots/{SpotId}"
 @rendermode InteractiveServer
+@implements IDisposable
 @inject ImageProcessingService ImageProcessingService
 @inject NavigationManager NavigationManager
+@inject ChatPageContext ChatPageContext
 
 <PageTitle>@(Spot?.Label ?? "Spot") - LA Spot</PageTitle>
 
@@ -69,11 +71,25 @@
         try
         {
             Spot = await ImageProcessingService.GetSpotAsync(SpotId);
+            SetChatContext(Spot);
         }
         catch (ImageProcessingApiException ex)
         {
             LoadError = ex.Message;
         }
+    }
+
+    /// <summary>Lets the chat widget answer questions about this spot's tracked history.</summary>
+    private void SetChatContext(SpotDetail spot)
+    {
+        ChatPageContext.Set("spot", new Dictionary<string, object?>
+        {
+            ["spotLabel"] = spot.Label,
+            ["bodyRegion"] = spot.BodyRegion,
+            ["checkCount"] = spot.CheckCount,
+            ["lastRiskScore"] = spot.LastRiskScore,
+            ["trend"] = spot.Trend,
+        });
     }
 
     private async Task<bool> SaveRename(string label)
@@ -125,4 +141,6 @@
 
     private void OpenCheck(LASpot check) =>
         NavigationManager.NavigateTo($"/results/{check.ProcessingId}");
+
+    public void Dispose() => ChatPageContext.Clear();
 }

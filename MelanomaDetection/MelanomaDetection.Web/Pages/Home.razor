@@ -1,7 +1,9 @@
 @page "/"
 @rendermode InteractiveServer
+@implements IDisposable
 @inject ImageProcessingService ImageProcessingService
 @inject NavigationManager NavigationManager
+@inject ChatPageContext ChatPageContext
 
 <PageTitle>Home - LA Spot</PageTitle>
 
@@ -109,6 +111,7 @@
             Spots = spotsTask.Result;
             RecentChecks = historyTask.Result.Take(4).ToList();
             Profile = profileTask.Result;
+            SetChatContext();
         }
         catch (ImageProcessingApiException ex)
         {
@@ -120,6 +123,20 @@
         }
     }
 
+    /// <summary>Lets the chat widget answer questions about the dashboard the person is looking at.</summary>
+    private void SetChatContext()
+    {
+        ChatPageContext.Set("home", new Dictionary<string, object?>
+        {
+            ["totalSpots"] = Spots.Count,
+            ["dueSpots"] = DueSpots.Count,
+            ["recentChecksShown"] = RecentChecks.Count,
+            ["profileConfigured"] = Profile.Configured,
+        });
+    }
+
     private void GoToRegion(string region) =>
         NavigationManager.NavigateTo($"/spots?region={Uri.EscapeDataString(region)}");
+
+    public void Dispose() => ChatPageContext.Clear();
 }

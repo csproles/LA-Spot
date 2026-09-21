@@ -47,6 +47,8 @@
         ["trash"] = """<path d="M4.5 7h15" /><path d="M9 7V4.5h6V7" /><path d="M6.5 7l.8 12h9.4l.8-12" /><path d="M10 11v5M14 11v5" />""",
         ["shield"] = """<path d="M12 3.5 5 6.2v5.3c0 4.2 2.9 7.4 7 9 4.1-1.6 7-4.8 7-9V6.2Z" /><path d="m9.2 12 2 2 3.8-4" />""",
         ["close"] = """<path d="M6 6l12 12M18 6 6 18" />""",
+        ["chat"] = """<rect x="4" y="5" width="16" height="11" rx="3" /><path d="M9 16l-1.5 3.5L11 16" />""",
+        ["send"] = """<path d="M4.5 12 19.5 5l-5.5 15-3-6.5Z" /><path d="M19.5 5 9 14" />""",
     };
 
     private MarkupString Shape => new(Shapes.TryGetValue(Name, out var path) ? path : string.Empty);

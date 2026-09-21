@@ -27,3 +27,10 @@ obj/
 
 # Claude
 CLAUDE.md
+
+# Textbook chat: raw page scans and OCR output never get committed (large binaries,
+# copyright) -- only the hand-curated knowledge/textbook_melanoma.json and its
+# generated embeddings are. See MelanomaDetection.Python/scripts/ocr_extract_textbook.py.
+MelanomaDetection/MelanomaDetection.Python/scripts/textbook_pages/*
+!MelanomaDetection/MelanomaDetection.Python/scripts/textbook_pages/.gitkeep
+MelanomaDetection/MelanomaDetection.Python/scripts/textbook_ocr_raw/
