@@ -1,7 +1,9 @@
 @page "/history"
 @rendermode InteractiveServer
+@implements IDisposable
 @inject ImageProcessingService ImageProcessingService
 @inject NavigationManager NavigationManager
+@inject ChatPageContext ChatPageContext
 
 <PageTitle>All checks - LA Spot</PageTitle>
 
@@ -89,6 +91,7 @@
         try
         {
             Entries = await ImageProcessingService.GetHistoryAsync();
+            SetChatContext();
         }
         catch (ImageProcessingApiException ex)
         {
@@ -98,6 +101,17 @@
         {
             IsLoading = false;
         }
+    }
+
+    /// <summary>Lets the chat widget answer questions about the person's overall check history.</summary>
+    private void SetChatContext()
+    {
+        ChatPageContext.Set("history", new Dictionary<string, object?>
+        {
+            ["totalChecks"] = Entries.Count,
+            ["earliestCheck"] = Entries.Select(e => e.ProcessedAt).Min()?.ToString("yyyy-MM-dd"),
+            ["latestCheck"] = Entries.Select(e => e.ProcessedAt).Max()?.ToString("yyyy-MM-dd"),
+        });
     }
 
     private void ToggleCompareMode()
@@ -126,4 +140,6 @@
             SelectedForCompare.Add(entry.ProcessingId);
         }
     }
+
+    public void Dispose() => ChatPageContext.Clear();
 }

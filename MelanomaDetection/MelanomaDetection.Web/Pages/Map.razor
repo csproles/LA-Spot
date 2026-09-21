@@ -1,11 +1,13 @@
 @page "/map"
 @using MelanomaDetection.Web.Services.RateLimiting
 @rendermode InteractiveServer
+@implements IDisposable
 @inject IConfiguration Configuration
 @inject IJSRuntime JS
 @inject NpiProviderService NpiService
 @inject CurrentUser CurrentUser
 @inject OperationRateLimiter RateLimiter
+@inject ChatPageContext ChatPageContext
 
 <PageTitle>Map - LA Spot</PageTitle>
 
@@ -87,6 +89,7 @@
         {
             LoadError = $"No dermatology providers found in the NPI Registry for {region.CityLabel}, LA.";
         }
+        SetChatContext();
 
         await JS.InvokeVoidAsync("skinCheckMap.showResults", new
         {
@@ -109,4 +112,16 @@
 
         StateHasChanged();
     }
+
+    /// <summary>Lets the chat widget answer questions about the Find Care results on screen.</summary>
+    private void SetChatContext()
+    {
+        ChatPageContext.Set("findCare", new Dictionary<string, object?>
+        {
+            ["region"] = CurrentRegionLabel,
+            ["providersFound"] = Providers.Count,
+        });
+    }
+
+    public void Dispose() => ChatPageContext.Clear();
 }

@@ -13,6 +13,9 @@ public enum LimitedOperation
 
     /// <summary>The Find Care lookup: up to nine requests to the government registries.</summary>
     FindProviders,
+
+    /// <summary>A textbook chat question: one OpenAI call (plus an embedding call) per question.</summary>
+    Chat,
 }
 
 /// <summary>
@@ -36,6 +39,7 @@ public sealed class OperationRateLimiter : IDisposable
             [LimitedOperation.AnalyzePhoto] = (8, TimeSpan.FromMinutes(1)),
             [LimitedOperation.ExplainResults] = (4, TimeSpan.FromMinutes(1)),
             [LimitedOperation.FindProviders] = (10, TimeSpan.FromMinutes(1)),
+            [LimitedOperation.Chat] = (6, TimeSpan.FromMinutes(1)),
         };
 
     private readonly PartitionedRateLimiter<(LimitedOperation Operation, Guid UserId)> _limiter =

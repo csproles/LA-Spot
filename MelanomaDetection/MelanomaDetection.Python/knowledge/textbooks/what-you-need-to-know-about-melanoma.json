@@ -1,0 +1,191 @@
+{
+  "source": {
+    "title": "What You Need To Know About Melanoma",
+    "publisher": "National Cancer Institute",
+    "edition": "NIH Publication No. 99-1563, revised July 1999",
+    "caveat": "This booklet dates from 1999, so ask a dermatologist for current guidance, especially on treatment and staging."
+  },
+  "notice": "Source: scripts/textbook_pages/What You Need to Know about Melanoma.pdf, a 47-page Google Books scan of the same NCI booklet knowledge/nci_melanoma_booklet.json already excerpts (that file covers only the ABCD passages used by the AI-explanation feature; this one covers the rest of the booklet for open-ended chat). The PDF's embedded text layer is intact but lost its word spacing during digitization (e.g. \"Thisbookletisaboutmelanoma\") -- not an OCR misread, just missing spaces, so scripts/extract_pdf_text.py used an LLM to reinsert spaces only (temperature 0, no rewording) rather than running image OCR. Each respaced page was hand-reviewed against the original before any sentence below was selected; one spot on the self-exam page (a stray 'sinema' fragment) looked like genuine extraction corruption rather than a spacing issue and was left out rather than guessed at. Passages are verbatim from the respaced text. Per page 46 of the PDF, NCI booklet text authored by government employees is public domain; only photographs and illustrations (not reproduced here) may carry separate contractor copyright.",
+  "passages": [
+    {
+      "id": "textbook-what-is-melanoma",
+      "page": 2,
+      "text": "Melanoma is a type of skin cancer. It begins in certain cells in the skin called melanocytes."
+    },
+    {
+      "id": "textbook-the-skin",
+      "page": 2,
+      "text": "The skin is the body's largest organ. It protects against heat, sunlight, injury, and infection. It helps regulate body temperature, stores water and fat, and produces vitamin D. The skin has two main layers: the outer epidermis and the inner dermis."
+    },
+    {
+      "id": "textbook-melanocytes",
+      "page": 3,
+      "text": "Melanocytes are found throughout the lower part of the epidermis. They produce melanin, the pigment that gives skin its natural color. When skin is exposed to the sun, melanocytes produce more pigment, causing the skin to tan, or darken."
+    },
+    {
+      "id": "textbook-moles-common",
+      "page": 3,
+      "text": "Moles are very common. Most people have between 10 and 40 of these flesh-colored, pink, tan, or brown areas on the skin. Moles can be flat or raised. They are usually round or oval and smaller than a pencil eraser."
+    },
+    {
+      "id": "textbook-benign-vs-malignant",
+      "page": 4,
+      "text": "Benign tumors are not cancer. They often can be removed and, in most cases, they do not come back. Cells in benign tumors do not spread to other parts of the body. Malignant tumors are cancer. Cells in malignant tumors are abnormal and divide without control or order."
+    },
+    {
+      "id": "textbook-metastasis",
+      "page": 4,
+      "text": "Cancer cells can also break away from a malignant tumor and enter the bloodstream or lymphatic system. This process, called metastasis, is how cancer spreads from the original tumor to form new tumors in other parts of the body."
+    },
+    {
+      "id": "textbook-cutaneous-melanoma",
+      "page": 5,
+      "text": "Melanoma occurs when melanocytes (pigment cells) become malignant. Most pigment cells are in the skin; when melanoma starts in the skin, the disease is called cutaneous melanoma."
+    },
+    {
+      "id": "textbook-where-melanoma-occurs",
+      "page": 5,
+      "text": "Melanoma can occur on any skin surface. In men, it is often found on the trunk (the area from the shoulders to the hips) or the head and neck. In women, melanoma often develops on the lower legs."
+    },
+    {
+      "id": "textbook-first-sign",
+      "page": 6,
+      "text": "Often, the first sign of melanoma is a change in the size, shape, color, or feel of an existing mole. Most melanomas have a black or blue-black area."
+    },
+    {
+      "id": "textbook-early-signs",
+      "page": 8,
+      "text": "Early melanomas may be found when a pre-existing mole changes slightly - such as forming a new black area. Other frequent findings are newly formed fine scales or itching in a mole."
+    },
+    {
+      "id": "textbook-usually-no-pain",
+      "page": 8,
+      "text": "Although melanomas may feel different and more advanced tumors may itch, ooze, or bleed, melanomas usually do not cause pain."
+    },
+    {
+      "id": "textbook-curable-early",
+      "page": 8,
+      "text": "Melanoma can be cured if it is diagnosed and treated when the tumor is thin and has not deeply invaded the skin. However, if a melanoma is not removed at its early stages, cancer cells may grow downward from the skin surface, invading healthy tissue."
+    },
+    {
+      "id": "textbook-dysplastic-nevi-intro",
+      "page": 8,
+      "text": "Some people have certain abnormal-looking moles, called dysplastic nevi or atypical moles, that may be more likely than normal moles to develop into melanoma."
+    },
+    {
+      "id": "textbook-biopsy-diagnosis",
+      "page": 9,
+      "text": "If the doctor suspects that a spot on the skin is melanoma, the patient will need to have a biopsy. A biopsy is the only way to make a definite diagnosis."
+    },
+    {
+      "id": "textbook-staging",
+      "page": 10,
+      "text": "If melanoma is found, the doctor needs to learn the extent, or stage, of the disease before planning treatment. The treatment plan takes into account the location and thickness of the tumor, how deeply the melanoma has invaded the skin, and whether melanoma cells have spread to nearby lymph nodes or other parts of the body."
+    },
+    {
+      "id": "textbook-treatment-overview",
+      "page": 11,
+      "text": "The standard treatment for melanoma is surgery; in some cases, doctors may also use chemotherapy, biological therapy, or radiation therapy. The doctors may decide to use one treatment method or a combination of methods."
+    },
+    {
+      "id": "textbook-surgery",
+      "page": 14,
+      "text": "Surgery to remove (excise) a melanoma is the standard treatment for this disease. It is necessary to remove not only the tumor but also some normal tissue around it in order to minimize the chance that any cancer will be left in the area."
+    },
+    {
+      "id": "textbook-chemotherapy",
+      "page": 15,
+      "text": "Chemotherapy is the use of drugs to kill cancer cells. It is generally a systemic therapy, meaning that it can affect cancer cells throughout the body."
+    },
+    {
+      "id": "textbook-side-effects-overview",
+      "page": 18,
+      "text": "Doctors plan treatment to keep side effects to a minimum. The goal of therapy is to remove or destroy cancer cells. Because treatment also damages healthy cells and tissues, it often causes side effects."
+    },
+    {
+      "id": "textbook-followup-care",
+      "page": 21,
+      "text": "Melanoma patients have a high risk of developing a separate new melanoma or recurrence of the original melanoma in nearby skin or in other parts of the body. To increase the chance that a new melanoma will be detected as early as possible, patients should follow their doctor's schedule for regular checkups."
+    },
+    {
+      "id": "textbook-causes-not-understood",
+      "page": 24,
+      "text": "At this time, the causes of melanoma are not fully understood. It is clear, however, that this disease is not contagious; no one can catch cancer from another person."
+    },
+    {
+      "id": "textbook-risk-family-history",
+      "page": 25,
+      "text": "Family history of melanoma - Having two or more close relatives who have had this disease is a risk factor because melanoma sometimes runs in families. About 10 percent of all patients with melanoma have family members who also have had this disease."
+    },
+    {
+      "id": "textbook-risk-many-moles",
+      "page": 25,
+      "text": "Many ordinary moles (more than 50) - Because melanoma usually begins in the melanocytes of an existing mole, having many moles increases the risk of developing this disease."
+    },
+    {
+      "id": "textbook-risk-uv-radiation",
+      "page": 25,
+      "text": "Ultraviolet (UV) radiation - Experts believe that much of the worldwide increase in melanoma is related to an increase in the amount of time people spend in the sun. UV radiation from the sun causes premature aging of the skin and skin damage that can lead to melanoma."
+    },
+    {
+      "id": "textbook-prevention-midday-sun",
+      "page": 26,
+      "text": "To help prevent and reduce the risk of melanoma caused by UV radiation, people should avoid exposure to the midday sun (from 10 a.m. to 3 p.m.) whenever possible. Another simple rule is to protect yourself from the sun when your shadow is shorter than you are."
+    },
+    {
+      "id": "textbook-sunscreen-spf",
+      "page": 26,
+      "text": "Sunscreens are rated in strength according to a sun protection factor (SPF). The higher the SPF, the more sunburn protection is provided. Sunscreens with an SPF value of 2 to 11 provide minimal protection against sunburns. Sunscreens with an SPF of 12 to 29 provide moderate protection. Those with an SPF of 30 or higher provide high protection against sunburn."
+    },
+    {
+      "id": "textbook-risk-severe-sunburns",
+      "page": 26,
+      "text": "Severe, blistering sunburns - People who have had one or more severe, blistering sunburns as a child or teenager are at increased risk for melanoma. Sunburns in adulthood are also a risk factor for melanoma."
+    },
+    {
+      "id": "textbook-risk-fair-skin",
+      "page": 27,
+      "text": "Fair skin - Melanoma occurs more frequently in people who have fair skin that burns or freckles easily (these people also usually have red or blond hair and blue eyes) than in people with dark skin."
+    },
+    {
+      "id": "textbook-self-exam-when",
+      "page": 38,
+      "text": "The best time to do a skin self-exam is after a shower or bath. You should check your skin in a well-lighted room using a full-length mirror and a hand-held mirror."
+    },
+    {
+      "id": "textbook-self-exam-what",
+      "page": 38,
+      "text": "Check yourself from head to toe. Don't forget to check all areas of the skin, including the back, the scalp, between the buttocks, and the genital area."
+    },
+    {
+      "id": "textbook-self-exam-tracking",
+      "page": 40,
+      "text": "By checking your skin regularly, you will become familiar with what is normal for you. It may be helpful to record the dates of your skin exams and to write notes about the way your skin looks. If you find anything unusual, see your doctor right away."
+    },
+    {
+      "id": "textbook-glossary-melanoma",
+      "page": 31,
+      "text": "Melanoma: A form of skin cancer that arises in melanocytes, the cells that produce pigment. Melanoma usually begins in a mole."
+    },
+    {
+      "id": "textbook-glossary-dysplastic-nevi",
+      "page": 29,
+      "text": "Dysplastic nevi: Atypical moles; moles whose appearance is different from that of common moles. Dysplastic nevi are generally larger than ordinary moles and have irregular and indistinct borders."
+    },
+    {
+      "id": "textbook-glossary-biopsy",
+      "page": 28,
+      "text": "Biopsy: The removal of cells or tissues for examination under a microscope."
+    },
+    {
+      "id": "textbook-glossary-risk-factor",
+      "page": 33,
+      "text": "Risk factor: Anything that increases the chance of developing a disease."
+    },
+    {
+      "id": "textbook-glossary-dermatologist",
+      "page": 29,
+      "text": "Dermatologist: A doctor who specializes in the diagnosis and treatment of skin problems."
+    }
+  ]
+}

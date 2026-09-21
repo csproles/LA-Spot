@@ -1,7 +1,9 @@
 @page "/results/{ProcessingId}"
 @rendermode InteractiveServer
+@implements IDisposable
 @inject ImageProcessingService ImageProcessingService
 @inject NavigationManager NavigationManager
+@inject ChatPageContext ChatPageContext
 
 <PageTitle>Analysis Results - LA Spot</PageTitle>
 
@@ -76,6 +78,7 @@
         {
             AnalysisResults = await ImageProcessingService.GetResultsAsync(ProcessingId);
             LoadedForId = ProcessingId;
+            SetChatContext(AnalysisResults);
         }
         catch (ImageProcessingApiException ex)
         {
@@ -87,5 +90,43 @@
         }
     }
 
+    /// <summary>
+    /// Lets the chat widget answer "what does my score mean" from what's already on
+    /// screen -- only the summary fields below, never the raw DTO. Cleared on Dispose
+    /// so navigating away doesn't leave this check's data attached to later questions.
+    /// </summary>
+    private void SetChatContext(ImageProcessingResults results)
+    {
+        var band = RiskBands.Band(results.RiskScore);
+        var flagged = new[] { "asymmetry", "border", "color", "diameter" }
+            .Where(name => IsFlagged(results.AbcdeScores, name))
+            .ToList();
+
+        ChatPageContext.Set("results", new Dictionary<string, object?>
+        {
+            ["riskScore"] = results.RiskScore,
+            ["riskBand"] = band,
+            ["flaggedCriteria"] = flagged,
+        });
+    }
+
+    private static bool IsFlagged(AbcdeScores scores, string criterion)
+    {
+        var details = criterion switch
+        {
+            "asymmetry" => scores.Asymmetry.Details,
+            "border" => scores.Border.Details,
+            "color" => scores.Color.Details,
+            "diameter" => scores.Diameter.Details,
+            _ => default,
+        };
+
+        return details.ValueKind == System.Text.Json.JsonValueKind.Object
+            && details.TryGetProperty("concern", out var concern)
+            && concern.ValueKind == System.Text.Json.JsonValueKind.True;
+    }
+
     private void GoToCheck() => NavigationManager.NavigateTo("/check");
+
+    public void Dispose() => ChatPageContext.Clear();
 }

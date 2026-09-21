@@ -21,6 +21,7 @@ from image_processor import MelanomaDetector
 from llm_explainer import explain_findings
 from ratelimit import RateLimiter
 from resultstore import ResultStore
+from textbook_chat import answer_question
 from validation import ValidationError
 
 ALLOWED_EXTENSIONS = {".png", ".jpg", ".jpeg", ".bmp"}
@@ -98,6 +99,7 @@ DEFAULT_RATE_LIMIT = 120
 ENDPOINT_RATE_LIMITS = {
     "process_image_endpoint": ("analyze", 10),
     "explain_results": ("explain", 5),
+    "textbook_chat_endpoint": ("chat", 8),
     "export_account_endpoint": ("account", 5),
     "delete_account_endpoint": ("account", 5),
 }
@@ -542,6 +544,27 @@ def explain_results(processing_id):
 
     results["explanation"] = explanation
     return jsonify({"explanation": explanation})
+
+
+@app.route("/api/chat", methods=["POST"])
+def textbook_chat_endpoint():
+    body = validation.json_object(request.get_json(silent=True))
+    question = validation.clean_text(
+        body.get("question"), "question", validation.CHAT_QUESTION_MAX, required=True, multiline=True
+    )
+    history = validation.clean_chat_history(body.get("history"))
+    page_context = validation.clean_page_context(body.get("pageContext"))
+
+    try:
+        result = answer_question(question, page_context=page_context, history=history)
+    except Exception:
+        app.logger.exception("Textbook chat request failed")
+        return jsonify({
+            "error": "Could not answer that right now. Check that the OpenAI API key "
+                     "is configured correctly and try again.",
+        }), 502
+
+    return jsonify(result)
 
 
 # --- account -------------------------------------------------------------
