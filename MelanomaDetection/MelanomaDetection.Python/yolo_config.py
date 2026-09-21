@@ -1,4 +1,6 @@
-"""Location of the frozen YOLO segmentation weights used by pipeline_v4.
+"""Location of the frozen YOLO segmentation weights used by pipeline_v5
+(the active pipeline; pipeline_v4 used the same checkpoint but is no longer
+wired into the running app).
 
 Never hard-code a developer's local machine path here. The default resolves
 to a file shipped INSIDE this package (models/yolo_melanoma_seg.pt), so it
