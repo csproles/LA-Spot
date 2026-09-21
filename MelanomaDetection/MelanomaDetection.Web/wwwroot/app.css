@@ -80,7 +80,6 @@
     --color-nav-active-bg: light-dark(#DDE4DC, #8BB09B);
     --color-nav-active-text: light-dark(#22322A, #0B0F13);
     --color-nav-hover-bg: light-dark(rgba(255, 255, 255, 0.14), rgba(244, 246, 245, 0.1));
-    --color-brand-mark-plate: light-dark(#DDE4DC, rgba(244, 246, 245, 0.08));
 
     --color-overlay-soft: light-dark(rgba(243, 239, 227, 0.55), rgba(139, 176, 155, 0.22));
     --color-scrim: light-dark(rgba(31, 41, 55, 0.5), rgba(0, 0, 0, 0.62));
@@ -125,23 +124,31 @@
     color-scheme: dark;
 }
 
-/* The mascot is an image, not a colour, so it cannot ride on light-dark(). */
+/* The mascot is used as a mask, not a picture: only its shape matters, and each
+   place that shows it fills that shape with a theme colour. */
 :root {
-    --brand-mascot: url('icons/dogblack.png');
+    --brand-mascot: url('icons/mascot.png');
+}
+
+/* The logo is white-and-sage artwork with a white outline, which vanishes on the
+   cream light theme, so it comes in two variants and follows the theme like the
+   rest of the palette (system preference unless data-theme forces one). */
+:root {
+    --brand-logo: url('images/la-spot-logo-on-light.png');
 }
 
 @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
-        --brand-mascot: url('icons/dogwhite.png');
+        --brand-logo: url('images/la-spot-logo-on-dark.png');
     }
 }
 
 :root[data-theme="dark"] {
-    --brand-mascot: url('icons/dogwhite.png');
+    --brand-logo: url('images/la-spot-logo-on-dark.png');
 }
 
 :root[data-theme="light"] {
-    --brand-mascot: url('icons/dogblack.png');
+    --brand-logo: url('images/la-spot-logo-on-light.png');
 }
 
 html, body {

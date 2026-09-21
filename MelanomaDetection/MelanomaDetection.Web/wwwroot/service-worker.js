@@ -3,7 +3,7 @@
 // interactivity. It precaches the static app shell for fast repeat loads,
 // serves those assets cache-first, and falls back to offline.html when a
 // page navigation fails with no network.
-const CACHE_NAME = "skin-check-shell-v2";
+const CACHE_NAME = "skin-check-shell-v3";
 
 const PRECACHE_URLS = [
     "offline.html",

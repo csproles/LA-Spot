@@ -152,6 +152,7 @@ public static class AuthenticationSetup
         // on the person's behalf.
         options.SaveTokens = false;
         options.ClaimActions.MapJsonKey(AppClaimTypes.Picture, "picture");
+        options.ClaimActions.MapJsonKey(AppClaimTypes.EmailVerified, "email_verified");
 
         // Google returns to us with a top-level GET, which Lax cookies are sent
         // on. The framework's default of SameSite=None exists for form-post
@@ -159,8 +160,34 @@ public static class AuthenticationSetup
         // and every sign-in would fail with "Correlation failed".
         options.CorrelationCookie.SameSite = SameSiteMode.Lax;
 
+        // Declining the consent screen, an expired or tampered "state", a missing
+        // correlation cookie: all arrive here. Send the person back to the
+        // sign-in page with a message instead of the framework's bare 500.
+        options.Events.OnRemoteFailure = context =>
+        {
+            var cancelled = string.Equals(context.Request.Query["error"], "access_denied", StringComparison.Ordinal);
+            context.HttpContext.RequestServices.GetRequiredService<ILoggerFactory>()
+                .CreateLogger("GoogleSignIn")
+                .LogWarning("Google sign-in did not complete ({Outcome}): {Reason}",
+                    cancelled ? "cancelled" : "failed", context.Failure?.Message);
+
+            context.Response.Redirect(cancelled ? "/login?status=signin-cancelled" : "/login?status=signin-failed");
+            context.HandleResponse();
+            return Task.CompletedTask;
+        };
+
         options.Events.OnTicketReceived = async context =>
         {
+            // Google's guidance: only trust an email address it has verified.
+            // Accounts are keyed on the stable subject id, but the address is
+            // what we show, export and would contact, so it has to be real.
+            if (!IsEmailVerified(context.Principal!))
+            {
+                context.Response.Redirect("/login?status=email-unverified");
+                context.HandleResponse();
+                return;
+            }
+
             var accounts = context.HttpContext.RequestServices.GetRequiredService<UserAccountService>();
             var user = await accounts.SignInWithGoogleAsync(context.Principal!, context.HttpContext.RequestAborted);
 
@@ -170,6 +197,13 @@ public static class AuthenticationSetup
             context.Principal = CreatePrincipal(user);
         };
     }
+
+    /// <summary>
+    /// Whether Google vouches for the address. A missing claim counts as
+    /// unverified, so the answer is never "yes" by default.
+    /// </summary>
+    private static bool IsEmailVerified(ClaimsPrincipal principal) =>
+        string.Equals(principal.FindFirstValue(AppClaimTypes.EmailVerified), "true", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// The principal a session cookie carries for an account: our id, what the

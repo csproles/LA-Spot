@@ -129,27 +129,22 @@
             text-decoration: none;
         }
 
-    /* The mascot is transparent line art, so it needs a plate behind it that
-       contrasts with the ink: black lines get the pale tile, white lines get
-       the dark one. Drawn as a background rather than two <img> tags so the
-       browser only downloads the variant actually in use. */
+    /* The mascot is a mask filled with the sage the active nav item uses, so it
+       sits straight on the dark sidebar with no tile behind it. */
     .app-nav-brand-mark {
         width: 44px;
         height: 44px;
-        border-radius: 12px;
         flex-shrink: 0;
-        background-color: var(--color-brand-mark-plate);
-        background-image: var(--brand-mascot);
-        background-size: cover;
-        background-position: center;
-        background-repeat: no-repeat;
+        background-color: var(--color-nav-active-bg);
+        -webkit-mask: var(--brand-mascot) center / contain no-repeat;
+        mask: var(--brand-mascot) center / contain no-repeat;
     }
 
-    .app-nav-brand-text {
-        font-family: var(--font-heading);
-        font-weight: 700;
-        color: var(--color-nav-text);
-        font-size: 13.5px;
+    /* The sidebar is dark in both themes, so it always takes the on-dark artwork. */
+    .app-nav-brand-logo {
+        width: 84px;
+        height: auto;
+        min-width: 0;
     }
 
     .app-nav-links {

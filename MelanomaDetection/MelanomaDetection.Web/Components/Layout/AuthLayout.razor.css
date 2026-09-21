@@ -24,22 +24,21 @@
     text-decoration: none;
 }
 
+/* A mask filled with the brand green, so the mascot sits straight on the page. */
 .auth-brand-mark {
     width: 48px;
     height: 48px;
-    border-radius: 14px;
-    background-color: var(--color-brand-mark-plate);
-    background-image: var(--brand-mascot);
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
+    background-color: var(--color-accent-strong);
+    -webkit-mask: var(--brand-mascot) center / contain no-repeat;
+    mask: var(--brand-mascot) center / contain no-repeat;
 }
 
-.auth-brand-text {
-    font-family: var(--font-heading);
-    font-weight: 800;
-    font-size: 20px;
-    color: var(--color-text);
+/* The logo swaps with the theme (see --brand-logo): light artwork on dark pages,
+   dark-outlined artwork on the cream one. */
+.auth-brand-logo {
+    height: 96px;
+    aspect-ratio: 1.476;
+    background: var(--brand-logo) center / contain no-repeat;
 }
 
 .auth-content {

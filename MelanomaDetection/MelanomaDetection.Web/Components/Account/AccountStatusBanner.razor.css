@@ -9,6 +9,11 @@
     color: var(--color-accent-ink);
 }
 
+.account-status-problem {
+    background: var(--color-warn-soft);
+    color: var(--color-warn-ink);
+}
+
 .account-status-icon {
     display: inline-flex;
     flex-shrink: 0;

@@ -12,6 +12,9 @@ public static class AppClaimTypes
     /// <summary>Profile picture URL, when the identity provider sent one.</summary>
     public const string Picture = "skincheck:picture";
 
+    /// <summary>Google's <c>email_verified</c> flag, present only on the ticket while signing in.</summary>
+    public const string EmailVerified = "skincheck:email_verified";
+
     /// <summary>Present (value "true") on a demo session; see <see cref="Data.AppUser.IsDemo"/>.</summary>
     public const string Demo = "skincheck:demo";
 }
