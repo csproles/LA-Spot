@@ -179,8 +179,8 @@ def score_change(current: dict, prior: dict):
     else:
         details["size_calibrated"] = False
         details["size_note"] = (
-            "Size change not measured: both photos need visible fine hair for "
-            "mm calibration."
+            "Size change not measured: no validated physical (mm) scale is available for "
+            "this pipeline, so only pixel-based measurements are compared."
         )
 
     if not components:

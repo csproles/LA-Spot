@@ -1,0 +1,94 @@
+{
+  "model_version": "V5",
+  "status": "FROZEN",
+  "frozen_date": "2026-09-21",
+  "frozen_by_process": "Evaluation_FeatureEngineering ablation (dev-only) -> Evaluation_V5Candidate threshold selection (dev-only) -> one-time locked-test evaluation (Evaluation_V5Candidate/LockedTest)",
+  "not_a_diagnostic_tool": "This is a research/prototype visual-concern score, not a melanoma/cancer probability and not a diagnosis.",
+
+  "model": {
+    "type": "sklearn.pipeline.Pipeline(StandardScaler, LogisticRegression)",
+    "artifact_file": "pipeline_v5/frozen_model.pkl",
+    "artifact_sha256_note": "byte-identical to Evaluation_V5Candidate/v5_reference_model.pkl, fit once on all 2,089 valid development rows -- never refit, including after locked-test results were seen",
+    "logistic_regression_params": {"max_iter": 1000, "random_state": 20260918},
+    "fit_on": "development cohort only (Evaluation_FinalTargeted/Cohort/development_manifest.csv), n=2089 SINGLE_LESION_EVALUABLE rows with all 17 features present; locked test never used for fitting"
+  },
+
+  "features_in_exact_order": [
+    "A_value",
+    "B_circularity",
+    "C_value",
+    "D_px",
+    "confidence",
+    "lesion_fraction",
+    "color_entropy",
+    "lab_a_std",
+    "lab_b_std",
+    "red_fraction",
+    "bluegray_fraction",
+    "dark_fraction",
+    "skin_contrast",
+    "solidity",
+    "turning_angle_std",
+    "eccentricity",
+    "D_px_normalized"
+  ],
+  "feature_order_note": "StandardScaler's fitted mean_/scale_ arrays are positional. Feature vectors MUST be assembled in exactly this order at inference time -- see pipeline_v5/decision_model.py::featurize.",
+  "feature_provenance": {
+    "base_6_unchanged_from_v4": ["A_value", "B_circularity", "C_value", "D_px", "confidence", "lesion_fraction"],
+    "base_6_source": "revised_abcd/pipeline_v2.py (unchanged); same values V4 already uses",
+    "new_11_source": "pipeline_v5/feature_extraction.py::extract_v5_new_features (color+border+geometry group from Evaluation_FeatureEngineering/run_ablation_cv.py's BEST_COMBO_FEATURES, unchanged, no further feature search performed after selection)"
+  },
+
+  "operating_threshold": 0.25,
+  "threshold_selection_method": "Development-only grouped-OOF sweep over {0.20,0.25,0.30,0.35,0.40,0.45,0.50}; select max balanced accuracy among thresholds with sensitivity>=0.55 AND specificity>=0.55 (identical rule to V4's own Evaluation_V4/select_threshold.py). Not re-tuned after seeing locked-test results. Coincidentally equal to V4's own threshold -- not chosen to match it.",
+  "decision_rule": "elevated_visual_concern = (decision_score >= 0.25); score is a logistic-regression decision score, not a melanoma probability",
+
+  "required_preprocessing": {
+    "order": [
+      "load_image (Code/HandlingStuff/load_file.py)",
+      "remove_vignette (Code/ComputerVisionStuff/vignette_remover.py) -> produces circle_info",
+      "remove_salt_pepper_noise(kernel_size=3) (Code/ComputerVisionStuff/median_filter.py)",
+      "apply_bilateral_filter(diameter=9, sigma_color=75, sigma_space=75) (Code/ComputerVisionStuff/bilateral_filter.py)",
+      "remove_hair(kernel_size=17, threshold=10) (Code/ComputerVisionStuff/hair.py) -> produces no_hair image",
+      "YOLO single-image segmentation (see yolo_dependency below) -> produces the raster mask"
+    ],
+    "note": "This is the EXACT chain revised_abcd/pipeline_v2.py already runs for V2/V3/V4 -- V5 adds no new preprocessing step, it only adds feature computations on top of the same mask/no_hair/circle_info outputs.",
+    "unchanged_functions_reused": [
+      "Code/MelanomaDeterminingStuff/color.py::score_color (for red_fraction/bluegray_fraction/dark_fraction)"
+    ]
+  },
+
+  "yolo_dependency": {
+    "note": "V5 does not change YOLO in any way -- same checkpoint, same inference call, same mask output V2/V3/V4 already use.",
+    "checkpoint_resolved_via": "MelanomaDetection/MelanomaDetection.Python/yolo_config.py::get_yolo_weights_path() (default models/yolo_melanoma_seg.pt, overridable via YOLO_WEIGHTS_PATH env var)",
+    "checkpoint_known_source_path": "C:\\Users\\sirjanaa\\Downloads\\runs\\runs\\segment\\melanoma_yolo26n_seg\\weights\\best.pt (the same checkpoint used to build cohort_v2_results.csv, i.e. every A/B/C/D/confidence/lesion_fraction value V4 and V5 both consume)",
+    "inference_call": "revised_abcd/yolo_single_image.py::run_single_image_inference(model, image_path, conf=0.25) -- single-image (unbatched), retina_masks=True, masks thresholded at raw>0.5",
+    "multi_instance_policy": "Every detected instance kept separately, sorted by confidence descending, instance 0 = primary. NOT unioned. V5, like V4, scores only the primary instance; other instances must remain visible/communicated (see MultiLesionNotice.razor on user-shree) but should not be silently dropped."
+  },
+
+  "diameter_calibration": {
+    "D_px": "always populated (pixel-based, from YOLO mask, unchanged)",
+    "D_mm": "NOT available -- mm_per_px is not computed by V5 (or by V2/V3/V4). Hair-width-based calibration (VELLUS_HAIR_UM, measure_hair_width_px) is the OLD classical-pipeline-only approach and must NOT be restored for V5.",
+    "D_px_normalized": "V5's own new feature: D_px divided by sqrt(image height x image width) -- a scale-normalized diameter proxy, NOT a physical mm measurement."
+  },
+
+  "excluded_candidates": {
+    "note": "Tested in the ablation study but NOT part of the final frozen V5 feature set -- do not add these without a new, explicitly-approved feature-selection round (this freeze forbids further feature search).",
+    "features": ["color_asymmetry", "texture_asymmetry", "local_contrast", "glcm_energy", "isoperimetric_ratio",
+                 "convexity_deficit", "aspect_ratio", "major_axis_px", "minor_axis_px", "lesion_area_px",
+                 "color_cluster_count", "white_fraction", "entropy_intensity", "glcm_contrast", "glcm_homogeneity",
+                 "lab_L_std", "radial_cv"]
+  },
+
+  "development_metrics_at_threshold_0.25": {
+    "n": 2089, "sensitivity": 0.7712, "specificity": 0.6733, "precision": 0.5093, "f1": 0.6135,
+    "accuracy": 0.7032, "balanced_accuracy": 0.7222, "roc_auc": 0.8008
+  },
+  "locked_test_metrics_at_threshold_0.25": {
+    "n": 615, "TP": 98, "TN": 340, "FP": 137, "FN": 40,
+    "sensitivity": 0.7101, "specificity": 0.7128, "precision": 0.417, "f1": 0.5255,
+    "accuracy": 0.7122, "balanced_accuracy": 0.7115, "roc_auc": 0.7981
+  },
+  "locked_test_run_date": "2026-09-21",
+  "locked_test_policy": "Run exactly once, per V4's own precedent. Not repeated, not used for any further tuning."
+}

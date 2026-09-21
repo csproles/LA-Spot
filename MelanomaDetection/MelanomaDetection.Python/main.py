@@ -1,4 +1,4 @@
-"""Flask API exposing the MelanomaDetector image-processing pipeline."""
+"""Flask API exposing the frozen V5 image-processing pipeline (V5Detector)."""
 
 import base64
 import datetime
@@ -17,10 +17,10 @@ import evolution
 import policy
 import store
 import validation
-from image_processor import MelanomaDetector
 from llm_explainer import explain_findings
 from ratelimit import RateLimiter
 from resultstore import ResultStore
+from v5_detector import V5Detector
 from validation import ValidationError
 
 ALLOWED_EXTENSIONS = {".png", ".jpg", ".jpeg", ".bmp"}
@@ -44,7 +44,7 @@ app = Flask(__name__)
 app.json = NumpyJSONProvider(app)
 app.config["MAX_CONTENT_LENGTH"] = MAX_CONTENT_LENGTH
 
-detector = MelanomaDetector()
+detector = V5Detector()
 store.init_db()
 
 # Full-size pipeline imagery for the current session only. Everything that has
@@ -295,8 +295,19 @@ def get_results(processing_id):
         "border_visual": _encode_image_base64(results["border_visual"]),
         "color_visual": _encode_image_base64(results["color_visual"]),
         "diameter_visual": _encode_image_base64(results["diameter_visual"]),
+        "multi_instance_overlay": (
+            _encode_image_base64(results["multi_instance_overlay"])
+            if results.get("multi_instance_overlay") is not None
+            else None
+        ),
         "abcde_scores": results["abcde_scores"],
         "risk_score": results["risk_score"],
+        "overall_visual_concern": results.get("overall_visual_concern"),
+        # Explicit boolean so the client never has to string-compare against
+        # the "NO_DETECTION" sentinel itself -- see policy.CONCERN_NO_DETECTION.
+        "no_detection": results.get("no_detection", False),
+        "num_lesion_instances": results.get("num_lesion_instances"),
+        "multi_lesion_detected": results.get("multi_lesion_detected", False),
         "location": results.get("location", ""),
         "symptoms": results.get("symptoms", []),
         "notes": results.get("notes", ""),
@@ -364,6 +375,7 @@ def save_to_history(processing_id):
         mm_per_px=results.get("mm_per_px"),
         area_px=results.get("area_px"),
         lab=results.get("lab"),
+        overall_visual_concern=results.get("overall_visual_concern"),
     )
 
     results["saved"] = True
@@ -463,18 +475,29 @@ def update_spot_endpoint(spot_id):
 def _as_rows(checks: list) -> list:
     """Adapt store check dicts to the key names store._aggregate expects."""
     return [
-        {"risk_score": check["riskScore"], "processed_at": check["processedAt"]}
+        {
+            "risk_score": check["riskScore"],
+            "overall_visual_concern": check.get("overallVisualConcern"),
+            "processed_at": check["processedAt"],
+        }
         for check in checks
     ]
 
 
 def _with_due_date(spot: dict, profile) -> dict:
-    """Layer the policy-derived recheck fields onto a spot summary."""
-    next_due = policy.next_due_at(spot.get("lastCheckedAt"), spot.get("lastRiskScore"), profile)
+    """Layer the policy-derived recheck fields onto a spot summary.
+
+    Cadence and band are keyed on the spot's last overall_visual_concern
+    (V5's own LOWER/ELEVATED result) when it's known, not a risk_score cut --
+    see policy.py. A concern of None (no detection, or a check saved before
+    this field existed) falls back to the risk_score band there.
+    """
+    last_concern = spot.get("lastOverallVisualConcern")
+    next_due = policy.next_due_at(spot.get("lastCheckedAt"), spot.get("lastRiskScore"), profile, last_concern)
     return {
         **spot,
         "riskBand": policy.risk_band(spot["lastRiskScore"]) if spot.get("lastRiskScore") is not None else None,
-        "cadenceDays": policy.cadence_days(spot.get("lastRiskScore"), profile)
+        "cadenceDays": policy.cadence_days(spot.get("lastRiskScore"), profile, last_concern)
         if spot.get("lastCheckedAt")
         else None,
         "nextDueAt": next_due,
