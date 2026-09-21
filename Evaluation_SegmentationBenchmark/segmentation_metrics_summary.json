@@ -1,0 +1,29 @@
+{
+  "n_images": 100,
+  "Original_LAB_Otsu": {
+    "mean_iou": 0.4417,
+    "median_iou": 0.4709,
+    "mean_dice": 0.5415,
+    "median_dice": 0.6403,
+    "failures": 0
+  },
+  "YOLO": {
+    "mean_iou": 0.7829,
+    "median_iou": 0.8544,
+    "mean_dice": 0.8523,
+    "median_dice": 0.9215,
+    "failures": 4,
+    "no_detection_count": 4,
+    "multi_instance_count": 10
+  },
+  "paired_comparison": {
+    "yolo_wins_iou": 91,
+    "otsu_wins_iou": 8,
+    "ties_iou": 1,
+    "yolo_wins_dice": 91,
+    "otsu_wins_dice": 8,
+    "ties_dice": 1,
+    "mean_paired_diff_iou_yolo_minus_otsu": 0.3412,
+    "median_paired_diff_iou_yolo_minus_otsu": 0.2808
+  }
+}
