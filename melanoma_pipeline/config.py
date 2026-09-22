@@ -33,14 +33,28 @@ OUTPUT_DIR: Path = Path(os.environ.get("MELANOMA_OUTPUT_DIR", "outputs"))
 CHECKPOINT_DIR: Path = Path(os.environ.get("MELANOMA_CHECKPOINT_DIR", str(OUTPUT_DIR / "checkpoints")))
 EMBEDDING_DIR: Path = Path(os.environ.get("MELANOMA_EMBEDDING_DIR", str(OUTPUT_DIR / "embeddings")))
 
-# Path to the YOLO segmentation checkpoint used by features.py. Defaults to
-# the SAME checkpoint the live application already uses (resolved via that
-# app's own yolo_config.get_yolo_weights_path(), which itself honors a
-# YOLO_WEIGHTS_PATH env var) -- features.py calls that resolver directly, so
-# nothing needs to be duplicated here. This constant exists only so it's
-# visible in one place that a YOLO checkpoint is a required external asset;
-# see the README's "External assets" section for how to obtain/place it.
-YOLO_WEIGHTS_ENV_VAR: str = "YOLO_WEIGHTS_PATH"
+# Path to the YOLO segmentation checkpoint used by features.py. NOT
+# committed to git (excluded as a large model weight) -- see the README's
+# "External assets" section for exactly how to obtain this project's
+# already-trained checkpoint. Defaults to a `weights/` folder inside this
+# package; override with the YOLO_WEIGHTS_PATH environment variable to
+# point at a checkpoint stored elsewhere instead.
+YOLO_WEIGHTS_PATH: Path = Path(os.environ.get("YOLO_WEIGHTS_PATH", "weights/yolo_melanoma_seg.pt"))
+
+
+def get_yolo_weights_path() -> Path:
+    """Resolves the YOLO checkpoint path, raising a clear, actionable error
+    (rather than a confusing downstream file-not-found from inside
+    `ultralytics`) if it hasn't been placed yet."""
+    if not YOLO_WEIGHTS_PATH.exists():
+        raise FileNotFoundError(
+            f"YOLO checkpoint not found at {YOLO_WEIGHTS_PATH.resolve()}. "
+            f"This project's already-trained checkpoint is not committed to git "
+            f"(excluded as a large binary) -- see README.md's 'External assets' "
+            f"section for exactly how to obtain it, or set the YOLO_WEIGHTS_PATH "
+            f"environment variable to point at a copy stored elsewhere."
+        )
+    return YOLO_WEIGHTS_PATH
 
 
 def ensure_dirs() -> None:

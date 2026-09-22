@@ -1,31 +1,25 @@
 """Real, validated ABCD/structured-feature extraction -- reuses this
-project's existing, frozen V5 pipeline (YOLO segmentation + the unchanged
-Code/MelanomaDeterminingStuff formulas + pipeline_v5's 11 additional
-features), exactly the same call sequence the live application's own
-`MelanomaDetection/MelanomaDetection.Python/v5_detector.py::V5Detector.
-process_image` uses -- not a reimplementation, and not the simpler
-Otsu-threshold placeholder an earlier version of this file used.
+project's existing, frozen V5 pipeline logic (YOLO segmentation + the
+unchanged legacy border/color formulas + the 11 additional V5 features),
+consolidated into the standalone `abcd/` package (see abcd/__init__.py)
+so this module runs independently of the rest of the original repository.
+Not a reimplementation, and not the simpler Otsu-threshold placeholder an
+earlier version of this file used.
 
-Feature order and count are DERIVED from the real, live config object
-(`pipeline_v5.decision_model.V5_CONFIG["features"]`), not hardcoded --
-if V5's feature set ever changes, this module's output shape changes with
-it automatically rather than silently going out of sync.
+Feature order and count are DERIVED from `abcd.feature_config.
+V5_ALL_FEATURES`, not hardcoded -- if that list ever changes, this
+module's output shape changes with it automatically rather than silently
+going out of sync.
 
-Design note vs. the earlier Otsu-based version of this file: that version
-used `joblib.Parallel` (process-based) to fan pure-NumPy/OpenCV work across
-CPU cores, which is safe because there was no shared heavy model state.
-Real extraction here loads a YOLO/torch model, which should be loaded ONCE
-and reused -- running several copies of it across parallel worker
-processes (especially on a single GPU) would be wasteful at best and
-resource-contending at worst, so `extract_features_for_dataframe` below
-loads the model once and processes images sequentially instead of via
-joblib. If this becomes a throughput bottleneck on the real 402k-image
-dataset, batch YOLO inference (not naive multiprocessing) is the right next
-optimization, not restoring joblib.
+Design note: this module loads a YOLO/torch model once and processes
+images SEQUENTIALLY, not via joblib multiprocessing -- running several
+copies of a loaded neural net across parallel worker processes (especially
+on a single GPU) would be wasteful at best and resource-contending at
+worst. If this becomes a throughput bottleneck on the full dataset, batch
+YOLO inference is the right next optimization, not multiprocessing.
 """
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 
 import cv2
@@ -34,52 +28,35 @@ import pandas as pd
 from tqdm import tqdm
 
 import config
+from abcd.feature_config import V5_ALL_FEATURES
+from abcd.pipeline import process_image as v5_process_image, preprocess_image as v5_preprocess_image
+from abcd.new_features import extract_v5_new_features
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
-PYTHON_APP_DIR = REPO_ROOT / "MelanomaDetection" / "MelanomaDetection.Python"
-for _p in (REPO_ROOT, PYTHON_APP_DIR):
-    if str(_p) not in sys.path:
-        sys.path.insert(0, str(_p))
+YOLO_CONF = 0.25  # matches every prior evaluation of this feature set in the original project
 
-# Exact same imports v5_detector.py uses for its own live scoring path --
-# see that module's docstring for why preprocess_image is called a second
-# time here (it needs no_hair/circle_info, which process_image() computes
-# internally but does not return).
-from revised_abcd.pipeline_v2 import process_image as v5_process_image, preprocess_image as v5_preprocess_image  # noqa: E402
-from pipeline_v5.decision_model import V5_CONFIG  # noqa: E402
-from pipeline_v5.feature_extraction import extract_v5_new_features  # noqa: E402
-
-YOLO_CONF = 0.25  # matches v5_detector.py's CONF and every prior V4/V5 evaluation in this project
-
-ABCD_FEATURE_NAMES: list[str] = list(V5_CONFIG["features"])  # derived from the real, live config -- not hardcoded
+ABCD_FEATURE_NAMES: list[str] = list(V5_ALL_FEATURES)  # derived from the real, versioned config -- not hardcoded
 N_ABCD_FEATURES: int = len(ABCD_FEATURE_NAMES)
 
 
 def load_yolo_model():
-    """Loads the same frozen YOLO checkpoint the live app uses, via the
-    app's own `yolo_config.get_yolo_weights_path()` so the checkpoint path
-    resolution (including its `YOLO_WEIGHTS_PATH` env var override) stays
-    identical to production rather than being re-specified here. Load once,
-    reuse for every image -- do not call this per-image."""
+    """Loads the YOLO checkpoint via config.get_yolo_weights_path() (which
+    raises a clear, actionable error if the checkpoint hasn't been placed
+    yet -- see README.md's "External assets" section). Load once, reuse
+    for every image -- do not call this per-image."""
     from ultralytics import YOLO
-    from yolo_config import get_yolo_weights_path
-    return YOLO(get_yolo_weights_path())
+    return YOLO(str(config.get_yolo_weights_path()))
 
 
 def extract_abcd_features(image_path: str | Path, yolo_model) -> np.ndarray:
     """Extracts the real, validated `ABCD_FEATURE_NAMES`-ordered feature
-    vector for one image, via the exact same call sequence as
-    `v5_detector.py::V5Detector.process_image`'s live scoring path:
-    YOLO segmentation -> primary (highest-confidence) instance's mask ->
-    the unchanged base-6 ABCD features (A_value, B_circularity, C_value,
-    D_px, confidence, lesion_fraction) -> pipeline_v5's 11 additional
-    features on the same mask/preprocessed image.
+    vector for one image: YOLO segmentation -> primary (highest-confidence)
+    instance's mask -> the unchanged base-6 ABCD features (A_value,
+    B_circularity, C_value, D_px, confidence, lesion_fraction) -> the 11
+    additional V5 features on the same mask/preprocessed image.
 
     Returns an all-NaN vector (never raises) if no lesion is detected, the
-    image can't be read, or any required feature comes back missing/NaN --
-    matching v5_detector.py's own NO_DETECTION-equivalent handling rather
-    than guessing or silently scoring a degenerate case. Callers
-    (`extract_features_for_dataframe`) should check for NaN rows.
+    image can't be read, or any required feature comes back missing/NaN.
+    Callers (`extract_features_for_dataframe`) should check for NaN rows.
     """
     try:
         rows, _orig_shape = v5_process_image(yolo_model, str(image_path), conf=YOLO_CONF)
@@ -89,7 +66,7 @@ def extract_abcd_features(image_path: str | Path, yolo_model) -> np.ndarray:
     if not rows:
         return np.full(N_ABCD_FEATURES, np.nan, dtype=np.float64)
 
-    primary = rows[0]  # highest-confidence instance -- same "primary lesion" convention as v5_detector.py
+    primary = rows[0]  # highest-confidence instance -- the "primary lesion" convention this feature set uses
     mask = primary["mask"]
 
     image_bgr = cv2.imread(str(image_path), cv2.IMREAD_COLOR)
@@ -107,7 +84,7 @@ def extract_abcd_features(image_path: str | Path, yolo_model) -> np.ndarray:
     }
 
     values = [feature_row.get(name) for name in ABCD_FEATURE_NAMES]
-    if any(v is None or v != v for v in values):  # v != v is the NaN check (works without a numpy import per-value)
+    if any(v is None or v != v for v in values):  # v != v is the NaN check
         return np.full(N_ABCD_FEATURES, np.nan, dtype=np.float64)
     return np.array(values, dtype=np.float64)
 
@@ -159,8 +136,8 @@ if __name__ == "__main__":
     np.save(out_names, np.array(ABCD_FEATURE_NAMES))
 
     n_failed = int(np.isnan(features).any(axis=1).sum())
-    print(f"Extracted {features.shape[1]} validated ABCD features (derived from the live "
-          f"pipeline_v5.decision_model.V5_CONFIG) for {len(metadata)} images -> {out_features} "
+    print(f"Extracted {features.shape[1]} validated ABCD features (derived from "
+          f"abcd.feature_config.V5_ALL_FEATURES) for {len(metadata)} images -> {out_features} "
           f"(shape {features.shape})")
     print(f"Feature order: {ABCD_FEATURE_NAMES}")
     print(f"Saved matching index -> {out_index}, feature names -> {out_names}")

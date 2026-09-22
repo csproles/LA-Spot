@@ -1,1 +1,0 @@
-from MelanomaDeterminingStuff.score import analyze_abcde

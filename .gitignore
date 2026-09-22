@@ -9,38 +9,22 @@ __pycache__/
 .venv/
 venv/
 
-# .NET
-bin/
-obj/
-
-# Local SQLite databases (accounts on the web side, spots/checks on the Flask side)
-*.db
-*.db-shm
-*.db-wal
-
 # OS/editor cruft
 .DS_Store
 .vscode/
 
-# SQLite store for tracked spots / saved checks (MelanomaDetection.Python/store.py)
-*.db
-
 # Claude
 CLAUDE.md
 
-# Textbook chat: raw page scans and OCR output never get committed (large binaries,
-# copyright) -- only the hand-curated knowledge/textbook_melanoma.json and its
-# generated embeddings are. See MelanomaDetection.Python/scripts/ocr_extract_textbook.py.
-MelanomaDetection/MelanomaDetection.Python/scripts/textbook_pages/*
-!MelanomaDetection/MelanomaDetection.Python/scripts/textbook_pages/.gitkeep
-MelanomaDetection/MelanomaDetection.Python/scripts/textbook_ocr_raw/
-
 # melanoma_pipeline/ (hybrid CNN+ABCD multimodal pipeline): never commit the
-# dataset itself, generated checkpoints/embeddings/trained models, or any
-# other run output -- these are large, regenerable from the code + external
-# assets documented in melanoma_pipeline/README.md, and specific to whoever
-# ran the pipeline on whichever device.
+# dataset itself, the YOLO checkpoint (large binary, obtained separately --
+# see melanoma_pipeline/README.md "External assets"), generated
+# checkpoints/embeddings/trained models, or any other run output -- these
+# are large, regenerable from the code + external assets documented in the
+# README, and specific to whoever ran the pipeline on whichever device.
 melanoma_pipeline/data/
 melanoma_pipeline/outputs/
+melanoma_pipeline/weights/*
+!melanoma_pipeline/weights/.gitkeep
 melanoma_pipeline/.venv/
 melanoma_pipeline/venv/
