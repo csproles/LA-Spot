@@ -29,6 +29,25 @@ public static class AbcdeDetails
         };
     }
 
+    /// <summary>Extended, hover-only explanation for a criterion's caption.
+    /// Only diameter uses this today -- see DiameterCaption's px/relative
+    /// display, which needs more room than the one-line caption has for why
+    /// these aren't millimeters.</summary>
+    public static string Tooltip(string criterion, AbcdeScore score)
+    {
+        var details = score.Details;
+        if (details.ValueKind != JsonValueKind.Object)
+        {
+            return string.Empty;
+        }
+
+        return criterion switch
+        {
+            "diameter" => DiameterTooltip(details),
+            _ => string.Empty,
+        };
+    }
+
     private static string AsymmetryCaption(JsonElement details)
     {
         if (!details.TryGetProperty("raw_asymmetry_ratio", out var ratio))
@@ -80,12 +99,38 @@ public static class AbcdeDetails
     {
         if (details.TryGetProperty("diameter_mm", out var mm))
         {
+            // Legacy only -- no active pipeline (V4 or V5) ever populates this
+            // key; kept only so a pre-V4 saved check still renders correctly.
+            // Do NOT restore hair-width mm calibration for V5.
             return $"≈{mm.GetDouble():F1}mm (hair-calibrated measurement)";
+        }
+
+        if (details.TryGetProperty("lesion_size_px", out var px) && px.ValueKind == JsonValueKind.Number)
+        {
+            var relative = details.TryGetProperty("relative_size_pct", out var pct)
+                && pct.ValueKind == JsonValueKind.Number
+                ? $" · Relative to photo: {pct.GetDouble():F1}% of image width"
+                : string.Empty;
+            return $"Lesion diameter: {px.GetDouble():F0} px{relative}. "
+                + "Physical diameter requires a scale reference.";
         }
 
         return details.TryGetProperty("reason", out var reason)
             ? $"Not measurable: {reason.GetString()}"
             : string.Empty;
+    }
+
+    private static string DiameterTooltip(JsonElement details)
+    {
+        if (!details.TryGetProperty("lesion_size_px", out var px) || px.ValueKind != JsonValueKind.Number)
+        {
+            return string.Empty;
+        }
+
+        return "Pixel and relative measurements depend on this photo's framing, crop, zoom, and "
+            + "camera distance from the skin, so they are not millimeters and cannot be compared "
+            + "across photos taken differently. A physical (mm) measurement would require a scale "
+            + "reference visible in the photo, such as a ruler, which this pipeline does not use.";
     }
 
     private static double Threshold(JsonElement details, double fallback) =>

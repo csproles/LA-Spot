@@ -34,7 +34,9 @@
     }
     else if (AnalysisResults is not null)
     {
-        <RiskBandPanel Score="AnalysisResults.RiskScore" ShowDoctorLink="true" />
+        <RiskBandPanel Score="AnalysisResults.RiskScore" OverallVisualConcern="AnalysisResults.OverallVisualConcern" ShowDoctorLink="true" />
+
+        <MultiLesionNotice Results="AnalysisResults" />
 
         <ChangePanel Results="AnalysisResults" />
 
@@ -97,7 +99,12 @@
     /// </summary>
     private void SetChatContext(ImageProcessingResults results)
     {
-        var band = RiskBands.Band(results.RiskScore);
+        // V5's own overall_visual_concern is what the results page actually shows as the
+        // verdict; a band re-derived from the raw score would let the chat widget describe
+        // a check in different terms than the panel above it (see docs/CV_PIPELINE.md's
+        // "Known integration TODOs" -- this was that exact gap). RiskBands.Band is only a
+        // fallback, for a legacy check that predates overall_visual_concern.
+        var concern = VisualConcern.Label(results.OverallVisualConcern);
         var flagged = new[] { "asymmetry", "border", "color", "diameter" }
             .Where(name => IsFlagged(results.AbcdeScores, name))
             .ToList();
@@ -105,7 +112,7 @@
         ChatPageContext.Set("results", new Dictionary<string, object?>
         {
             ["riskScore"] = results.RiskScore,
-            ["riskBand"] = band,
+            ["overallVisualConcern"] = concern,
             ["flaggedCriteria"] = flagged,
         });
     }

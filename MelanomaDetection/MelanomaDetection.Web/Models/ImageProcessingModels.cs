@@ -47,6 +47,19 @@ public class HistoryEntry
     [JsonPropertyName("riskScore")]
     public double RiskScore { get; set; }
 
+    /// <summary>V5's own result for this check, or null (no detection at
+    /// save time is "NO_DETECTION", never null; null means this check
+    /// predates the field). Authoritative -- never re-derive a verdict from
+    /// RiskScore via RiskBands here.</summary>
+    [JsonPropertyName("overallVisualConcern")]
+    public string? OverallVisualConcern { get; set; }
+
+    /// <summary>&gt;1 means only the primary (highest-confidence) YOLO
+    /// instance was analyzed at save time -- see MultiLesionNotice.razor
+    /// for the live-analysis equivalent of this caveat.</summary>
+    [JsonPropertyName("numLesionInstances")]
+    public int? NumLesionInstances { get; set; }
+
     [JsonPropertyName("processedAt")]
     public DateTimeOffset? ProcessedAt { get; set; }
 
@@ -122,11 +135,41 @@ public class ImageProcessingResults
     [JsonPropertyName("diameter_visual")]
     public string DiameterVisual { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Every YOLO-detected instance outlined on the original photo (present
+    /// only when MultiLesionDetected is true). The primary instance -- the
+    /// only one analyzed -- is drawn distinctly from the others, which are
+    /// outlined only, never analyzed.
+    /// </summary>
+    [JsonPropertyName("multi_instance_overlay")]
+    public string? MultiInstanceOverlay { get; set; }
+
     [JsonPropertyName("abcde_scores")]
     public AbcdeScores AbcdeScores { get; set; } = new();
 
     [JsonPropertyName("risk_score")]
     public double RiskScore { get; set; }
+
+    /// <summary>
+    /// V5's own screening result -- "LOWER VISUAL CONCERN", "ELEVATED
+    /// VISUAL CONCERN", or "NO_DETECTION" (see NoDetection below). This is
+    /// the authoritative verdict; see Services/VisualConcern.cs. It is not a
+    /// diagnosis and RiskScore is not a probability of one.
+    /// </summary>
+    [JsonPropertyName("overall_visual_concern")]
+    public string? OverallVisualConcern { get; set; }
+
+    /// <summary>True when no lesion could be located in this photo. Prefer
+    /// this over comparing OverallVisualConcern to a string -- see
+    /// policy.CONCERN_NO_DETECTION.</summary>
+    [JsonPropertyName("no_detection")]
+    public bool NoDetection { get; set; }
+
+    [JsonPropertyName("num_lesion_instances")]
+    public int NumLesionInstances { get; set; }
+
+    [JsonPropertyName("multi_lesion_detected")]
+    public bool MultiLesionDetected { get; set; }
 
     [JsonPropertyName("location")]
     public string Location { get; set; } = string.Empty;
@@ -169,6 +212,10 @@ public class Spot
     [JsonPropertyName("lastRiskScore")]
     public double? LastRiskScore { get; set; }
 
+    /// <summary>V5's result on the spot's most recent check, or null if unknown/no detection.</summary>
+    [JsonPropertyName("lastOverallVisualConcern")]
+    public string? LastOverallVisualConcern { get; set; }
+
     [JsonPropertyName("lastCheckedAt")]
     public DateTimeOffset? LastCheckedAt { get; set; }
 
@@ -201,6 +248,17 @@ public class LASpot
 
     [JsonPropertyName("riskScore")]
     public double RiskScore { get; set; }
+
+    /// <summary>V5's own result for this check, or null (see HistoryEntry's
+    /// OverallVisualConcern for the same NO_DETECTION-vs-null distinction).</summary>
+    [JsonPropertyName("overallVisualConcern")]
+    public string? OverallVisualConcern { get; set; }
+
+    /// <summary>How many YOLO instances this check's photo had, or null for
+    /// a check saved before this was tracked. &gt;1 means only the primary
+    /// (highest-confidence) instance was actually analyzed.</summary>
+    [JsonPropertyName("numLesionInstances")]
+    public int? NumLesionInstances { get; set; }
 
     [JsonPropertyName("diameterMm")]
     public double? DiameterMm { get; set; }

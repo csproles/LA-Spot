@@ -8,37 +8,59 @@ Track each spot over time: re-check it later and the app measures how it has
 changed, suggests when to look again, and lets you compare past checks side by
 side.
 
-The image pipeline mirrors the ABCDE rule dermatologists use for a quick visual
-melanoma screen:
+The current CV pipeline (**V5**, frozen) is: uploaded image → frozen YOLO
+instance segmentation → raster lesion mask → ABCD + enhanced interpretable
+features (17 total) → a frozen logistic-regression decision model → a fixed
+0.25 threshold → **LOWER VISUAL CONCERN** / **ELEVATED VISUAL CONCERN**. This
+replaced an earlier classical LAB/Otsu segmentation entirely (YOLO produces
+substantially better lesion masks) and, separately, replaced a hand-tuned
+rule-count decision layer with a trained model. See
+[`docs/CV_PIPELINE.md`](docs/CV_PIPELINE.md) for the full history of how the
+pipeline got here (original → YOLO transition → V2 → V3 → V4 → V5) and the
+exact feature list.
 
-- **A**symmetry — mirror-overlap analysis around the lesion's mass centroid
-- **B**order irregularity — contour circularity
-- **C**olor variation — measured against *this photo's own* sampled skin tone,
-  with specific "dangerous color" detection (pink/red, blue-gray, white, black)
-- **D**iameter — a real millimeter measurement, calibrated using the known
-  average width of vellus (fine body) hair visible in the photo as a physical
-  reference scale (falls back to "not measurable" if no hair is detected —
-  never a fabricated number)
-- **E**volving — scored by comparing a spot's photo with its previous one:
-  shape change, color change and, only when both photos carry the hair-based
-  size calibration, growth. A spot's first photo shows "First photo of this spot"
-  rather than a made-up number (a single photo can't show change over time)
+A–D each also get a 0–10 display score shown alongside the headline verdict
+(NOT what decides it — the frozen model's raw 17-feature vector does that):
 
-A–D each get a 0–10 score, combined into one 0–100 risk indicator. Evolving is
-scored separately and kept out of that number, so a spot's first check stays
-comparable with its later ones. The pipeline
-also removes the dermoscope vignette, denoises, removes hair, and segments the
-lesion in LAB color space; the app shows every intermediate image plus four
-annotated visualizations (one per scored ABCDE criterion) explaining what each
-score is based on. An optional AI-generated plain-language explanation (OpenAI,
-safety-constrained to never state a diagnosis) is available on demand. It is
-grounded in excerpts of the National Cancer Institute booklet *What You Need To
-Know About Melanoma* (`MelanomaDetection.Python/knowledge/`): the model only
-sees passages for the features that were flagged, must cite and exactly quote
-one for every claim, and its reply is checked in code (quotes, numbers,
-diagnosis wording, unflagged features). If it can't produce a reply that passes
-after one retry, an explanation built directly from the passages is shown
-instead. The risk score itself never comes from the model.
+- **A**symmetry — mirror-overlap analysis, aligned to the lesion's own
+  principal axis
+- **B**order irregularity — contour circularity, solidity, and boundary
+  turning-angle variation
+- **C**olor variation — measured against *this photo's own* sampled skin
+  tone (color-distance CV, LAB channel spread, color entropy), with specific
+  "dangerous color" detection (pink/red, blue-gray, black)
+- **D**iameter — pixel-based only. **This pipeline has no physical scale
+  reference (no ruler or similar object in the photo), so it never reports
+  millimeters** — only a pixel measurement and a relative-to-photo-width
+  percentage, both clearly labeled as such in the UI
+- **E**volving — scored by comparing a spot's photo with its previous one
+  (shape change, color change; size comparison is pixel-based, same caveat as
+  D). A spot's first photo shows "First photo of this spot" rather than a
+  made-up number
+
+The model's decision score is a **decision score, not a melanoma or cancer
+probability**, and YOLO's detection confidence (one of the 17 model inputs)
+is a **detection confidence, not a melanoma probability** either — neither
+is presented to the user as one. When more than one lesion instance is
+detected in a photo, all instances are kept separate (never unioned into one
+mask); the highest-confidence instance is used for analysis, and the app
+shows that more than one spot was found. The pipeline also removes the
+dermoscope vignette, denoises, and removes hair before segmentation; the app
+shows every intermediate image plus four annotated visualizations (one per
+scored ABCDE criterion) explaining what each display score is based on. An
+optional AI-generated plain-language explanation (OpenAI, safety-constrained
+to never state a diagnosis) is available on demand. It is grounded in
+excerpts of the National Cancer Institute booklet *What You Need To Know
+About Melanoma* (`MelanomaDetection.Python/knowledge/`): the model only sees
+passages for the features that were flagged, must cite and exactly quote one
+for every claim, and its reply is checked in code (quotes, numbers, diagnosis
+wording, unflagged features). If it can't produce a reply that passes after
+one retry, an explanation built directly from the passages is shown instead.
+The verdict itself never comes from the model.
+
+This is a research/prototype visual-concern screening tool, not a melanoma
+diagnosis. See [`docs/CV_PIPELINE.md`](docs/CV_PIPELINE.md) for evaluation
+results and known integration TODOs.
 
 There are two parts:
 
@@ -70,9 +92,16 @@ If PowerShell blocks the activation script with an execution-policy error, run
 `Set-ExecutionPolicy -Scope Process RemoteSigned` first (session-only, doesn't
 change any system setting).
 
-An OpenAI API key is only required for the optional "Get AI Explanation"
-button — copy `.env.example` (repo root) to `.env` and fill in
-`OPENAI_API_KEY` if you want that feature; everything else works without it.
+The frozen YOLO segmentation weights (`models/yolo_melanoma_seg.pt`) and the
+frozen V5 decision model (`pipeline_v5/frozen_model.pkl`) are both committed
+to this repository — nothing extra to download for a fresh clone to run the
+CV pipeline. `YOLO_WEIGHTS_PATH` can override the weights location if you
+need to point at a different checkpoint (`yolo_config.py`).
+
+An OpenAI API key is only required for the optional "Get AI Explanation" and
+"Ask a question" (textbook chat) features — copy `.env.example` (repo root)
+to `.env` and fill in `OPENAI_API_KEY` if you want those; everything else,
+including the full image-analysis pipeline, works without it.
 
 Leave this running — it serves the API on `http://localhost:5002`. Confirm it's
 up:
@@ -81,6 +110,16 @@ up:
 curl http://localhost:5002/health
 # {"status":"healthy"}
 ```
+
+**Port 5002 must not already be in use by another Flask instance** (e.g. a
+leftover process from a previous run you forgot to stop) — Werkzeug's dev
+server can appear to start successfully against an already-occupied port
+without erroring, silently leaving the old process handling requests instead
+of yours. If `/api/image/process` ever returns unexpected errors, check
+`http://localhost:5002/health` is really answering from a freshly started
+process, or check `netstat -ano | findstr :5002` (Windows) /
+`lsof -i :5002` (macOS/Linux) for a stray listener before assuming the
+application code is at fault.
 
 **2. Start the Blazor app** (in a second terminal):
 
@@ -332,21 +371,28 @@ History or Profile, which show no analysis output of their own.
 
 ## Limitations
 
-- **Measured accuracy: 5/10 (50%) on a small labeled ISIC sample** — see
-  `MelanomaDetection.Python/validate_accuracy.py`. This is a real, honest
-  ceiling of the current heuristic approach, not a rounding error.
-- **No trained ML model.** Every score comes from classical CV measurements,
-  not a model trained on labeled data.
+See [`docs/CV_PIPELINE.md`](docs/CV_PIPELINE.md) for full evaluation results
+(segmentation accuracy, dev/locked-test classification metrics across every
+pipeline version) and current known integration TODOs. Headlines:
+
+- **Prototype research results, not clinical validation.** The frozen V5
+  model's locked-test balanced accuracy is ~0.71 on a specific ISIC-derived
+  evaluation cohort — a real, measured number, not a rounding error, and not
+  evidence this tool works on the general population or any individual case.
+- **The decision layer is a trained logistic-regression model** (V5, frozen;
+  see `pipeline_v5/`), not a hand-tuned rule — but its output is a decision
+  score, not a melanoma or cancer probability.
 - **"Evolving" needs two photos of the same spot.** It compares a spot's photo
   with its previous one, so a first photo shows "First photo of this spot" instead
   of a score. It measures shape and color change on consumer phone photos (no
-  fixed distance, lighting or registration), and growth only when both photos
-  have hair-based size calibration — treat it as a prompt to review with a
+  fixed distance, lighting or registration); size comparison is pixel-based
+  only (see Diameter, below) — treat it as a prompt to review with a
   clinician, not a finding.
-- **Diameter calibration depends on visible hair.** The mm measurement needs
-  fine hair somewhere in the photo to calibrate a pixel-to-mm scale; if none is
-  detected (e.g. a dermoscope with polarization that suppresses surface hair),
-  diameter is reported as not measurable rather than guessed.
+- **Diameter has no physical (mm) calibration.** This pipeline does not use
+  hair-width or any other physical scale reference, so diameter is reported
+  in pixels and as a percentage of the photo's width only — never
+  millimeters. See `docs/CV_PIPELINE.md` for why, and for the known UI
+  verification TODOs around this.
 - **Full-resolution pipeline images are session-only.** Spots, checks, scores,
   and the risk profile (including its notification and privacy toggles) are
   all persisted to SQLite (see Setup), but the full-size intermediate

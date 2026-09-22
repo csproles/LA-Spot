@@ -5,10 +5,11 @@ This is a port of the repository's original `llm_explainer.py` prototype: the
 safety-constrained SYSTEM_PROMPT below is copied verbatim (it encodes careful,
 deliberate rules -- e.g. never state a diagnosis, never mention an unflagged
 criterion, always recommend a dermatologist -- that shouldn't be casually
-rewritten). What's new here is `_map_to_llm_schema()`, which adapts
-MelanomaDetector's actual output shape (0-10 scores + rich "details" dicts) into
-the flagged/score JSON shape this prompt was originally designed around, since
-this pipeline's schema evolved independently of the original prototype's.
+rewritten). What's new here is `_map_to_llm_schema()`, which adapts the
+detector's actual output shape (0-10 scores + rich "details" dicts, plus V5's
+own overall_visual_concern verdict) into the flagged/score JSON shape this
+prompt was originally designed around, since this pipeline's schema evolved
+independently of the original prototype's.
 
 Grounding: the reply is constrained to what the analysis data shows and to a
 small set of National Cancer Institute passages (see knowledge.py). The model
@@ -18,16 +19,18 @@ from the passages instead (knowledge.fallback_data). SYSTEM_PROMPT itself is
 left untouched; GROUNDING_PROMPT is added after it and only narrows what the
 model may say.
 
-Coherence with the rest of the app: explain_findings can also be given the
-overall score/band, the change-since-last-photo comparison, and the symptoms
-the person selected (all optional -- the plain per-letter explanation this
-module has always produced still works with none of them). When the overall
-result is supplied, the summary line and the first "see a doctor" step are
-written by this module from policy.py's own wording, never by the model, so
-the explanation can never name a different band or timeframe than the score
-panel above it. knowledge.parse_and_validate rejects a reply that claims a
-change the comparison did not find, or names the wrong band, the same way it
-already rejects an invented number or an unflagged feature.
+Coherence with the rest of the app: explain_findings can also be given V5's
+own overall_visual_concern verdict, the change-since-last-photo comparison,
+and the symptoms the person selected (all optional -- the plain per-letter
+explanation this module has always produced still works with none of them).
+When the concern is supplied, the summary line and the first "see a doctor"
+step are written by this module from policy.py's own CONCERN_LABEL/
+CONCERN_ADVICE wording, never by the model, so the explanation can never name
+a different result than the one the results page shows (see
+Services/VisualConcern.cs, which uses the same wording). knowledge.
+parse_and_validate rejects a reply that claims a change the comparison did
+not find, or names the wrong result, the same way it already rejects an
+invented number or an unflagged feature.
 
 Requires an OPENAI_API_KEY in a .env file. This repo keeps that .env at the
 repository root (see load_dotenv() call below) rather than duplicating it here.
@@ -91,27 +94,48 @@ STRICT RULES -- follow every one of these, no exceptions:
    aside. If a component wasn't flagged, act as if it wasn't mentioned in
    the input at all.
 
-4a. The "D" (diameter) component may be entirely absent from the input if
-    the pipeline couldn't detect hair to calibrate its pixel-to-millimeter
-    scale. If diameter is missing, say plainly that size could not be
-    measured for this image rather than guessing or omitting the gap
+4a. The "D" (diameter) component may be entirely absent from the input
+    because this pipeline has no physical scale reference (no ruler or
+    similar object in the photo), so it reports pixel-based/relative-to-photo
+    size only, never millimeters. If diameter is missing, say plainly that a
+    physical size measurement is not available for this image (never invent
+    or imply a millimeter figure) rather than guessing or omitting the gap
     silently.
 
 4b. Component C (color) is calibrated to the person's own skin tone from
     the image itself, not a generic skin-tone default -- if useful, this can
     be mentioned as a reason the color assessment is specific to this photo.
 
-4c. The input may also include an OVERALL result (a 0-100 score and a
-    low/moderate/high band), a CHANGE SINCE LAST PHOTO comparison, and
-    SYMPTOMS REPORTED by the person. Use whichever of these are present:
-    - If OVERALL is present, the summary line matching it is written for
-      you and given first. It has already told the person their score and
-      band, so do not write any sentence in your own reply that states,
-      restates, or refers to there being an overall score, band, or summary
-      -- not even to note that one was given. Simply move straight to what
-      the analysis noticed. Separately: never use a band word ("low risk",
-      "moderate risk", "high risk", "some risk signs") other than the one
-      already given.
+4c. The input may include an "overall_result" field: "elevated", "lower", or
+    "not_available", V5's own authoritative screening result for this photo,
+    arrived at from many measurements considered together, not a simple
+    count of the flagged components below. It also may include a CHANGE
+    SINCE LAST PHOTO comparison and SYMPTOMS REPORTED by the person. Use
+    whichever of these are present:
+    - If "overall_result" is "elevated" or "lower", the summary line
+      matching it is written for you and given first. It has already told
+      the person the result and what to do next, so do not write any
+      sentence in your own reply that states, restates, or refers to there
+      being an overall result -- not even to note that one was given.
+      Simply move straight to what the analysis noticed. Treat
+      "overall_result" as the headline fact and the flagged components
+      below as supporting detail, not the reverse:
+        - If "elevated" but no individual component below is flagged, add
+          one sentence noting that this photo's overall visual pattern
+          crossed this tool's screening threshold even though no single
+          feature was individually flagged -- do not guess or invent which
+          feature caused it.
+        - If "lower", do not describe the photo in alarming terms even if
+          one individual component happens to be flagged; you may still
+          name that flagged component per rule 4, just without implying it
+          changes the overall result.
+      Separately: never use a different overall-result word ("elevated" /
+      "lower") than the one already given, and never state or imply a
+      percentage, probability, or numeric score for it -- it is a category,
+      not a number (rule 6 already forbids inventing numbers not present in
+      the input).
+    - If "overall_result" is "not_available" or absent, say nothing about an
+      overall result at all -- describe only the individual components.
     - If CHANGE SINCE LAST PHOTO is present and available is true, describe
       only the changes it names (shape, color, and/or size) -- never say a
       spot grew, changed, or differs from before unless this comparison
@@ -120,13 +144,13 @@ STRICT RULES -- follow every one of these, no exceptions:
     - If SYMPTOMS REPORTED is present, you may mention what the person
       reported noticing (e.g. itching, bleeding) as something they told the
       app, not as something the analysis measured.
-    Say nothing about any of these three if they are absent from the input.
+    Say nothing about change or symptoms if they are absent from the input.
 
 5. End with 2-4 concrete, doable next steps (e.g., "photograph the spot
    monthly to track changes", "bring this analysis to a dermatology
    appointment", "note if it itches, bleeds, or changes size"). If the input
    already includes a next step (because the app supplied one from the
-   overall score), add 1-3 more of your own instead of repeating it or
+   overall result), add 1-3 more of your own instead of repeating it or
    contradicting its timing.
 
 6. Never mention specific probabilities, percentages, or risk levels unless
@@ -203,7 +227,7 @@ plain sentence with no markdown. At least one next step must recommend seeing
 a licensed dermatologist or healthcare provider.
 """
 
-USER_PROMPT_TEMPLATE = """ANALYSIS DATA from the image pipeline (may include "overall",
+USER_PROMPT_TEMPLATE = """ANALYSIS DATA from the image pipeline (may include "overall_result",
 "change_since_last_photo" and "symptoms_reported" -- see rule 4c):
 
 {abcde_json}
@@ -220,15 +244,18 @@ instructions and the grounding rules exactly.
 MAX_ATTEMPTS = 2
 
 
-def _map_to_llm_schema(abcde_scores: dict) -> dict:
-    """Adapt MelanomaDetector's abcde_scores dict into this prompt's expected shape.
+def _map_to_llm_schema(abcde_scores: dict, overall_visual_concern=None) -> dict:
+    """Adapt the detector's abcde_scores dict (plus V5's own overall verdict)
+    into this prompt's expected shape.
 
-    MelanomaDetector reports each letter as {"score": 0-10, "details": {...}},
-    with a "concern" bool and raw (pre-scaled) measurement inside "details".
-    The prompt above expects a simpler {"score": raw 0-1 value, "flagged": bool}
-    shape per letter (matching the original prototype's own output format), plus
-    a couple of color-specific fields. This function bridges the two without
-    changing the prompt itself.
+    The detector reports each letter as {"score": 0-10, "details": {...}},
+    with a "concern" bool and raw (pre-scaled) measurement inside "details" --
+    these are per-feature reference thresholds, NOT V5's actual decision (see
+    pipeline_v5/decision_model.py). The prompt above expects a simpler
+    {"score": raw 0-1 value, "flagged": bool} shape per letter (matching the
+    original prototype's own output format), plus a couple of color-specific
+    fields and an "overall_result" field carrying V5's real verdict -- see
+    rule 4c. This function bridges the two without changing the prompt itself.
     """
     asymmetry = abcde_scores["asymmetry"]["details"]
     border = abcde_scores["border"]["details"]
@@ -264,12 +291,21 @@ def _map_to_llm_schema(abcde_scores: dict) -> dict:
 
     diameter_mm = diameter.get("diameter_mm")
     if diameter_mm is not None:
+        # Legacy only -- V5 (and V4 before it) never sets this key. Kept so a
+        # pre-V4 saved check's explanation still renders correctly.
         payload["diameter_mm"] = {
             "value": diameter_mm,
             "flagged": diameter.get("concern", False),
             "measured": True,
         }
     # else: omit diameter_mm entirely, per rule 4a -- absence, not a null value.
+    # V5 always takes this branch (diameter_mm is always None); the pixel/
+    # relative-size figures shown in the UI (AbcdeDetails.cs) are deliberately
+    # NOT sent here, since rule 4a's job is simply "say size isn't available
+    # as mm," not to describe the pixel proxy.
+
+    concern_map = {"ELEVATED VISUAL CONCERN": "elevated", "LOWER VISUAL CONCERN": "lower"}
+    payload["overall_result"] = concern_map.get(overall_visual_concern, "not_available")
 
     return payload
 
@@ -280,7 +316,7 @@ _CHANGE_SIGNAL_LABEL = {"shape": "shape", "color": "color", "growth": "size"}
 
 
 def _map_change_to_llm_schema(evolving: dict) -> dict:
-    """Adapt image_processor's "evolving" entry (evolution.score_change's own shape) into
+    """Adapt the detector's "evolving" entry (evolution.score_change's own shape) into
     the small, code-checkable summary the prompt and the validator use.
 
     Kept separate from the ABCD criteria: unlike them, "changed" is a claim about two
@@ -308,6 +344,7 @@ def _map_symptoms(symptoms) -> list:
 
 def explain_findings(
     abcde_scores: dict,
+    overall_visual_concern: str = None,
     risk_score: float = None,
     profile: dict = None,
     evolving: dict = None,
@@ -316,12 +353,17 @@ def explain_findings(
 ) -> str:
     """Return a plain-language, source-grounded explanation of the ABCDE output.
 
-    `risk_score`, `profile`, `evolving` (the "evolving" entry of abcde_scores --
-    passed separately because callers that omit it get the original, letters-only
-    explanation with no behavior change) and `symptoms` are all optional. Passing
-    `risk_score` is what turns on the score-matched summary line and next step;
-    without it, this is the same per-letter explanation the module has always
-    produced.
+    `overall_visual_concern` is V5's own authoritative "LOWER VISUAL CONCERN"
+    / "ELEVATED VISUAL CONCERN" result for this check, when known -- it is
+    the authoritative source for the summary line and next step (mirroring
+    policy.cadence_days' own fallback), and is never itself presented as a
+    number or probability. `risk_score`/`profile` still matter even when
+    `overall_visual_concern` is given: they drive the recheck timing (see
+    policy.recheck_advice). `evolving` (the "evolving" entry of abcde_scores)
+    and `symptoms` are independent of the above and add the change-since-last-
+    photo comparison and reported symptoms to the explanation. All of these
+    are optional -- omitting every one of them gives the original, letters-
+    only explanation with no behavior change.
 
     Model failures (a missing key, a network error) propagate to the caller. A
     reply that merely fails validation does not: it is retried once with the
@@ -330,14 +372,19 @@ def explain_findings(
     `client` is injectable so tests can supply a fake OpenAI client.
     """
     client = client or OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
-    payload = _map_to_llm_schema(abcde_scores)
+    payload = _map_to_llm_schema(abcde_scores, overall_visual_concern)
 
+    # The summary line and first next step are written here, from policy.py's
+    # own wording, never by the model -- so the explanation can never name a
+    # result other than the one the results page shows. Only for a genuinely
+    # known verdict: CONCERN_NO_DETECTION ("a lesion couldn't be located")
+    # isn't a result to open an explanation with, so it's left to read as
+    # "not_available" (see _map_to_llm_schema) with no app-authored lead,
+    # exactly like a check with no recorded concern at all.
     lead = opening_steps = None
-    if risk_score is not None:
-        band = policy.risk_band(risk_score)
-        payload["overall"] = {"score": round(risk_score), "band": band}
-        lead = f"This check came back {policy.BAND_LABEL[band].lower()} ({round(risk_score)}/100). {policy.BAND_ADVICE[band]}"
-        advice = policy.recheck_advice(risk_score, profile)
+    if overall_visual_concern in (policy.CONCERN_LOWER, policy.CONCERN_ELEVATED):
+        lead = f"{policy.CONCERN_LABEL[overall_visual_concern]}. {policy.CONCERN_ADVICE[overall_visual_concern]}"
+        advice = policy.recheck_advice(risk_score, profile, overall_visual_concern)
         opening_steps = (advice,) if advice else ()
     if evolving is not None:
         payload["change_since_last_photo"] = _map_change_to_llm_schema(evolving)

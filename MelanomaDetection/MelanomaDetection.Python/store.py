@@ -27,6 +27,8 @@ import os
 import sqlite3
 import uuid
 
+import policy
+
 DB_PATH = os.environ.get("SKINCHECK_DB") or os.path.join(
     os.path.dirname(os.path.abspath(__file__)), "skincheck.db"
 )
@@ -48,6 +50,13 @@ CREATE TABLE IF NOT EXISTS checks (
     user_id       TEXT NOT NULL,
     spot_id       TEXT REFERENCES spots(id),
     risk_score    REAL NOT NULL,
+    -- V5's own "LOWER VISUAL CONCERN" / "ELEVATED VISUAL CONCERN" /
+    -- "NO_DETECTION" result. NULL is reserved exclusively for a check saved
+    -- before this column existed -- a no-detection result is NEVER NULL,
+    -- it is the literal string "NO_DETECTION" (see policy.CONCERN_NO_DETECTION).
+    -- This, not a band cut on risk_score, is what recheck cadence and the
+    -- UI's headline verdict are keyed on -- see policy.py.
+    overall_visual_concern TEXT,
     diameter_mm   REAL,
     mm_per_px     REAL,
     asymmetry     REAL,
@@ -102,6 +111,22 @@ _PROFILE_COLUMNS_ADDED_IN_V3 = {
     "anonymous_analytics": "INTEGER NOT NULL DEFAULT 0",
 }
 
+# Same idea as _PROFILE_COLUMNS_ADDED_IN_V3, for checks. NULL-able and
+# defaultless on purpose: an existing row's concern genuinely isn't known
+# (it predates V4), which is different from it having been "LOWER".
+_CHECKS_COLUMNS_ADDED_IN_V4 = {
+    "overall_visual_concern": "TEXT",
+}
+
+# NULL-able: an existing row simply never recorded this (single-instance
+# results and pre-V5 rows alike). Lets a reloaded saved check still show the
+# "multiple spots were detected, only the primary was analyzed" caveat
+# (MultiLesionNotice.razor) instead of losing it on reload -- see
+# v5_detector.py's result packaging.
+_CHECKS_COLUMNS_ADDED_IN_V5 = {
+    "num_lesion_instances": "INTEGER",
+}
+
 
 @contextlib.contextmanager
 def _connect():
@@ -132,7 +157,7 @@ def _connect():
 # (spots, checks, a filled-in risk profile) and init_db must never drop them;
 # a version bump from here on has to ship with an additive migration instead
 # (see _migrate_profile_columns for the 2 -> 3 example).
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 5
 
 
 def init_db():
@@ -158,6 +183,7 @@ def init_db():
             _drop_all(connection)
         connection.executescript(_SCHEMA)
         _migrate_profile_columns(connection)
+        _migrate_checks_columns(connection)
         connection.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
 
 
@@ -175,6 +201,14 @@ def _migrate_profile_columns(connection):
     for column, ddl in _PROFILE_COLUMNS_ADDED_IN_V3.items():
         if column not in existing:
             connection.execute(f"ALTER TABLE profile ADD COLUMN {column} {ddl}")
+
+
+def _migrate_checks_columns(connection):
+    """Add columns introduced after v3 to an existing checks table in place. See _migrate_profile_columns."""
+    existing = {row["name"] for row in connection.execute("PRAGMA table_info(checks)")}
+    for column, ddl in {**_CHECKS_COLUMNS_ADDED_IN_V4, **_CHECKS_COLUMNS_ADDED_IN_V5}.items():
+        if column not in existing:
+            connection.execute(f"ALTER TABLE checks ADD COLUMN {column} {ddl}")
 
 
 def reset_db():
@@ -268,7 +302,7 @@ def list_spots(user_id: str, include_archived: bool = False) -> list:
     with _connect() as connection:
         spot_rows = connection.execute(query, (user_id,)).fetchall()
         check_rows = connection.execute(
-            "SELECT spot_id, risk_score, processed_at FROM checks "
+            "SELECT spot_id, risk_score, overall_visual_concern, processed_at FROM checks "
             "WHERE user_id = ? AND spot_id IS NOT NULL ORDER BY processed_at ASC",
             (user_id,),
         ).fetchall()
@@ -292,14 +326,15 @@ def list_spots(user_id: str, include_archived: bool = False) -> list:
 def aggregate_checks(checks: list) -> dict:
     """Derive count/latest/trend fields from a spot's checks, oldest first.
 
-    Accepts rows with "risk_score" and "processed_at" keys. Public because
-    main.py reuses it to summarize a single spot's timeline and a brand new
-    spot with no checks yet.
+    Accepts rows with "risk_score", "overall_visual_concern" and
+    "processed_at" keys. Public because main.py reuses it to summarize a
+    single spot's timeline and a brand new spot with no checks yet.
     """
     if not checks:
         return {
             "checkCount": 0,
             "lastRiskScore": None,
+            "lastOverallVisualConcern": None,
             "lastCheckedAt": None,
             "firstRiskScore": None,
             "trend": None,
@@ -307,8 +342,16 @@ def aggregate_checks(checks: list) -> dict:
 
     last = checks[-1]
     trend = None
-    if len(checks) >= 2:
-        delta = last["risk_score"] - checks[-2]["risk_score"]
+    # A NO_DETECTION check's risk_score is a meaningless 0.0 (no assessment
+    # was actually made), not a real "improvement" -- comparing against or
+    # from one would render a false trend (e.g. a no-detection retake of an
+    # elevated spot looking like a big "down" move). Trend is computed only
+    # over checks that produced a real LOWER/ELEVATED result; a NO_DETECTION
+    # check still counts in checkCount/lastCheckedAt/lastRiskScore (it did
+    # happen), it's just excluded from the trend comparison itself.
+    scored = [c for c in checks if c["overall_visual_concern"] != policy.CONCERN_NO_DETECTION]
+    if len(scored) >= 2:
+        delta = scored[-1]["risk_score"] - scored[-2]["risk_score"]
         # 2 points of risk is below this pipeline's own run-to-run noise, so
         # anything inside that band reads as "flat" rather than a real move.
         trend = "flat" if abs(delta) < 2.0 else ("up" if delta > 0 else "down")
@@ -316,6 +359,7 @@ def aggregate_checks(checks: list) -> dict:
     return {
         "checkCount": len(checks),
         "lastRiskScore": last["risk_score"],
+        "lastOverallVisualConcern": last["overall_visual_concern"],
         "lastCheckedAt": last["processed_at"],
         "firstRiskScore": checks[0]["risk_score"],
         "trend": trend,
@@ -350,6 +394,8 @@ def save_check(
     mm_per_px=None,
     area_px=None,
     lab=None,
+    overall_visual_concern=None,
+    num_lesion_instances=None,
 ):
     """Persist one analyzed check. Re-saving the same processing_id is a no-op update."""
     diameter = abcde_scores.get("diameter", {}).get("details")
@@ -359,10 +405,11 @@ def save_check(
     with _connect() as connection:
         connection.execute(
             """
-            INSERT INTO checks (processing_id, user_id, spot_id, risk_score, diameter_mm, mm_per_px,
-                                asymmetry, border, color, area_px, lab_l, lab_a, lab_b,
+            INSERT INTO checks (processing_id, user_id, spot_id, risk_score, overall_visual_concern,
+                                num_lesion_instances,
+                                diameter_mm, mm_per_px, asymmetry, border, color, area_px, lab_l, lab_a, lab_b,
                                 location, symptoms, notes, processed_at, thumbnail, mask)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(processing_id) DO UPDATE SET
                 spot_id = excluded.spot_id,
                 location = excluded.location,
@@ -375,6 +422,8 @@ def save_check(
                 user_id,
                 spot_id,
                 risk_score,
+                overall_visual_concern,
+                num_lesion_instances,
                 diameter_mm,
                 mm_per_px,
                 _score_of(abcde_scores, "asymmetry"),
@@ -465,6 +514,8 @@ def _check_row_to_dict(row) -> dict:
         "processingId": row["processing_id"],
         "spotId": row["spot_id"],
         "riskScore": row["risk_score"],
+        "overallVisualConcern": row["overall_visual_concern"],
+        "numLesionInstances": row["num_lesion_instances"],
         "diameterMm": row["diameter_mm"],
         "mmPerPx": row["mm_per_px"],
         "asymmetry": row["asymmetry"],
