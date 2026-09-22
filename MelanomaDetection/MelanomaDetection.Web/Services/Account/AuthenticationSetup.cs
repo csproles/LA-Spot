@@ -232,6 +232,11 @@ public static class AuthenticationSetup
             identity.AddClaim(new Claim(AppClaimTypes.Demo, "true"));
         }
 
+        if (user.IsProvider)
+        {
+            identity.AddClaim(new Claim(AppClaimTypes.Provider, "true"));
+        }
+
         return new ClaimsPrincipal(identity);
     }
 

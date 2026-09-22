@@ -18,8 +18,24 @@ public sealed class CurrentUser(AuthenticationStateProvider authenticationStateP
         return ReadUserId(state.User);
     }
 
+    public async ValueTask<bool> IsProviderAsync()
+    {
+        var state = await authenticationStateProvider.GetAuthenticationStateAsync();
+        return IsProvider(state.User);
+    }
+
+    /// <summary>The signed-in person's display name, straight from the claim -- no DB round trip needed.</summary>
+    public async ValueTask<string?> GetDisplayNameAsync()
+    {
+        var state = await authenticationStateProvider.GetAuthenticationStateAsync();
+        return state.User.Identity?.Name;
+    }
+
     /// <summary>True when the principal is a throw-away demo session.</summary>
     public static bool IsDemo(ClaimsPrincipal principal) => principal.HasClaim(AppClaimTypes.Demo, "true");
+
+    /// <summary>True for a dermatologist account; see <see cref="Data.AppUser.IsProvider"/>.</summary>
+    public static bool IsProvider(ClaimsPrincipal principal) => principal.HasClaim(AppClaimTypes.Provider, "true");
 
     /// <summary>The app's own account id from a principal, or null when it isn't a signed-in user of ours.</summary>
     public static Guid? ReadUserId(ClaimsPrincipal principal)

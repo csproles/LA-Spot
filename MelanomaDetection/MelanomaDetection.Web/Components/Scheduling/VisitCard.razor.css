@@ -1,0 +1,45 @@
+.visit-card {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.visit-card-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.visit-card-main {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.visit-card-time {
+    color: var(--color-text-muted);
+}
+
+.visit-card-reason {
+    margin: 4px 0 0;
+    color: var(--color-text-muted);
+}
+
+.visit-card-status {
+    align-self: flex-start;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    padding: 2px 10px;
+    border-radius: var(--radius-pill);
+    background: var(--color-well);
+    color: var(--color-accent-ink);
+}
+
+.visit-card-status-cancelled {
+    background: color-mix(in srgb, var(--bs-danger) 16%, transparent);
+    color: var(--bs-danger);
+}

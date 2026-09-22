@@ -1,0 +1,85 @@
+@page "/notifications"
+@rendermode InteractiveServer
+@inject NotificationService NotificationService
+@inject CurrentUser CurrentUser
+@inject IJSRuntime JS
+
+<PageTitle>Notifications - LA Spot</PageTitle>
+
+<div class="notifications-page">
+    <PageHeader Title="Notifications"
+                Subtitle="This demo doesn't send real email -- booking, cancellation and reminder notices land here instead." />
+
+    @if (IsLoading)
+    {
+        <SkeletonBlock Height="80px" Shape="card" />
+        <SkeletonBlock Height="80px" Shape="card" />
+    }
+    else if (Items.Count == 0)
+    {
+        <EmptyState Title="Nothing yet" Description="Booking or cancelling a visit, or an upcoming reminder, will show up here." />
+    }
+    else
+    {
+        <div class="notifications-list">
+            @foreach (var n in Items)
+            {
+                <div class="card-panel notification-card @(n.IsRead ? "" : "is-unread")">
+                    <div class="notification-card-main">
+                        <strong>@n.Subject</strong>
+                        <span class="notification-card-time">@FormatSentAt(n.CreatedAtUtc)</span>
+                        @* n.Body is a fixed string written once at send time (see NotificationService), so any
+                           appointment time embedded in it stays in UTC even after this timestamp is localized --
+                           fully fixing that would mean storing structured data instead of pre-rendered text. *@
+                        <p>@n.Body</p>
+                    </div>
+                    @if (n.IcsContent is not null)
+                    {
+                        <a class="btn btn-outline-primary btn-sm" href="@($"/api/notifications/{n.Id}/ics")">
+                            Add to calendar
+                        </a>
+                    }
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private bool IsLoading = true;
+    private List<Notification> Items = [];
+    private string? BrowserTimeZoneId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var userId = await CurrentUser.GetUserIdAsync();
+        if (userId is null)
+        {
+            IsLoading = false;
+            return;
+        }
+
+        Items = [.. await NotificationService.ListForUserAsync(userId.Value)];
+        await NotificationService.MarkAllReadAsync(userId.Value);
+        IsLoading = false;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        try
+        {
+            BrowserTimeZoneId = await JS.InvokeAsync<string>("skinCheckScheduling.getTimeZone");
+            StateHasChanged();
+        }
+        catch (JSException)
+        {
+        }
+    }
+
+    private string FormatSentAt(DateTime createdAtUtc) => ClientTimeZone.Format(createdAtUtc, BrowserTimeZoneId, "MMM d 'at' h:mm tt");
+}

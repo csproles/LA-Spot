@@ -39,4 +39,11 @@ public class AppUser
     /// if abandoned. Never tied to a Google identity.
     /// </summary>
     public bool IsDemo { get; set; }
+
+    /// <summary>
+    /// True for a dermatologist account (telehealth scheduling). Granted by an
+    /// email allow-list (Provider:AllowedEmails) at sign-in, not self-service --
+    /// see AuthenticationSetup. A real credentialing flow is out of scope here.
+    /// </summary>
+    public bool IsProvider { get; set; }
 }

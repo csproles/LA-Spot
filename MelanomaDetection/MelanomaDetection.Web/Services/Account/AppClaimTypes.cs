@@ -17,4 +17,7 @@ public static class AppClaimTypes
 
     /// <summary>Present (value "true") on a demo session; see <see cref="Data.AppUser.IsDemo"/>.</summary>
     public const string Demo = "skincheck:demo";
+
+    /// <summary>Present (value "true") for a dermatologist account; see <see cref="Data.AppUser.IsProvider"/>.</summary>
+    public const string Provider = "skincheck:provider";
 }

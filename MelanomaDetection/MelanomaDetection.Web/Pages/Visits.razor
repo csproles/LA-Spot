@@ -1,0 +1,147 @@
+@page "/visits"
+@rendermode InteractiveServer
+@inject BookingService Booking
+@inject CurrentUser CurrentUser
+@inject IJSRuntime JS
+
+<PageTitle>My visits - LA Spot</PageTitle>
+
+<div class="visits-page">
+    <PageHeader Title="My visits">
+        <Actions>
+            <a href="/notifications" class="btn btn-outline-primary">Notifications</a>
+            <a href="/book-visit" class="btn btn-primary">Book a visit</a>
+        </Actions>
+    </PageHeader>
+
+    <ErrorAlert Message="@LoadError" />
+
+    @if (IsLoading)
+    {
+        <SkeletonBlock Height="88px" Shape="card" />
+        <SkeletonBlock Height="88px" Shape="card" />
+    }
+    else if (Appointments.Count == 0)
+    {
+        <EmptyState Title="No visits yet" Description="Book a video visit with a dermatologist."
+                    ActionHref="/book-visit" ActionText="Book a visit" />
+    }
+    else
+    {
+        @if (Upcoming.Count > 0)
+        {
+            <section class="visits-section">
+                <h2 class="panel-title">Upcoming</h2>
+                <div class="visits-list">
+                    @foreach (var appt in Upcoming)
+                    {
+                        <VisitCard Appointment="appt" BrowserTimeZoneId="BrowserTimeZoneId"
+                                   ShowCancel="true" IsCancelling="CancellingIds.Contains(appt.Id)"
+                                   OnCancel="() => CancelAsync(appt.Id)" />
+                    }
+                </div>
+            </section>
+        }
+
+        @if (Past.Count > 0)
+        {
+            <section class="visits-section">
+                <h2 class="panel-title">Past &amp; cancelled</h2>
+                <div class="visits-list">
+                    @foreach (var appt in Past)
+                    {
+                        <VisitCard Appointment="appt" BrowserTimeZoneId="BrowserTimeZoneId" ShowCancel="false" />
+                    }
+                </div>
+            </section>
+        }
+    }
+</div>
+
+@code {
+    private List<AppointmentView> Appointments = [];
+    private bool IsLoading = true;
+    private string? LoadError;
+    private Guid? PatientId;
+    private string? BrowserTimeZoneId;
+    private readonly HashSet<Guid> CancellingIds = [];
+
+    private List<AppointmentView> Upcoming => [.. Appointments
+        .Where(a => a.Status == AppointmentStatus.Booked && a.EndUtc >= DateTime.UtcNow)
+        .OrderBy(a => a.StartUtc)];
+
+    private List<AppointmentView> Past => [.. Appointments
+        .Where(a => a.Status != AppointmentStatus.Booked || a.EndUtc < DateTime.UtcNow)
+        .OrderByDescending(a => a.StartUtc)];
+
+    protected override async Task OnInitializedAsync()
+    {
+        PatientId = await CurrentUser.GetUserIdAsync();
+        await LoadAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        try
+        {
+            BrowserTimeZoneId = await JS.InvokeAsync<string>("skinCheckScheduling.getTimeZone");
+            StateHasChanged();
+        }
+        catch (JSException)
+        {
+        }
+    }
+
+    private async Task LoadAsync()
+    {
+        if (PatientId is null)
+        {
+            return;
+        }
+
+        IsLoading = true;
+        LoadError = null;
+        StateHasChanged();
+
+        try
+        {
+            Appointments = [.. await Booking.ListForPatientAsync(PatientId.Value)];
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            LoadError = "Couldn't load your visits. Try again in a moment.";
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private async Task CancelAsync(Guid appointmentId)
+    {
+        if (PatientId is null || !CancellingIds.Add(appointmentId))
+        {
+            return;
+        }
+
+        StateHasChanged();
+        try
+        {
+            await Booking.CancelAsync(appointmentId, PatientId.Value);
+            await LoadAsync();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            LoadError = "That visit isn't yours to cancel.";
+        }
+        finally
+        {
+            CancellingIds.Remove(appointmentId);
+        }
+    }
+}

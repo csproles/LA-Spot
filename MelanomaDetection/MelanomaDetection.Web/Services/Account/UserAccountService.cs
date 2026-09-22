@@ -14,8 +14,17 @@ namespace MelanomaDetection.Web.Services.Account;
 public sealed class UserAccountService(
     IDbContextFactory<AppDbContext> dbFactory,
     IMemoryCache cache,
-    ILogger<UserAccountService> logger)
+    ILogger<UserAccountService> logger,
+    IConfiguration configuration)
 {
+    /// <summary>Emails granted a provider account, comma-separated (Provider:AllowedEmails).
+    /// Re-checked on every sign-in, not just creation, so adding/removing an email takes
+    /// effect on that person's next login -- no manual DB edit needed.</summary>
+    private bool IsAllowedProviderEmail(string email) =>
+        (configuration["Provider:AllowedEmails"] ?? "")
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Contains(email, StringComparer.OrdinalIgnoreCase);
+
     /// <summary>
     /// How long a "this account exists" answer is trusted before hitting the
     /// database again. Deleting an account evicts the entry immediately, so
@@ -61,6 +70,12 @@ public sealed class UserAccountService(
             user.DisplayName = displayName;
             user.PictureUrl = picture;
             user.LastSignInAtUtc = now;
+        }
+
+        user.IsProvider = IsAllowedProviderEmail(email);
+        if (user.IsProvider && !await db.Providers.AnyAsync(p => p.Id == user.Id, cancellationToken))
+        {
+            db.Providers.Add(new Provider { Id = user.Id });
         }
 
         await db.SaveChangesAsync(cancellationToken);

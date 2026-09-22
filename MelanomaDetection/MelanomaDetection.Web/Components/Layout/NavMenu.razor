@@ -13,7 +13,7 @@
     <AuthorizeView>
         <Authorized>
             <div class="app-nav-links">
-                @foreach (var destination in Destinations)
+                @foreach (var destination in Destinations.Where(d => !d.ProviderOnly || CurrentUser.IsProvider(context.User)))
                 {
                     <NavLink class="@LinkClass(destination)"
                              href="@destination.Href"
@@ -54,7 +54,7 @@
 </nav>
 
 @code {
-    private record Destination(string Href, string Icon, string Label, bool IsPrimary = false);
+    private record Destination(string Href, string Icon, string Label, bool IsPrimary = false, bool ProviderOnly = false);
 
     private static readonly Destination[] Destinations =
     {
@@ -62,6 +62,8 @@
         new("spots", "spots", "My spots"),
         new("check", "camera", "Check", IsPrimary: true),
         new("map", "map", "Find a doctor"),
+        new("visits", "clock", "Visits"),
+        new("provider", "shield", "Dashboard", ProviderOnly: true),
         new("profile", "person", "Profile"),
     };
 

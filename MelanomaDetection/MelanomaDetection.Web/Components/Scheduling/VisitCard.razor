@@ -1,0 +1,64 @@
+@* One appointment row on the "My visits" / provider schedule pages. *@
+
+<div class="card-panel visit-card">
+    <div class="visit-card-main">
+        <span class="visit-card-status visit-card-status-@StatusClass">@StatusLabel</span>
+        <strong>@PersonLabel</strong>
+        <span class="visit-card-time">@FormattedTime</span>
+        @if (!string.IsNullOrWhiteSpace(Appointment.Reason))
+        {
+            <p class="visit-card-reason">@Appointment.Reason</p>
+        }
+    </div>
+    <div class="visit-card-actions">
+        @if (Appointment.Status == AppointmentStatus.Booked)
+        {
+            <a href="@($"/video/{Appointment.Id}")" class="btn btn-outline-primary btn-sm">Join call</a>
+        }
+        @if (ShowCancel)
+        {
+            <button type="button" class="btn btn-outline-danger btn-sm" disabled="@IsCancelling" @onclick="OnCancel">
+                @if (IsCancelling)
+                {
+                    <span class="btn-spinner" aria-hidden="true"></span>
+                }
+                Cancel
+            </button>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public AppointmentView Appointment { get; set; } = null!;
+
+    /// <summary>"provider" shows the provider's name (patient's own view); "patient" shows the patient's (provider's schedule view).</summary>
+    [Parameter]
+    public string PerspectiveOf { get; set; } = "provider";
+
+    [Parameter]
+    public string? BrowserTimeZoneId { get; set; }
+
+    [Parameter]
+    public bool ShowCancel { get; set; }
+
+    [Parameter]
+    public bool IsCancelling { get; set; }
+
+    [Parameter]
+    public EventCallback OnCancel { get; set; }
+
+    private string PersonLabel => PerspectiveOf == "patient" ? Appointment.PatientName : Appointment.ProviderName;
+
+    private string FormattedTime => ClientTimeZone.Format(Appointment.StartUtc, BrowserTimeZoneId, "dddd, MMM d 'at' h:mm tt");
+
+    private string StatusClass => Appointment.Status.ToString().ToLowerInvariant();
+
+    private string StatusLabel => Appointment.Status switch
+    {
+        AppointmentStatus.Booked => "Booked",
+        AppointmentStatus.Cancelled => "Cancelled",
+        AppointmentStatus.Completed => "Completed",
+        _ => Appointment.Status.ToString(),
+    };
+}

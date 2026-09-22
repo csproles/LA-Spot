@@ -4,6 +4,7 @@ using MelanomaDetection.Web.Services;
 using MelanomaDetection.Web.Services.Account;
 using MelanomaDetection.Web.Services.Chat;
 using MelanomaDetection.Web.Services.RateLimiting;
+using MelanomaDetection.Web.Services.Scheduling;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.HttpOverrides;
 
@@ -91,6 +92,13 @@ builder.Services.AddHttpClient<NpiProviderService>(client =>
     client.Timeout = TimeSpan.FromSeconds(15);
 });
 
+// Telehealth scheduling: availability lookups, booking and notifications.
+builder.Services.AddScoped<AvailabilityService>();
+builder.Services.AddScoped<NotificationService>();
+builder.Services.AddScoped<BookingService>();
+builder.Services.AddSingleton<VideoRoomPresence>();
+builder.Services.AddHostedService<ReminderSweeper>();
+
 var app = builder.Build();
 
 if (behindProxy)
@@ -147,6 +155,9 @@ app.UseAntiforgery();
 
 app.MapStaticAssets();
 app.MapAccountEndpoints();
+app.MapSchedulingEndpoints();
+app.MapAppointmentEndpoints();
+app.MapNotificationEndpoints();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 

@@ -1,0 +1,40 @@
+.notifications-page {
+    max-width: 720px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.notifications-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.notification-card {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.notification-card.is-unread {
+    border-color: var(--color-accent);
+}
+
+.notification-card-main {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.notification-card-main p {
+    margin: 4px 0 0;
+    color: var(--color-text-muted);
+}
+
+.notification-card-time {
+    font-size: 0.8125rem;
+    color: var(--color-text-muted);
+}

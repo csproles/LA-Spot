@@ -1,0 +1,55 @@
+.book-visit-page {
+    max-width: 720px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.book-visit-page section.card-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.choice-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 10px;
+}
+
+.date-stepper {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.date-stepper-label {
+    font-weight: 600;
+    color: var(--color-accent-ink);
+}
+
+.book-visit-no-slots {
+    color: var(--color-text-muted);
+    margin: 0;
+}
+
+.book-visit-optional {
+    font-weight: 400;
+    color: var(--color-text-muted);
+}
+
+.book-visit-submit {
+    align-self: flex-start;
+}
+
+.book-visit-confirmation p {
+    margin: 0 0 12px;
+}
+
+.book-visit-confirmation-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}

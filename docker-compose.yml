@@ -49,7 +49,7 @@ services:
     ports:
       - "7001:8080"
     env_file:
-      - .env   # provides GoogleMaps__ApiKey and Authentication__Google__* (dotnet user-secrets isn't visible inside the container)
+      - .env   # provides GoogleMaps__ApiKey, Authentication__Google__* and Provider__AllowedEmails (dotnet user-secrets isn't visible inside the container)
     environment:
       # Overrides Program.cs's FlaskApi:BaseUrl to point at the Flask container by
       # its service name instead of localhost -- Docker Compose gives each service
