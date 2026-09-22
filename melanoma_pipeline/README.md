@@ -279,18 +279,39 @@ current access/registration requirements yourself):
 
 Unlike an earlier version of this branch, **this checkpoint is not committed here**
 (this branch was trimmed to a minimal training package and no longer includes the
-web application folder it used to live in). You have two ways to get it:
+web application folder it used to live in). You have three ways to get it — use
+whichever you actually have access to:
 
-1. **From this same repository's `user` branch** (if you have access to the full
+1. **The original Ultralytics training-run output**, if you have access to the
+   machine/environment this project trained on: `runs/segment/
+   melanoma_yolo26n_seg/weights/best.pt` (the `weights/` folder Ultralytics writes
+   during training — `best.pt` is the checkpoint with the best validation metric,
+   NOT `last.pt`, which is a *different* checkpoint, the final training epoch
+   regardless of whether it was the best one). **Verified byte-for-byte identical**
+   (SHA-256 `68131680...7882f5b`) to the `yolo_melanoma_seg.pt` this whole pipeline
+   was built and evaluated against — this is the most direct source if you can reach
+   it, since it requires no git access at all, just a file copy:
+   ```bash
+   cp /path/to/runs/segment/melanoma_yolo26n_seg/weights/best.pt \
+     melanoma_pipeline/weights/yolo_melanoma_seg.pt
+   ```
+   After copying, you can confirm you have the exact right file with:
+   ```bash
+   python -c "import hashlib; print(hashlib.sha256(open('melanoma_pipeline/weights/yolo_melanoma_seg.pt','rb').read()).hexdigest())"
+   # expect: 6813168001fe796cbaed8d1ce66f5539bd172a4f67e124edc50af017a7882f5b
+   ```
+2. **From this same repository's `user` branch** (if you have access to the full
    repository, not just this branch), without checking that whole branch out:
    ```bash
    git show user:MelanomaDetection/MelanomaDetection.Python/models/yolo_melanoma_seg.pt \
      > melanoma_pipeline/weights/yolo_melanoma_seg.pt
    ```
-2. **Directly from your project team**, if you only have this standalone branch —
+3. **Directly from your project team**, if you only have this standalone branch —
    ask whoever gave you access to this repository for a copy of
    `yolo_melanoma_seg.pt`, and place it at `melanoma_pipeline/weights/
    yolo_melanoma_seg.pt` (or point `YOLO_WEIGHTS_PATH` at wherever you put it).
+   Ask them to confirm the SHA-256 above if you want to be certain it's the exact
+   checkpoint this pipeline was built against, not a retrained/updated one.
 
 `features.py` raises a clear, actionable error (naming this exact section) if the
 checkpoint isn't found where `config.get_yolo_weights_path()` expects it.
