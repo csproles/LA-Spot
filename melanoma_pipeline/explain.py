@@ -16,8 +16,8 @@ Two things this module produces, per fold:
      CNN activations, not a named concept) -- only this aggregate split is
      interpretable on its own. If you need to know WHERE in an image the
      CNN was drawing signal from, that requires Grad-CAM on the CNN
-     backbone directly (see docs/design/multimodal_pipeline_design.md's
-     Section 7); this module does not implement that, only the
+     backbone directly (see docs/architecture.md's "Explainability"
+     section); this module does not implement that, only the
      SHAP-based structured/CNN attribution split.
 
 Uses TreeExplainer (exact, fast for CatBoost's tree ensembles) -- not the

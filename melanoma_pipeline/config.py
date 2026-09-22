@@ -112,8 +112,7 @@ CATBOOST_DEPTH: int = 6
 # dimensions from numerically swamping the much smaller (17-dim) validated
 # ABCD feature vector, and keeps the downstream CatBoost model's effective
 # parameter count sane relative to a single fold's training-row count.
-# See ABCD_Improved_Experimental/Multimodal_Design/ (copied into
-# docs/design/ alongside this package) for the full reasoning.
+# See docs/architecture.md ("Fusion") for the full reasoning.
 PCA_N_COMPONENTS: int = int(os.environ.get("MELANOMA_PCA_N_COMPONENTS", 128))
 
 # ------------------------------------------------------------------ eval --

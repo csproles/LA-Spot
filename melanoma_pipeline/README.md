@@ -17,9 +17,10 @@ from a location with no other repository folders present at all — see
 "Verification," below). **No training has been run, no dataset has been
 downloaded, and no CNN checkpoints exist yet.**
 
-Design background: `docs/design/01_original_design_proposal.md` (the original
-proposal) and `docs/design/02_agreed_architecture.md` (what was actually decided,
-and why it differs from the proposal in a few places).
+Architecture reference: **[`docs/architecture.md`](docs/architecture.md)** — what
+this pipeline actually implements, component by component, including a section on
+known gaps between the original design intent and the current code (e.g. the CNN
+currently trains on the full image rather than a YOLO-cropped lesion patch).
 
 ---
 
@@ -58,8 +59,8 @@ lesion image
   (`train_cnn.py::MelanomaCNN` — every backbone parameter is trainable). This was a
   deliberate choice given confirmed GPU access and the ~402k-image target dataset
   scale, versus a smaller/CPU-only setting where a staged frozen-first approach would
-  have been safer. See `docs/design/02_agreed_architecture.md` for the full
-  reasoning and what would change this recommendation.
+  have been safer. See `docs/architecture.md` for the full reasoning and what would
+  change this recommendation.
 - **Segmentation**: the project's existing frozen YOLO instance-segmentation
   checkpoint, reused as-is (independently benchmarked elsewhere in this project at
   mean IoU 0.783 / Dice 0.852 against expert ISIC ground truth). Not retrained here.
@@ -77,7 +78,7 @@ lesion image
   reference partial-AUC construction — see Section 4.
 - **Explainability**: SHAP (`explain.py`) — per-structured-feature attributions plus
   a CNN-embedding-vs-ABCD-features modality split. (Grad-CAM is documented as a
-  next step, not yet implemented — see `docs/design/02_agreed_architecture.md`.)
+  next step, not yet implemented — see `docs/architecture.md`.)
 
 ---
 
@@ -372,9 +373,8 @@ melanoma_pipeline/
 ├── explain.py                     # SHAP explainability
 ├── weights/                        # place yolo_melanoma_seg.pt here (gitignored)
 ├── requirements.txt
-├── docs/design/
-│   ├── 01_original_design_proposal.md
-│   └── 02_agreed_architecture.md
+├── docs/
+│   └── architecture.md               # what this pipeline actually implements
 └── README.md                        # this file
 ```
 
@@ -386,10 +386,10 @@ repo root `.gitignore`.
 ## 8. Known limitation / documented next step
 
 Grad-CAM (backbone-level "where in the image was the CNN looking" heatmaps) is
-described in the design docs but **not implemented**. `explain.py` currently covers
-SHAP-based structured-feature and modality-level attribution only. See
-`docs/design/02_agreed_architecture.md`'s explainability section for what a
-Grad-CAM addition would need.
+described in `docs/architecture.md` but **not implemented**. `explain.py` currently
+covers SHAP-based structured-feature and modality-level attribution only. See that
+doc's explainability section (and its "Summary of known gaps" section, which also
+covers the full-image-vs-lesion-crop CNN input gap) for what's left to do.
 
 ---
 

@@ -11,7 +11,7 @@ same per-fold-fit discipline every other learned step in this pipeline
 (the CNN itself, CatBoost) already follows, and it's what keeps the
 ~1024-dim CNN embedding from numerically swamping the much smaller
 (N_ABCD_FEATURES-dim, currently 17) validated ABCD feature vector -- see
-config.PCA_N_COMPONENTS's docstring and docs/design/ for the reasoning.
+config.PCA_N_COMPONENTS's docstring and docs/architecture.md for the reasoning.
 
 Nothing executes at import time -- `main()` must be called explicitly
 (directly, or via `python train_catboost.py`).
