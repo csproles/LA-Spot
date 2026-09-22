@@ -18,7 +18,7 @@
 
 .field-label {
     font-weight: 600;
-    font-size: 13px;
+    font-size: 0.88rem;
     color: var(--color-text);
     margin: 0;
 }

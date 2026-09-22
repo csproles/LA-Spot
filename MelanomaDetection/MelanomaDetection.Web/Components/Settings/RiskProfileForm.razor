@@ -17,7 +17,7 @@
         <section class="card-panel">
             <h2 class="panel-title">Where you live</h2>
             <p class="text-muted-small">City and state or country is enough. Helps tailor seasonal UV guidance.</p>
-            <input type="text" class="form-control location-input" placeholder="e.g. Austin, TX" maxlength="@InputLimits.LocationMax"
+            <input type="text" class="form-control location-input" placeholder="e.g. Lafayette, LA" maxlength="@InputLimits.LocationMax"
                    value="@Profile.Location" aria-label="Location"
                    @oninput="e => Set(profile => profile.Location = e.Value?.ToString() ?? string.Empty)" />
         </section>

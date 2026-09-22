@@ -16,6 +16,9 @@ is different and checkable:
     from one of them, which parse_and_validate verifies in code;
   * numbers, diagnosis wording and mentions of unflagged features are rejected
     in code, not just discouraged in the prompt;
+  * when the app supplies the overall score, a reply that names a different risk
+    band than the one shown beside it, or describes a comparison with an earlier
+    photo that never happened, is rejected the same way;
   * if the model can't produce a valid answer, fallback_data builds one from the
     passages directly, with no model involved.
 
@@ -54,6 +57,8 @@ CRITERION_LABEL = {
 GENERAL_PASSAGES = (
     "nci-report-changes",
     "nci-early-changes",
+    "nci-skin-exam-checkup",
+    "nci-self-exam-how",
     "nci-self-exam-record",
     "nci-uv-midday",
     "nci-biopsy",
@@ -101,6 +106,20 @@ _FORBIDDEN = (
         "uses alarming language",
     ),
 )
+
+# A reply may not name a risk band other than the one the app shows beside it. "higher risk"
+# (as in a risk factor) is deliberately not a band name, so it is not matched.
+_BAND_MENTION = re.compile(r"\b(low|moderate|high)[ -]risk\b|\b(some) risk signs?\b", re.IGNORECASE)
+_BAND_NAMES = {"low": "low", "some": "moderate", "moderate": "moderate", "high": "high"}
+
+# Claims about how a spot changed. They are only allowed when the comparison with the
+# previous photo actually found that change; the cue words keep ordinary sentences
+# (a pencil eraser "larger than...") from being mistaken for one.
+_GROWTH_CLAIM = re.compile(r"\b(?:grown|grew|larger|bigger|increase[ds]?|differ(?:s|ent|ence)?)\b", re.IGNORECASE)
+_HAS_CHANGED_CLAIM = re.compile(
+    r"\b(?:has|have|had) (?:changed|grown|got (?:bigger|larger)|become (?:bigger|larger))\b", re.IGNORECASE
+)
+_COMPARISON_CUE = re.compile(r"\b(?:since|compared|earlier|previous|last|before)\b", re.IGNORECASE)
 
 _SEES_A_PROFESSIONAL = re.compile(
     r"dermatolog|health ?care provider|doctor|physician", re.IGNORECASE
@@ -189,6 +208,43 @@ def _allowed_numbers(payload: dict, cited: list) -> set:
     return allowed
 
 
+def _mentionable_when_unflagged(payload: dict) -> set:
+    """Features a reply may name even though the colour criterion itself was not flagged.
+
+    "The colour changed since your last photo" and "you noted it changed colour" are
+    facts about change and about what the person reported, not claims about colour
+    variation, so they must not trip the unflagged-feature check.
+    """
+    allowed = set()
+    if "color" in (payload.get("change_since_last_photo") or {}).get("changes_noticed", []):
+        allowed.add("color")
+    if "changed color" in payload.get("symptoms_reported", []):
+        allowed.add("color")
+    return allowed
+
+
+def _check_coherence(where: str, text: str, payload: dict) -> list:
+    """Checks that only apply when the app supplied the overall result and the change data."""
+    problems = []
+
+    overall = payload.get("overall")
+    if overall:
+        for match in _BAND_MENTION.finditer(text):
+            named = _BAND_NAMES[next(group for group in match.groups() if group).lower()]
+            if named != overall["band"]:
+                problems.append(f"{where}: names the {named} band, but this result is {overall['band']}.")
+
+    change = payload.get("change_since_last_photo")
+    if change is not None and _COMPARISON_CUE.search(text):
+        claims_change = _GROWTH_CLAIM.search(text) or _HAS_CHANGED_CLAIM.search(text)
+        if not change.get("available") and claims_change:
+            problems.append(f"{where}: describes a change since an earlier photo, but no comparison was possible.")
+        elif change.get("available") and "size" not in change.get("changes_noticed", []) and _GROWTH_CLAIM.search(text):
+            problems.append(f"{where}: says the spot grew or differs, but the comparison did not find that.")
+
+    return problems
+
+
 def _check_statement(where: str, item, payload: dict, provided: dict) -> list:
     if not isinstance(item, dict) or set(item) != _STATEMENT_KEYS:
         return [f'{where}: must be an object with exactly the keys "text", "basis", "source_ids", "quote".']
@@ -227,11 +283,13 @@ def _check_statement(where: str, item, payload: dict, provided: dict) -> list:
         if pattern.search(text):
             problems.append(f"{where}: {reason}.")
 
+    mentionable = _mentionable_when_unflagged(payload)
     for key, pattern in UNFLAGGED_PATTERNS.items():
         entry = payload.get(key)
-        if entry is not None and not entry.get("flagged") and pattern.search(text):
+        if entry is not None and not entry.get("flagged") and key not in mentionable and pattern.search(text):
             problems.append(f"{where}: mentions {CRITERION_LABEL[key]}, which was not flagged.")
 
+    problems.extend(_check_coherence(where, text, payload))
     return problems
 
 
@@ -246,7 +304,10 @@ def parse_and_validate(content, payload: dict, passages: list):
 
     provided = {p.id: p for p in passages}
     problems = []
-    for section, low, high in (("noticed", 1, 6), ("next_steps", 2, 4)):
+    # When the app supplies the overall result it writes the first next step itself (the
+    # timeframe for seeing a doctor), so the model adds one to three more, not two to four.
+    step_range = (1, 3) if "overall" in payload else (2, 4)
+    for section, low, high in (("noticed", 1, 6), ("next_steps", *step_range)):
         items = data[section]
         if not isinstance(items, list) or not low <= len(items) <= high:
             problems.append(f'"{section}" must be a list of {low} to {high} items.')
@@ -254,22 +315,37 @@ def parse_and_validate(content, payload: dict, passages: list):
         for index, item in enumerate(items, start=1):
             problems.extend(_check_statement(f"{section}[{index}]", item, payload, provided))
 
-    if not problems and not any(_SEES_A_PROFESSIONAL.search(step["text"]) for step in data["next_steps"]):
+    # When the app supplies "overall", its own BAND_ADVICE line (see llm_explainer's
+    # "lead") always recommends seeing a professional, so the model's own next_steps
+    # aren't required to repeat it.
+    if not problems and "overall" not in payload and not any(
+        _SEES_A_PROFESSIONAL.search(step["text"]) for step in data["next_steps"]
+    ):
         problems.append("At least one next step must recommend seeing a dermatologist or healthcare provider.")
 
     return (None, problems) if problems else (data, [])
 
 
-def render_explanation(data: dict, source: Source, passages: list) -> str:
-    """The plain-text shape the web app displays, plus a Sources block for what was cited."""
+def render_explanation(data: dict, source: Source, passages: list, lead=None, opening_steps=()) -> str:
+    """The plain-text shape the web app displays, plus a Sources block for what was cited.
+
+    `lead` (the score-and-band summary) and `opening_steps` (the first next step)
+    are written by the app from the same wording the screen shows, not by the model,
+    so the explanation can never contradict the verdict beside it. Everything else
+    was checked in parse_and_validate.
+    """
     by_id = {p.id: p for p in passages}
     pages = sorted(
         {by_id[i].page for section in ("noticed", "next_steps") for item in data[section] for i in item["source_ids"] if i in by_id}
     )
 
-    lines = ["What the analysis noticed:"]
+    lines = []
+    if lead:
+        lines.extend(["In short:", lead, ""])
+    lines.append("What the analysis noticed:")
     lines.extend(item["text"].strip() for item in data["noticed"])
     lines.extend(["", "Suggested next steps:"])
+    lines.extend(step for step in (opening_steps or ()) if step)
     lines.extend(item["text"].strip() for item in data["next_steps"])
 
     if pages:
@@ -289,36 +365,64 @@ def _statement(text: str, basis: str = "analysis", passage_ids=(), quote=None) -
     return {"text": text, "basis": basis, "source_ids": list(passage_ids), "quote": quote}
 
 
+def _join(items) -> str:
+    items = list(items)
+    return items[0] if len(items) == 1 else ", ".join(items[:-1]) + " and " + items[-1]
+
+
+def _change_sentence(change: dict) -> str:
+    found = change.get("changes_noticed", [])
+    if not found:
+        return "Compared with the last photo of this spot, the analysis did not find a notable change."
+
+    sentence = f"Compared with the last photo of this spot, the analysis found a change in {_join(found)}."
+    percent = change.get("area_change_percent")
+    if "size" in found and percent is not None:
+        sentence += f" The spot's area is about {abs(percent)}% {'larger' if percent > 0 else 'smaller'}."
+    return sentence
+
+
 def fallback_data(payload: dict, passages: list) -> dict:
     """An explanation built from the passages with no model involved.
 
     Used when the model can't produce a reply that passes parse_and_validate.
-    Plainer than a model's, but every sentence is either fixed wording or a
-    verbatim excerpt.
+    Plainer than a model's, but it reads in the same order (what was found, what
+    changed, what the person reported, what the booklet says) and every sentence
+    is either fixed wording or a verbatim excerpt.
     """
     by_id = {p.id: p for p in passages}
-    noticed = []
     flagged = [key for key in CRITERION_PASSAGE if payload.get(key, {}).get("flagged")]
+    change = payload.get("change_since_last_photo")
+    symptoms = payload.get("symptoms_reported")
+
+    noticed = []
+    if flagged:
+        measured = payload.get("diameter_mm", {}).get("value") if "diameter_mm" in flagged else None
+        detail = f" The spot measures about {measured} mm across." if measured is not None else ""
+        noticed.append(_statement(f"The analysis flagged {_join(CRITERION_LABEL[k] for k in flagged)} in this spot.{detail}"))
+    else:
+        noticed.append(_statement("The analysis did not flag any of the features it checks in this photo. That does not rule anything out."))
+
+    if change and change.get("available"):
+        noticed.append(_statement(_change_sentence(change)))
+    elif change:
+        noticed.append(_statement("There was no earlier photo of this spot that could be compared, so change over time was not checked."))
+
+    if symptoms:
+        noticed.append(_statement(f"You reported these about the spot: {', '.join(symptoms)}."))
+    if "diameter_mm" not in payload:
+        noticed.append(_statement("Size could not be measured for this image."))
 
     for key in flagged:
         passage = by_id[CRITERION_PASSAGE[key]]
-        label = CRITERION_LABEL[key]
-        measured = payload.get("diameter_mm", {}).get("value") if key == "diameter_mm" else None
-        detail = f" (about {measured} mm across)" if measured is not None else ""
         noticed.append(
             _statement(
-                f'The analysis flagged {label} in this spot{detail}. '
-                f'The National Cancer Institute booklet describes this feature as: "{passage.text}"',
+                f'The National Cancer Institute booklet describes {CRITERION_LABEL[key]}: "{passage.text}"',
                 "booklet",
                 [passage.id],
                 passage.text,
             )
         )
-
-    if not flagged:
-        noticed.append(_statement("The analysis did not flag any of the features it checks in this photo. That does not rule anything out."))
-    if "diameter_mm" not in payload:
-        noticed.append(_statement("Size could not be measured for this image."))
 
     def with_quote(lead: str, passage_id: str) -> dict:
         passage = by_id[passage_id]
@@ -329,4 +433,4 @@ def fallback_data(payload: dict, passages: list) -> dict:
         with_quote("Check your skin regularly and keep notes on this spot so you can notice changes.", "nci-self-exam-record"),
         with_quote("Protect your skin from the sun.", "nci-uv-midday"),
     ]
-    return {"noticed": noticed, "next_steps": next_steps}
+    return {"noticed": noticed[:6], "next_steps": next_steps}

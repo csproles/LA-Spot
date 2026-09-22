@@ -28,7 +28,7 @@
 }
 
 .photo-figure-caption {
-    font-size: 12px;
+    font-size: 0.88rem;
     color: var(--color-text-muted);
     text-align: center;
 }

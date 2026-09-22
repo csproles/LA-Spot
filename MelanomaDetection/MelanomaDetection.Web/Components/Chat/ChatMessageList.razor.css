@@ -9,7 +9,7 @@
 
 .chat-message-empty {
     color: var(--color-text-muted);
-    font-size: 13px;
+    font-size: 0.88rem;
     text-align: center;
     margin: auto 0;
 }
@@ -18,7 +18,7 @@
     max-width: 88%;
     padding: 10px 12px;
     border-radius: var(--radius-card);
-    font-size: 13.5px;
+    font-size: 0.88rem;
     line-height: 1.45;
 }
 
@@ -47,7 +47,7 @@
 
 .chat-message-sources {
     margin: 6px 0 0;
-    font-size: 11px;
+    font-size: 0.88rem;
     color: var(--color-text-faint);
 }
 

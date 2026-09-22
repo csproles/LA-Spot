@@ -24,8 +24,9 @@
         "signin-cancelled" => "Sign-in was cancelled. You can try again whenever you're ready.",
         "signin-failed" => "We couldn't finish signing you in with Google. Please try again.",
         "email-unverified" => "Google hasn't verified the email address on that account, so we can't use it. Verify it with Google, then try again.",
+        "session-expired" => "That page was out of date. Please try again.",
         _ => null,
     };
 
-    private bool IsProblem => Status is "signin-failed" or "email-unverified";
+    private bool IsProblem => Status is "signin-failed" or "email-unverified" or "session-expired";
 }

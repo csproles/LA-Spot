@@ -63,7 +63,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 13px;
+    font-size: 0.88rem;
 }
 
 .history-card-body {
@@ -75,31 +75,34 @@
 
 .history-card-top {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    gap: 6px;
+    gap: 4px 6px;
 }
 
 .history-location {
     font-weight: 600;
-    font-size: 13.5px;
+    font-size: 0.88rem;
     color: var(--color-text);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    flex: 1 1 7rem;
+    min-width: 0;
+    overflow-wrap: anywhere;
 }
 
 .history-date {
     color: var(--color-text-faint);
-    font-size: 12px;
+    font-size: 0.88rem;
     margin: 0;
 }
 
 .history-note {
     color: var(--color-text-muted);
-    font-size: 12.5px;
+    font-size: 0.88rem;
     margin: 2px 0 0;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
     overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
 }

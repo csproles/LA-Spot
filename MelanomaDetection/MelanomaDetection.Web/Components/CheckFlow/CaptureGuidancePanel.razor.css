@@ -21,7 +21,7 @@
     display: flex;
     gap: 10px;
     align-items: flex-start;
-    font-size: 13.5px;
+    font-size: 0.88rem;
     color: var(--color-text-muted);
     line-height: 1.45;
 }
@@ -32,9 +32,14 @@
 }
 
 .guidance-icon {
-    font-size: 18px;
-    line-height: 1.2;
+    display: flex;
+    justify-content: center;
+    padding-top: 2px;
     flex-shrink: 0;
     width: 26px;
-    text-align: center;
+    color: var(--color-accent-ink);
+}
+
+.guidance-text {
+    max-width: 32em;
 }

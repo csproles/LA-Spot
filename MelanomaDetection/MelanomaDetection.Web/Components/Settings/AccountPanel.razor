@@ -11,7 +11,7 @@
             }
             else
             {
-                <input id="full-name" type="text" class="form-control" placeholder="Jane Doe" maxlength="@InputLimits.FullNameMax"
+                <input id="full-name" type="text" autocomplete="name" class="form-control" placeholder="Jane Doe" maxlength="@InputLimits.FullNameMax"
                        value="@FullName"
                        @oninput="e => FullNameChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty)" />
             }

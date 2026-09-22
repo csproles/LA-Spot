@@ -3,7 +3,7 @@
 // interactivity. It precaches the static app shell for fast repeat loads,
 // serves those assets cache-first, and falls back to offline.html when a
 // page navigation fails with no network.
-const CACHE_NAME = "skin-check-shell-v4";
+const CACHE_NAME = "skin-check-shell-v5";
 
 const PRECACHE_URLS = [
     "offline.html",
@@ -14,6 +14,8 @@ const PRECACHE_URLS = [
     "icons/icon-maskable-512.png",
     "icons/apple-touch-icon.png",
     "icons/mascot.png",
+    "fonts/bricolage-grotesque-latin.woff2",
+    "fonts/atkinson-hyperlegible-next-latin.woff2",
 ];
 
 self.addEventListener("install", (event) => {
@@ -37,6 +39,7 @@ self.addEventListener("activate", (event) => {
 function isShellAsset(url) {
     return url.origin === self.location.origin && (
         url.pathname.startsWith("/icons/") ||
+        url.pathname.startsWith("/fonts/") ||
         url.pathname.startsWith("/lib/") ||
         url.pathname === "/app.css" ||
         url.pathname === "/favicon.png" ||

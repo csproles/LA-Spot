@@ -28,7 +28,7 @@
 }
 
 .signal-name {
-    font-size: 11.5px;
+    font-size: 0.88rem;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.03em;
@@ -36,7 +36,7 @@
 }
 
 .signal-value {
-    font-size: 13px;
+    font-size: 0.88rem;
     font-weight: 600;
     color: var(--color-text);
 }

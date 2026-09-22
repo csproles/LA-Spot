@@ -18,6 +18,17 @@ from the passages instead (knowledge.fallback_data). SYSTEM_PROMPT itself is
 left untouched; GROUNDING_PROMPT is added after it and only narrows what the
 model may say.
 
+Coherence with the rest of the app: explain_findings can also be given the
+overall score/band, the change-since-last-photo comparison, and the symptoms
+the person selected (all optional -- the plain per-letter explanation this
+module has always produced still works with none of them). When the overall
+result is supplied, the summary line and the first "see a doctor" step are
+written by this module from policy.py's own wording, never by the model, so
+the explanation can never name a different band or timeframe than the score
+panel above it. knowledge.parse_and_validate rejects a reply that claims a
+change the comparison did not find, or names the wrong band, the same way it
+already rejects an invented number or an unflagged feature.
+
 Requires an OPENAI_API_KEY in a .env file. This repo keeps that .env at the
 repository root (see load_dotenv() call below) rather than duplicating it here.
 """
@@ -31,6 +42,7 @@ from dotenv import load_dotenv
 from openai import OpenAI
 
 import knowledge
+import policy
 
 logger = logging.getLogger(__name__)
 
@@ -89,9 +101,33 @@ STRICT RULES -- follow every one of these, no exceptions:
     the image itself, not a generic skin-tone default -- if useful, this can
     be mentioned as a reason the color assessment is specific to this photo.
 
+4c. The input may also include an OVERALL result (a 0-100 score and a
+    low/moderate/high band), a CHANGE SINCE LAST PHOTO comparison, and
+    SYMPTOMS REPORTED by the person. Use whichever of these are present:
+    - If OVERALL is present, the summary line matching it is written for
+      you and given first. It has already told the person their score and
+      band, so do not write any sentence in your own reply that states,
+      restates, or refers to there being an overall score, band, or summary
+      -- not even to note that one was given. Simply move straight to what
+      the analysis noticed. Separately: never use a band word ("low risk",
+      "moderate risk", "high risk", "some risk signs") other than the one
+      already given.
+    - If CHANGE SINCE LAST PHOTO is present and available is true, describe
+      only the changes it names (shape, color, and/or size) -- never say a
+      spot grew, changed, or differs from before unless this comparison
+      says so. If available is false, say plainly that there was no earlier
+      photo to compare against; do not guess whether it has changed.
+    - If SYMPTOMS REPORTED is present, you may mention what the person
+      reported noticing (e.g. itching, bleeding) as something they told the
+      app, not as something the analysis measured.
+    Say nothing about any of these three if they are absent from the input.
+
 5. End with 2-4 concrete, doable next steps (e.g., "photograph the spot
    monthly to track changes", "bring this analysis to a dermatology
-   appointment", "note if it itches, bleeds, or changes size").
+   appointment", "note if it itches, bleeds, or changes size"). If the input
+   already includes a next step (because the app supplied one from the
+   overall score), add 1-3 more of your own instead of repeating it or
+   contradicting its timing.
 
 6. Never mention specific probabilities, percentages, or risk levels unless
    they are provided directly in the input data -- do not invent confidence
@@ -167,7 +203,8 @@ plain sentence with no markdown. At least one next step must recommend seeing
 a licensed dermatologist or healthcare provider.
 """
 
-USER_PROMPT_TEMPLATE = """ANALYSIS DATA from the image pipeline:
+USER_PROMPT_TEMPLATE = """ANALYSIS DATA from the image pipeline (may include "overall",
+"change_since_last_photo" and "symptoms_reported" -- see rule 4c):
 
 {abcde_json}
 
@@ -237,8 +274,54 @@ def _map_to_llm_schema(abcde_scores: dict) -> dict:
     return payload
 
 
-def explain_findings(abcde_scores: dict, client=None) -> str:
+# Evolution's own "signals" name (see evolution.score_change) mapped to what this schema
+# calls the same thing, so a growth signal reads as a change in "size", not "growth".
+_CHANGE_SIGNAL_LABEL = {"shape": "shape", "color": "color", "growth": "size"}
+
+
+def _map_change_to_llm_schema(evolving: dict) -> dict:
+    """Adapt image_processor's "evolving" entry (evolution.score_change's own shape) into
+    the small, code-checkable summary the prompt and the validator use.
+
+    Kept separate from the ABCD criteria: unlike them, "changed" is a claim about two
+    photos, not one, so it gets its own coherence check (knowledge._check_coherence)
+    instead of the flagged/unflagged pattern check the ABCD letters use.
+    """
+    details = evolving.get("details") or {}
+    if evolving.get("score") is None:
+        return {"available": False, "reason": details.get("reason", "no prior check to compare against")}
+
+    changes_noticed = sorted({_CHANGE_SIGNAL_LABEL[s] for s in details.get("signals", []) if s in _CHANGE_SIGNAL_LABEL})
+    result = {"available": True, "changes_noticed": changes_noticed}
+    growth = details.get("area_growth_ratio")
+    if growth is not None:
+        result["area_change_percent"] = round(growth * 100)
+    return result
+
+
+def _map_symptoms(symptoms) -> list:
+    """Free text never reaches the model (it is not grounded in anything checkable);
+    only the fixed checkbox choices SymptomChipRow offers do."""
+    allowed = {"Itchy", "Growing", "Bleeding", "Painful", "Changed color", "New"}
+    return [s for s in (symptoms or []) if s in allowed]
+
+
+def explain_findings(
+    abcde_scores: dict,
+    risk_score: float = None,
+    profile: dict = None,
+    evolving: dict = None,
+    symptoms=None,
+    client=None,
+) -> str:
     """Return a plain-language, source-grounded explanation of the ABCDE output.
+
+    `risk_score`, `profile`, `evolving` (the "evolving" entry of abcde_scores --
+    passed separately because callers that omit it get the original, letters-only
+    explanation with no behavior change) and `symptoms` are all optional. Passing
+    `risk_score` is what turns on the score-matched summary line and next step;
+    without it, this is the same per-letter explanation the module has always
+    produced.
 
     Model failures (a missing key, a network error) propagate to the caller. A
     reply that merely fails validation does not: it is retried once with the
@@ -248,6 +331,20 @@ def explain_findings(abcde_scores: dict, client=None) -> str:
     """
     client = client or OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
     payload = _map_to_llm_schema(abcde_scores)
+
+    lead = opening_steps = None
+    if risk_score is not None:
+        band = policy.risk_band(risk_score)
+        payload["overall"] = {"score": round(risk_score), "band": band}
+        lead = f"This check came back {policy.BAND_LABEL[band].lower()} ({round(risk_score)}/100). {policy.BAND_ADVICE[band]}"
+        advice = policy.recheck_advice(risk_score, profile)
+        opening_steps = (advice,) if advice else ()
+    if evolving is not None:
+        payload["change_since_last_photo"] = _map_change_to_llm_schema(evolving)
+    reported = _map_symptoms(symptoms)
+    if reported:
+        payload["symptoms_reported"] = reported
+
     source, _ = knowledge.load()
     passages = knowledge.select_passages(payload)
 
@@ -279,7 +376,7 @@ def explain_findings(abcde_scores: dict, client=None) -> str:
         content = response.choices[0].message.content
         data, problems = knowledge.parse_and_validate(content, payload, passages)
         if data is not None:
-            return knowledge.render_explanation(data, source, passages)
+            return knowledge.render_explanation(data, source, passages, lead=lead, opening_steps=opening_steps)
 
         logger.warning("Explanation attempt %d rejected: %s", attempt, "; ".join(problems))
         messages = base_messages + [
@@ -293,4 +390,6 @@ def explain_findings(abcde_scores: dict, client=None) -> str:
         ]
 
     logger.warning("Falling back to a passage-only explanation after %d rejected attempts.", MAX_ATTEMPTS)
-    return knowledge.render_explanation(knowledge.fallback_data(payload, passages), source, passages)
+    return knowledge.render_explanation(
+        knowledge.fallback_data(payload, passages), source, passages, lead=lead, opening_steps=opening_steps
+    )

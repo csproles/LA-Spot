@@ -95,3 +95,45 @@ def next_due_at(last_checked_at: str, risk_score, profile=None):
         return None
 
     return (last + datetime.timedelta(days=cadence_days(risk_score, profile))).isoformat()
+
+
+# What a person is told about each band. The web app shows the same words
+# (MelanomaDetection.Web/Services/RiskBands.cs) beside the score, and the AI
+# explanation opens with them, so all three read as one voice. They live in two
+# languages, so tests/test_policy.py compares the two files and fails if they drift.
+BAND_LABEL = {
+    "low": "Low risk signs",
+    "moderate": "Some risk signs",
+    "high": "High risk signs",
+}
+
+BAND_ADVICE = {
+    "low": (
+        "You don't need to do anything right now. Keep checking your skin every so often, "
+        "and see a skin doctor (a dermatologist) once a year."
+    ),
+    "moderate": (
+        "Think about seeing a skin doctor (a dermatologist) in the next few months "
+        "to have this spot looked at."
+    ),
+    "high": (
+        "Please see a skin doctor (a dermatologist) as soon as you can "
+        "to have this spot looked at."
+    ),
+}
+
+
+def recheck_advice(risk_score, profile=None):
+    """The line telling someone when to photograph the spot again, or None when it is already due.
+
+    A high-risk spot has a cadence of 0 (already due): the advice there is to
+    see a doctor, not to wait for another photo, so it says nothing extra.
+    """
+    days = cadence_days(risk_score, profile)
+    if days <= 0:
+        return None
+
+    line = f"Take a new photo of this spot in about {days} days, so the app can compare it with this one."
+    if has_elevated_risk_factors(profile):
+        line += " That is sooner than usual because of your personal risk factors."
+    return line

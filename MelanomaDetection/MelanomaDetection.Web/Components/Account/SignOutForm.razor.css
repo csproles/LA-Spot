@@ -10,7 +10,7 @@
 
 .signout-icon {
     display: inline-flex;
-    font-size: 17px;
+    font-size: 1.0625rem;
 }
 
 /* The compact variant the sidebar uses: text-only, inherits the nav's ink. */
@@ -21,7 +21,7 @@
     border-radius: var(--radius-control);
     color: inherit;
     font-family: var(--font-body);
-    font-size: 12.5px;
+    font-size: 0.88rem;
     font-weight: 600;
     cursor: pointer;
 }

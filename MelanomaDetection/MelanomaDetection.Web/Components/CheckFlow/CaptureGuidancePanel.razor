@@ -7,14 +7,14 @@
         @foreach (var tip in Tips)
         {
             <li class="guidance-item">
-                <span class="guidance-icon" aria-hidden="true">@tip.Icon</span>
+                <span class="guidance-icon" aria-hidden="true"><AppIcon Name="@tip.Icon" Size="lg" /></span>
                 <span class="guidance-text"><strong>@tip.Headline</strong> @tip.Detail</span>
             </li>
         }
         @if (IsRecheck)
         {
             <li class="guidance-item">
-                <span class="guidance-icon" aria-hidden="true">🔁</span>
+                <span class="guidance-icon" aria-hidden="true"><AppIcon Name="retry" Size="lg" /></span>
                 <span class="guidance-text">
                     <strong>Match the last photo.</strong>
                     Same distance and angle as before makes the change comparison much more reliable.
@@ -29,13 +29,13 @@
 
     private static readonly Tip[] Tips =
     {
-        new("☀️", "Bright, indirect light.",
+        new("sun", "Bright, indirect light.",
             "Daylight near a window is ideal. Avoid the flash — it washes out colour and adds glare."),
-        new("📏", "10–15 cm away, rear camera.",
+        new("ruler", "10–15 cm away, rear camera.",
             "Close enough to fill the frame, far enough to stay in focus. The front camera can't capture the detail needed."),
-        new("🎯", "One spot, centred, sharp.",
+        new("target", "One spot, centred, sharp.",
             "Tap to focus on the spot itself and hold still. Only one lesion in frame."),
-        new("🔬", "Include some surrounding skin.",
+        new("magnifier", "Include some surrounding skin.",
             "We calibrate size from the fine hair around the spot — without it, the diameter and size-change readings come back as \"not measured\"."),
     };
 

@@ -2,7 +2,7 @@
    this check under the spot. *@
 
 <div class="results-step">
-    <RiskBandPanel Score="Results.RiskScore" />
+    <RiskBandPanel Score="Results.RiskScore" ShowDoctorLink="IsSaved" />
 
     <ChangePanel Results="Results" />
 
@@ -14,13 +14,17 @@
             {
                 <span class="btn-spinner" aria-hidden="true"></span>
             }
-            @(IsSaved ? "Saved ✓" : IsSaving ? "Saving…" : "Save to this spot")
+            @if (IsSaved)
+            {
+                <AppIcon Name="check" Size="md" StrokeWidth="2.4" />
+            }
+            @(IsSaved ? "Saved" : IsSaving ? "Saving…" : "Save this check")
         </button>
         @if (IsSaved && Results.SpotId is not null)
         {
-            <a href="/spots/@Results.SpotId" class="btn btn-outline-primary">View spot timeline</a>
+            <a href="/spots/@Results.SpotId" class="btn btn-outline-primary">See this spot's history</a>
         }
-        <button type="button" class="btn btn-outline-primary" @onclick="OnStartAnother">Start another check</button>
+        <button type="button" class="btn btn-outline-primary" @onclick="OnStartAnother">Check another spot</button>
     </div>
 
     <BreakdownDisclosure Results="Results" ProcessingId="@ProcessingId" />

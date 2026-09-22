@@ -1,3 +1,27 @@
+/* Fonts are self-hosted (wwwroot/fonts, SIL Open Font License; see the OFL files
+   there). No request leaves for Google on any page but the map, which is faster on
+   a weak connection and keeps a health app from telling a third party who is using it.
+   Bricolage Grotesque carries headings; Atkinson Hyperlegible Next, designed by the
+   Braille Institute for low-vision readers, carries everything else. Latin subset only:
+   it covers English, Spanish and French accents; anything else falls back to system-ui. */
+@font-face {
+    font-family: "Bricolage Grotesque";
+    src: url("fonts/bricolage-grotesque-latin.woff2") format("woff2");
+    font-weight: 500 800;
+    font-style: normal;
+    font-display: swap;
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+    font-family: "Atkinson Hyperlegible Next";
+    src: url("fonts/atkinson-hyperlegible-next-latin.woff2") format("woff2");
+    font-weight: 400 700;
+    font-style: normal;
+    font-display: swap;
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
 /* Design tokens ----------------------------------------------------------
    Every colour in the app comes from this block; page and component
    stylesheets must not introduce new hex values.
@@ -10,11 +34,11 @@
    Ten colours are fixed by the brand -- bg, surface, both accents and both
    text tones, per mode. The rest are derived, and the derivations exist for a
    reason: the light-mode accent (#769382) is a mid-tone that cannot carry
-   text at AAA in either direction, and the light-mode surface (#C0C3B9) is
-   itself mid-tone, which caps how dark text on a card needs to be. So each
-   accent splits into a fill (`--color-accent`), an interactive fill that
-   carries text (`--color-accent-strong`), and an ink tone for when the accent
-   has to *be* text (`--color-accent-ink`).
+   text at AAA in either direction. So each accent splits into a fill
+   (`--color-accent`), an interactive fill that carries text
+   (`--color-accent-strong`), and an ink tone for when the accent has to *be*
+   text (`--color-accent-ink`). Cards are a warm near-white on the cream page,
+   so text has plenty of headroom on both.
 
    Text tones target WCAG AAA (7:1) against both the page and the card, not
    just AA -- see the ramp in the contrast notes below. Non-text targets
@@ -22,19 +46,17 @@
    disabled controls are exempt.
 
    Semantics: sage = calm/low risk/improving, amber = watch/moderate,
-   coral (accent-2) = concern/high risk/medical disclaimer. */
+   alert red = high risk, destructive actions and the medical disclaimer. */
 :root {
     color-scheme: light dark;
 
     --color-bg: light-dark(#F3EFE3, #12161A);
-    --color-surface: light-dark(#C0C3B9, #1E252B);
-    --color-surface-alt: light-dark(#D3D6CD, #262F36);
-    /* Nested zones sit *lighter* than the card in light mode, not darker:
-       small text lands on them constantly (badges, tracks, segmented
-       controls) and the card is already a mid-tone, so going darker would
-       leave no headroom for AAA text. */
-    --color-well: light-dark(#D7DAD1, #151A1F);
-    --color-field: light-dark(#F0ECE0, #161B20);
+    --color-surface: light-dark(#FFFDF8, #1E252B);
+    --color-surface-alt: light-dark(#F5F0E3, #262F36);
+    /* Nested zones (badges, tracks, segmented controls) sit slightly *darker*
+       than the card in light mode, so they read as pressed in. */
+    --color-well: light-dark(#EAE4D3, #151A1F);
+    --color-field: light-dark(#FFFEFB, #161B20);
 
     --color-border: light-dark(#7D8476, #3E4A54);
     --color-border-strong: light-dark(#565D51, #64727D);
@@ -100,16 +122,16 @@
     --color-bg-wash: light-dark(#E7E3D4, #171D23);
     /* The body diagram needs to read as a silhouette against a card, which
        neither the border nor the well tone is far enough from. */
-    --color-body-fill: light-dark(#E4E6DD, #3B454D);
-    --color-body-fill-back: light-dark(#CFD2C8, #2C353C);
+    --color-body-fill: light-dark(#DCE3D9, #3B454D);
+    --color-body-fill-back: light-dark(#C7D0C4, #2C353C);
     --skeleton-sheen: light-dark(rgba(255, 255, 255, 0.85), rgba(244, 246, 245, 0.08));
 
-    --radius-card: 15px;
-    --radius-control: 9px;
+    --radius-card: 20px;
+    --radius-control: 14px;
     --radius-pill: 999px;
 
-    --font-heading: "Manrope", system-ui, sans-serif;
-    --font-body: "Work Sans", system-ui, sans-serif;
+    --font-heading: "Bricolage Grotesque", system-ui, sans-serif;
+    --font-body: "Atkinson Hyperlegible Next", system-ui, sans-serif;
 }
 
 /* An explicit choice from the Theme control in Profile. Flipping
@@ -149,6 +171,11 @@
 
 :root[data-theme="light"] {
     --brand-logo: url('images/la-spot-logo-on-light.png');
+}
+
+html {
+    font-size: 106.25%;
+    -webkit-text-size-adjust: 100%;
 }
 
 html, body {
@@ -339,6 +366,30 @@ a:focus-visible, button:focus-visible {
     }
 }
 
+/* Big, friendly targets: every button is at least 48px tall and fully rounded,
+   which is what an older thumb on a bouncing phone needs. */
+.btn {
+    --bs-btn-border-radius: var(--radius-pill);
+    --bs-btn-padding-x: 1.4rem;
+    --bs-btn-padding-y: 0.6rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 3rem;
+}
+
+.btn-sm {
+    --bs-btn-padding-x: 1rem;
+    --bs-btn-padding-y: 0.4rem;
+    min-height: 2.75rem;
+}
+
+.form-control, .form-select {
+    min-height: 3rem;
+    border-radius: var(--radius-control);
+}
+
 .btn-primary, .btn-outline-primary, .btn-outline-danger {
     transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
@@ -442,14 +493,14 @@ a:focus-visible, button:focus-visible {
 .panel-title {
     font-family: var(--font-heading);
     font-weight: 700;
-    font-size: 17px;
+    font-size: 1.0625rem;
     color: var(--color-accent-ink);
     margin: 0 0 14px;
 }
 
 .text-muted-small {
     color: var(--color-text-muted);
-    font-size: 13px;
+    font-size: 0.88rem;
     margin: 0 0 12px;
 }
 
@@ -458,9 +509,12 @@ a:focus-visible, button:focus-visible {
     border: none;
     padding: 0;
     color: var(--color-accent-ink);
-    font-size: 13.5px;
+    font-size: 0.88rem;
     text-decoration: underline;
     width: fit-content;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
 }
 
 .result-actions {
@@ -469,10 +523,39 @@ a:focus-visible, button:focus-visible {
     gap: 12px;
 }
 
+/* Small controls keep their look but get a 44px hit area, so a thumb can find them. */
+.link-button, .back-link, .legal-link, .icon-button, .direction-toggle {
+    position: relative;
+}
+
+.link-button::after, .back-link::after, .legal-link::after, .icon-button::after,
+.direction-toggle::after, .body-dot::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: max(100%, 44px);
+    height: max(100%, 44px);
+    transform: translate(-50%, -50%);
+}
+
+.segmented-option {
+    min-height: 2.75rem;
+}
+
+.parish-select {
+    min-height: 3rem;
+}
+
+.signout-form button {
+    min-height: 2.75rem;
+}
+
 /* Soft diagonal wash + two-density dot grid, used behind the main content area */
 .app-background {
     position: relative;
     min-height: 100vh;
+    min-height: 100dvh;
     background:
         radial-gradient(circle, var(--dot-far) 1px, transparent 1.3px) 13px 13px / 26px 26px,
         radial-gradient(circle, var(--dot-near) 1px, transparent 1.3px) 0 0 / 26px 26px,
@@ -516,4 +599,80 @@ h1:focus {
 
 .form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
     text-align: start;
+}
+
+/* Interaction and type polish ---------------------------------------------
+   From the ui-ux-pro-max rules; each is here because the audit measured the gap. */
+
+/* Keyboard focus must not land behind the sticky top bar (phones) or the chat button. */
+html {
+    scroll-padding-top: 1rem;
+    scroll-padding-bottom: 5rem;
+}
+
+@media (max-width: 859px) {
+    html {
+        scroll-padding-top: 5.5rem;
+    }
+}
+
+/* Skip link: off-screen until it takes keyboard focus. */
+.skip-link {
+    position: fixed;
+    top: calc(8px + env(safe-area-inset-top));
+    left: 8px;
+    z-index: 2000;
+    padding: 0.75rem 1.25rem;
+    border-radius: var(--radius-pill);
+    background: var(--color-accent-strong);
+    color: var(--color-on-accent);
+    font-weight: 700;
+    text-decoration: none;
+    transform: translateY(-300%);
+    transition: transform 0.15s ease;
+}
+
+.skip-link:focus {
+    transform: none;
+}
+
+/* <main> takes programmatic focus from the skip link; it is not a control, so no ring. */
+main:focus {
+    outline: none;
+}
+
+/* Drops the ~300ms wait browsers add for a possible double-tap zoom. Pinch zoom still works. */
+a, button, input, select, textarea, summary, label, [role="button"] {
+    touch-action: manipulation;
+}
+
+/* Feedback within the tap itself. transform never moves neighbouring content. */
+.btn:active:not(:disabled),
+a.card-panel:active,
+button.card-panel:active,
+.history-card:active {
+    transform: scale(0.985);
+}
+
+/* Long words in a name or a note wrap instead of pushing the layout wider. */
+body {
+    overflow-wrap: break-word;
+}
+
+/* Short headings break evenly, and prose stays at a readable line length. 32em is about 73 characters of
+   prose in Atkinson; a `ch` limit would allow ~106, because this font's zero is unusually wide. */
+h1, h2, h3, h4 {
+    text-wrap: balance;
+}
+
+p {
+    max-width: 32em;
+    text-wrap: pretty;
+}
+
+/* Figures that change (scores, counts, dates) keep a fixed width, so nothing shifts as they update. */
+.risk-badge, .risk-band-score, .factor-row-value, .list-count, .due-spots-count, .region-count,
+.body-dot-count, .trend-summary-from, .trend-summary-to, .trend-summary-delta, .stepper-dot,
+.change-stat-value, .page-header-eyebrow, .history-date {
+    font-variant-numeric: tabular-nums;
 }

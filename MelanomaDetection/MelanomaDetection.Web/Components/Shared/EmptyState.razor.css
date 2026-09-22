@@ -11,12 +11,21 @@
 
 .empty-state-description {
     color: var(--color-text-muted);
-    font-size: 13px;
+    font-size: 0.88rem;
     margin: 0;
-    max-width: 62ch;
+    max-width: 32em;
     line-height: 1.5;
 }
 
 .empty-state-action {
     margin-top: 8px;
+}
+
+.empty-state-dog {
+    width: 72px;
+    height: 72px;
+    margin-bottom: 4px;
+    background-color: var(--color-accent-strong);
+    -webkit-mask: var(--brand-mascot) center / contain no-repeat;
+    mask: var(--brand-mascot) center / contain no-repeat;
 }

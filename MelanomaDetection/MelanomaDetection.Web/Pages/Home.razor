@@ -8,14 +8,16 @@
 <PageTitle>Home - LA Spot</PageTitle>
 
 <div class="home-page">
-    <PageHeader Eyebrow="@Today" Title="@Greeting" Subtitle="@Summary" Size="lg">
-        <Actions>
-            <a href="/check" class="btn btn-primary home-cta">
-                <AppIcon Name="plus" Size="md" StrokeWidth="2" />
-                New skin check
-            </a>
-        </Actions>
-    </PageHeader>
+    <section class="home-hero" aria-labelledby="home-greeting">
+        <p class="home-hero-eyebrow">@Today</p>
+        <h1 id="home-greeting" class="home-hero-title">@Greeting</h1>
+        <p class="home-hero-summary">@Summary</p>
+        <a href="/check" class="btn home-hero-cta">
+            <AppIcon Name="camera" Size="lg" StrokeWidth="2" />
+            Check a spot
+        </a>
+        <span class="home-hero-dog" aria-hidden="true"></span>
+    </section>
 
     <ErrorAlert Message="@LoadError" />
 
@@ -26,14 +28,12 @@
             <RiskProfilePromptCard />
         }
 
-        <DashboardStatGrid Spots="Spots" IsLoading="IsLoading" />
-
         @if (!IsLoading && Spots.Count == 0)
         {
             <EmptyState Title="Start tracking your first spot"
                         Description="Photograph a mole or spot you want to keep an eye on. Each spot gets its own timeline, so the next time you photograph it we can show you what changed."
                         ActionHref="/check"
-                        ActionText="Photograph a spot" />
+                        ActionText="Check a spot" />
         }
         else
         {
@@ -49,7 +49,7 @@
                         <a href="/spots" class="link-button">All spots</a>
                     </Trailing>
                     <Footer>
-                        Tap a region to see its spots. Colour shows the highest risk band in that region.
+                        Tap an area to see the spots there. A dot's color shows the highest risk in that area: green is low, amber is some, red is high.
                     </Footer>
                 </BodyMapPanel>
 
@@ -88,13 +88,13 @@
         {
             if (IsLoading || LoadError is not null || Spots.Count == 0)
             {
-                return "Keep an eye on the spots that matter, and see how they change over time.";
+                return "Take a photo of a spot on your skin. We'll measure it and tell you, in plain words, if it's worth showing a doctor.";
             }
             return DueSpots.Count switch
             {
-                0 => "Everything you're tracking is up to date.",
-                1 => "One spot is due for a recheck.",
-                var due => $"{due} spots are due for a recheck.",
+                0 => "You're all caught up. No spot needs a new photo right now.",
+                1 => "One spot is ready for a new photo.",
+                var due => $"{due} spots are ready for a new photo.",
             };
         }
     }

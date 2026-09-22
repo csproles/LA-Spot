@@ -42,11 +42,11 @@
 
 .timeline-date {
     font-weight: 600;
-    font-size: 13.5px;
+    font-size: 0.88rem;
 }
 
 .timeline-meta {
-    font-size: 12px;
+    font-size: 0.88rem;
     color: var(--color-text-muted);
 }
 
@@ -56,7 +56,7 @@
     border-radius: 50%;
     background: var(--color-accent-strong);
     color: var(--color-on-accent);
-    font-size: 12px;
+    font-size: 0.88rem;
     display: flex;
     align-items: center;
     justify-content: center;

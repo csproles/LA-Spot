@@ -6,11 +6,19 @@
     <p class="risk-band-label">@RiskBands.Label(Band)</p>
     <p class="risk-band-score">@Score.ToString("F0") <span class="risk-band-score-total">/100</span></p>
     <p class="risk-band-recommendation">@RiskBands.Recommendation(Band)</p>
+    @if (ShowDoctorLink && Band != "low")
+    {
+        <a href="/map" class="btn @(Band == "high" ? "btn-primary" : "btn-outline-primary") risk-band-action">Find a skin doctor</a>
+    }
 </div>
 
 @code {
     [Parameter, EditorRequired]
     public double Score { get; set; }
+
+    /// <summary>Offer "Find a skin doctor". Off while a check is unsaved, so leaving the page never loses it.</summary>
+    [Parameter]
+    public bool ShowDoctorLink { get; set; }
 
     private string Band => RiskBands.Band(Score);
 }

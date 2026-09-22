@@ -13,7 +13,7 @@
         <BackLink Href="@($"/spots/{AnalysisResults.SpotId}")" Text="Back to spot timeline" />
     }
 
-    <PageHeader Eyebrow="SAVED CHECK" Title="Analysis details" Size="lg" />
+    <PageHeader Eyebrow="SAVED CHECK" Title="Your saved check" Size="lg" />
 
     <MedicalDisclaimer Role="alert"
                        Message="Educational use only. This is not a substitute for professional medical diagnosis. Consult a dermatologist." />
@@ -34,7 +34,7 @@
     }
     else if (AnalysisResults is not null)
     {
-        <RiskBandPanel Score="AnalysisResults.RiskScore" />
+        <RiskBandPanel Score="AnalysisResults.RiskScore" ShowDoctorLink="true" />
 
         <ChangePanel Results="AnalysisResults" />
 

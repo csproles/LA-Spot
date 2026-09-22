@@ -1,5 +1,6 @@
 .auth-shell {
     min-height: 100vh;
+    min-height: 100dvh;
     display: flex;
     flex-direction: column;
 }
@@ -10,7 +11,7 @@
     flex-direction: column;
     align-items: center;
     gap: 28px;
-    padding: 40px 16px 32px;
+    padding: max(40px, calc(env(safe-area-inset-top) + 24px)) max(16px, env(safe-area-inset-right)) max(32px, calc(env(safe-area-inset-bottom) + 16px)) max(16px, env(safe-area-inset-left));
     width: 100%;
     max-width: 440px;
     margin: 0 auto;
@@ -53,15 +54,29 @@
     box-sizing: border-box;
     display: none;
     left: 0;
-    padding: 0.6rem 1.25rem 0.7rem 1.25rem;
+    padding: 0.6rem 1.25rem calc(0.7rem + env(safe-area-inset-bottom)) 1.25rem;
     position: fixed;
+    /* The banner is always light yellow; take text colours from its own (light) scheme so it stays readable in dark mode. */
+    color: CanvasText;
     width: 100%;
     z-index: 1000;
 }
 
+    #blazor-error-ui a {
+        color: LinkText;
+    }
+
     #blazor-error-ui .dismiss {
         cursor: pointer;
         position: absolute;
-        right: 0.75rem;
-        top: 0.5rem;
+        right: 0.25rem;
+        top: 0.1rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 44px;
+        min-height: 44px;
+        background: none;
+        border: 0;
+        color: inherit;
     }

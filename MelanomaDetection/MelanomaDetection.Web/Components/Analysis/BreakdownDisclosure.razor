@@ -5,7 +5,7 @@
 {
     <div class="card-panel">
         <button type="button" class="link-button breakdown-collapse" @onclick="() => IsOpen = false">
-            Hide full breakdown ▲
+            Hide details <AppIcon Name="chevron-up" Size="sm" />
         </button>
         <AnalysisBreakdown Results="Results" ProcessingId="@ProcessingId" />
     </div>
@@ -17,9 +17,9 @@ else
             <AppIcon Name="gallery" Size="hero" />
         </span>
         <span class="detail-link-text">
-            <span class="detail-link-title">See the full breakdown</span>
+            <span class="detail-link-title">See how we got this</span>
             <span class="detail-link-subtitle">
-                Every processed image, the ABCD visual evidence, and an optional AI-generated explanation.
+                The photo steps, what we measured, and an optional summary in plain words.
             </span>
         </span>
         <span class="detail-link-chevron">

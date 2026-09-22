@@ -534,7 +534,13 @@ def explain_results(processing_id):
         return jsonify({"explanation": results["explanation"]})
 
     try:
-        explanation = explain_findings(results["abcde_scores"])
+        explanation = explain_findings(
+            results["abcde_scores"],
+            risk_score=results["risk_score"],
+            profile=store.get_profile(g.user_id),
+            evolving=results["abcde_scores"].get("evolving"),
+            symptoms=results.get("symptoms", []),
+        )
     except Exception:
         app.logger.exception("LLM explanation request failed")
         return jsonify({

@@ -36,7 +36,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 12px;
+    font-size: 0.88rem;
     font-weight: 700;
     background: var(--color-well);
     color: var(--color-text-muted);
@@ -59,7 +59,7 @@
 }
 
 .stepper-label {
-    font-size: 12.5px;
+    font-size: 0.88rem;
     font-weight: 600;
     color: var(--color-text-faint);
     white-space: nowrap;

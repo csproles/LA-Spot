@@ -12,7 +12,7 @@
 
 .page-header-eyebrow {
     text-transform: uppercase;
-    font-size: 12.5px;
+    font-size: 0.88rem;
     letter-spacing: 0.04em;
     color: var(--color-text-faint);
     margin: 0 0 2px;
@@ -27,22 +27,22 @@
 }
 
 .page-header-title-lg {
-    font-size: 30px;
+    font-size: 1.875rem;
 }
 
 .page-header-title-md {
-    font-size: 26px;
+    font-size: 1.625rem;
 }
 
 .page-header-subtitle {
     color: var(--color-text-muted);
-    font-size: 15px;
+    font-size: 0.9375rem;
     margin: 4px 0 0;
 }
 
 .page-header-details {
     color: var(--color-text-muted);
-    font-size: 14px;
+    font-size: 0.88rem;
     margin-top: 2px;
 }
 

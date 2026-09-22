@@ -38,12 +38,12 @@
 
 .detail-link-title {
     font-weight: 700;
-    font-size: 14.5px;
+    font-size: 0.9062rem;
     color: var(--color-accent-ink);
 }
 
 .detail-link-subtitle {
-    font-size: 12.5px;
+    font-size: 0.88rem;
     color: var(--color-text-muted);
 }
 

@@ -13,14 +13,14 @@
 .change-empty-title {
     margin: 0 0 4px;
     font-weight: 700;
-    font-size: 14px;
+    font-size: 0.88rem;
     color: var(--color-accent-ink);
 }
 
 .change-empty-body {
     margin: 0;
     color: var(--color-text-muted);
-    font-size: 13px;
+    font-size: 0.88rem;
     line-height: 1.5;
 }
 
@@ -49,7 +49,7 @@
 
 .change-caveat {
     margin: 0;
-    font-size: 12.5px;
+    font-size: 0.88rem;
     color: var(--color-text-muted);
     line-height: 1.5;
 }

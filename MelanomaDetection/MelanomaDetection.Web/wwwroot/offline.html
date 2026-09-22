@@ -2,31 +2,53 @@
 <html lang="en">
 <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>You're offline - LA Spot</title>
     <link rel="icon" type="image/png" href="favicon.png" />
     <style>
+        @font-face {
+            font-family: "Bricolage Grotesque";
+            src: url("fonts/bricolage-grotesque-latin.woff2") format("woff2");
+            font-weight: 500 800;
+            font-display: swap;
+            unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+        }
+
+        @font-face {
+            font-family: "Atkinson Hyperlegible Next";
+            src: url("fonts/atkinson-hyperlegible-next-latin.woff2") format("woff2");
+            font-weight: 400 700;
+            font-display: swap;
+            unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+        }
+
         :root {
             color-scheme: light dark;
+        }
+
+        html {
+            font-size: 106.25%;
+            -webkit-text-size-adjust: 100%;
         }
 
         body {
             margin: 0;
             min-height: 100vh;
+            min-height: 100dvh;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-family: "Work Sans", system-ui, sans-serif;
+            font-family: "Atkinson Hyperlegible Next", system-ui, sans-serif;
             background: light-dark(#F3EFE3, #12161A);
             color: light-dark(#1F2937, #F4F6F5);
-            padding: 24px;
+            padding: max(24px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left));
         }
 
         .card {
-            max-width: 360px;
+            max-width: 24rem;
             text-align: center;
-            background: light-dark(#FFFFFF, #1E252B);
-            border-radius: 15px;
+            background: light-dark(#FFFDF8, #1E252B);
+            border-radius: 20px;
             box-shadow: 0 1px 2px light-dark(rgba(47, 74, 60, 0.1), rgba(0, 0, 0, 0.3));
             padding: 32px 28px;
         }
@@ -43,28 +65,29 @@
         }
 
         h1 {
-            font-family: "Manrope", system-ui, sans-serif;
-            font-size: 19px;
+            font-family: "Bricolage Grotesque", system-ui, sans-serif;
+            font-size: 1.6rem;
             margin: 0 0 8px;
             color: light-dark(#2F4A3C, #9EC2AE);
         }
 
         p {
-            font-size: 14px;
+            font-size: 1rem;
             color: light-dark(#24323F, #C2CAD1);
-            margin: 0 0 20px;
-            line-height: 1.5;
+            margin: 0 0 24px;
+            line-height: 1.55;
         }
 
         button {
             font-family: inherit;
             font-weight: 700;
-            font-size: 14px;
+            font-size: 1rem;
             color: light-dark(#F6F8F5, #0B0F13);
             background: light-dark(#2F4A3C, #9EC2AE);
             border: none;
-            border-radius: 9px;
-            padding: 10px 20px;
+            border-radius: 999px;
+            min-height: 3rem;
+            padding: 0.6rem 1.75rem;
             cursor: pointer;
         }
 
@@ -77,7 +100,7 @@
     <div class="card">
         <div class="mark" aria-hidden="true"></div>
         <h1>You're offline</h1>
-        <p>LA Spot needs a live connection to analyze photos and load your data. Reconnect and try again.</p>
+        <p>LA Spot needs an internet connection to check photos and load your spots. If your signal is weak, move to a spot with better service, then tap Retry.</p>
         <button type="button" onclick="location.reload()">Retry</button>
     </div>
 </body>

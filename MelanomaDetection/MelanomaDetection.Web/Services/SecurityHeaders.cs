@@ -56,6 +56,22 @@ public static class SecurityHeaders
                 headers.XContentTypeOptions = "nosniff";
                 headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
                 headers["Permissions-Policy"] = "camera=(self), microphone=(), geolocation=(), payment=()";
+
+                // Every page here reflects request-time session state -- even the
+                // "static" sign-in page embeds an antiforgery token bound to whoever
+                // is signed in right now. Without this, the browser's back/forward
+                // cache can resurrect an old copy of a page instead of asking the
+                // server again; posting its stale embedded token then fails with
+                // "meant for a different claims-based user than the current user"
+                // (caught in Program.cs as a fallback for whatever this misses).
+                // MapStaticAssets sets its own long-lived, fingerprinted caching for
+                // wwwroot files earlier in the pipeline, so only apply this where
+                // nothing has already set Cache-Control.
+                if (headers.CacheControl.Count == 0)
+                {
+                    headers.CacheControl = "no-store";
+                }
+
                 return Task.CompletedTask;
             });
 

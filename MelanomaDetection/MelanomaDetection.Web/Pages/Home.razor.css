@@ -6,13 +6,97 @@
     gap: 20px;
 }
 
-.home-cta {
-    display: inline-flex;
+/* The welcome: the app's deep forest green, a plain sentence, and one big action.
+   Colours come from the nav tokens because that pairing is already contrast-checked. */
+.home-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+        "eyebrow dog"
+        "title title"
+        "summary summary"
+        "cta cta";
     align-items: center;
-    gap: 8px;
-    padding: 10px 18px;
+    gap: 6px 16px;
+    padding: 24px 22px 26px;
+    border-radius: var(--radius-card);
+    border: 1px solid var(--color-border-subtle);
+    background: var(--color-nav-bg);
+    color: var(--color-nav-text);
+}
+
+.home-hero-eyebrow {
+    grid-area: eyebrow;
+    margin: 0;
+    font-size: 0.88rem;
     font-weight: 700;
-    border-radius: var(--radius-pill);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.home-hero-title {
+    grid-area: title;
+    margin: 4px 0 0;
+    font-family: var(--font-heading);
+    font-weight: 800;
+    font-size: clamp(2.1rem, 7vw, 3.25rem);
+    line-height: 1.05;
+    color: var(--color-nav-text);
+}
+
+.home-hero-summary {
+    grid-area: summary;
+    margin: 6px 0 0;
+    max-width: 34ch;
+    font-size: 1.15rem;
+    line-height: 1.45;
+}
+
+.home-hero-cta {
+    --bs-btn-color: var(--color-nav-active-text);
+    --bs-btn-bg: var(--color-nav-active-bg);
+    --bs-btn-border-color: var(--color-nav-active-bg);
+    --bs-btn-hover-color: var(--color-nav-active-text);
+    --bs-btn-hover-bg: var(--color-surface);
+    --bs-btn-hover-border-color: var(--color-surface);
+    --bs-btn-active-color: var(--color-nav-active-text);
+    --bs-btn-active-bg: var(--color-surface);
+    --bs-btn-active-border-color: var(--color-surface);
+    grid-area: cta;
+    justify-self: start;
+    margin-top: 14px;
+    min-height: 3.5rem;
+    padding-inline: 1.75rem;
+    font-size: 1.15rem;
+    font-weight: 700;
+}
+
+/* The mascot, drawn as a mask in the button's own colour so it never needs a plate. */
+.home-hero-dog {
+    grid-area: dog;
+    width: 56px;
+    height: 56px;
+    background-color: var(--color-nav-active-bg);
+    -webkit-mask: var(--brand-mascot) center / contain no-repeat;
+    mask: var(--brand-mascot) center / contain no-repeat;
+}
+
+@media (min-width: 700px) {
+    .home-hero {
+        grid-template-columns: minmax(0, 1fr) 190px;
+        grid-template-areas:
+            "eyebrow dog"
+            "title dog"
+            "summary dog"
+            "cta dog";
+        padding: 32px 36px;
+    }
+
+    .home-hero-dog {
+        width: 170px;
+        height: 170px;
+        justify-self: end;
+    }
 }
 
 .home-grid {

@@ -4,6 +4,7 @@ using MelanomaDetection.Web.Services;
 using MelanomaDetection.Web.Services.Account;
 using MelanomaDetection.Web.Services.Chat;
 using MelanomaDetection.Web.Services.RateLimiting;
+using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.HttpOverrides;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -99,6 +100,28 @@ if (behindProxy)
 }
 
 app.UseSkinCheckSecurityHeaders();
+
+// A stale page -- almost always the browser's back/forward cache showing an
+// old sign-in, sign-out, or delete-account form -- carries an antiforgery
+// token bound to whoever was signed in when that page was rendered. If the
+// session has since changed (signed in, signed out, the demo account got
+// swept), posting that stale form throws here instead of silently acting
+// under the wrong identity. Cache-Control: no-store (see SecurityHeaders)
+// stops the browser from resurrecting the stale page in the first place;
+// this is the fallback for whatever slips through that anyway (multiple
+// tabs, multiple devices). Registered this early so it wraps every later
+// middleware, including UseAntiforgery and the endpoints themselves.
+app.Use(async (context, next) =>
+{
+    try
+    {
+        await next();
+    }
+    catch (Exception ex) when (ex is AntiforgeryValidationException || ex.InnerException is AntiforgeryValidationException)
+    {
+        context.Response.Redirect("/login?status=session-expired");
+    }
+});
 
 await app.MigrateAccountsDatabaseAsync();
 

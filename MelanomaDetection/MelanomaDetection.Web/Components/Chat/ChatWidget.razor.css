@@ -1,7 +1,7 @@
 .chat-launcher {
     position: fixed;
-    right: 20px;
-    bottom: 20px;
+    right: max(20px, env(safe-area-inset-right));
+    bottom: max(20px, env(safe-area-inset-bottom));
     width: 52px;
     height: 52px;
     border-radius: 50%;
@@ -11,7 +11,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 22px;
+    font-size: 1.375rem;
     box-shadow: var(--shadow-lifted);
     cursor: pointer;
     z-index: 25;

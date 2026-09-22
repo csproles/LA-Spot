@@ -21,19 +21,19 @@
 
 .compare-label {
     font-weight: 600;
-    font-size: 13.5px;
+    font-size: 0.88rem;
     color: var(--color-text);
     margin: 0;
 }
 
 .compare-date {
     color: var(--color-text-faint);
-    font-size: 12px;
+    font-size: 0.88rem;
     margin: 0;
 }
 
 .compare-score {
-    font-size: 13px;
+    font-size: 0.88rem;
     color: var(--color-text-muted);
     margin: 4px 0 0;
 }

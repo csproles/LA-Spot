@@ -10,7 +10,7 @@
     background: none;
     padding: 6px 14px;
     border-radius: var(--radius-pill);
-    font-size: 13px;
+    font-size: 0.88rem;
     font-weight: 500;
     color: var(--color-text-muted);
     transition: background-color 0.2s ease, color 0.2s ease;

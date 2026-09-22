@@ -5,7 +5,7 @@
 }
 
 .photo-comparison-arrow {
-    font-size: 20px;
-    color: var(--color-border-strong);
+    display: inline-flex;
+    color: var(--color-text-muted);
     flex-shrink: 0;
 }

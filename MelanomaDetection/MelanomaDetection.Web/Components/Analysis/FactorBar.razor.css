@@ -10,7 +10,7 @@
     display: flex;
     justify-content: space-between;
     gap: 12px;
-    font-size: 13.5px;
+    font-size: 0.88rem;
     margin-bottom: 6px;
 }
 
@@ -21,7 +21,7 @@
 
 .factor-row-detail {
     color: var(--color-text-muted);
-    font-size: 13px;
+    font-size: 0.88rem;
     margin: 8px 0 0;
 }
 

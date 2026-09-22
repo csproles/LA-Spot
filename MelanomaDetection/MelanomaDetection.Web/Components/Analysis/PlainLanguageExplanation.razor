@@ -4,7 +4,7 @@
 @inject ImageProcessingService ImageProcessingService
 
 <div class="card-panel">
-    <h2 class="panel-title">Plain-language explanation</h2>
+    <h2 class="panel-title">In plain words</h2>
 
     @if (IsGenerating)
     {
@@ -20,11 +20,10 @@
     {
         <ErrorAlert Message="@GenerateError" />
         <p class="text-muted-small">
-            Get an AI-generated, plain-language summary of these findings. This calls
-            an external AI service and is not itself a diagnosis.
+            Want this in everyday words? We'll ask an outside AI service to write a short summary. It is not a diagnosis.
         </p>
         <button type="button" class="btn btn-outline-primary" @onclick="Generate">
-            Get AI explanation
+            Explain this in plain words
         </button>
     }
 </div>

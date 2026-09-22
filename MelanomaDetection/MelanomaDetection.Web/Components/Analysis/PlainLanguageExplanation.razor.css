@@ -1,6 +1,6 @@
 .explanation-text {
     white-space: pre-line;
     margin: 0;
-    font-size: 14px;
+    font-size: 0.88rem;
     color: var(--color-text);
 }

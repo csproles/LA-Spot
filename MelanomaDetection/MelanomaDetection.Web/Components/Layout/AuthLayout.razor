@@ -3,7 +3,8 @@
 @inherits LayoutComponentBase
 
 <div class="auth-shell app-background">
-    <main class="auth-main">
+    <a class="skip-link" href="#main-content">Skip to main content</a>
+    <main id="main-content" tabindex="-1" class="auth-main">
         <a class="auth-brand" href="/">
             <span class="auth-brand-mark" aria-hidden="true"></span>
             <span class="auth-brand-logo" role="img" aria-label="LA Spot"></span>
@@ -20,5 +21,5 @@
 <div id="blazor-error-ui" data-nosnippet>
     An unhandled error has occurred.
     <a href="." class="reload">Reload</a>
-    <span class="dismiss">🗙</span>
+    <button type="button" class="dismiss" aria-label="Dismiss this message"><AppIcon Name="close" Size="md" /></button>
 </div>

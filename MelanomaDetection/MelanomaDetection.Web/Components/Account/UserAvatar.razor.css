@@ -22,10 +22,10 @@
     color: var(--color-accent-ink);
     font-family: var(--font-heading);
     font-weight: 700;
-    font-size: 12px;
+    font-size: 0.88rem;
     letter-spacing: 0.02em;
 }
 
 .user-avatar-lg.user-avatar-initials {
-    font-size: 20px;
+    font-size: 1.25rem;
 }

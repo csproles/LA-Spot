@@ -17,7 +17,7 @@
 
 .chat-panel-title {
     font-family: var(--font-heading);
-    font-size: 15px;
+    font-size: 0.9375rem;
     font-weight: 700;
     color: var(--color-text);
     margin: 0;
@@ -33,7 +33,7 @@
     border: none;
     background: transparent;
     color: var(--color-text-muted);
-    font-size: 18px;
+    font-size: 1.125rem;
     cursor: pointer;
     transition: background-color 0.15s ease;
 }
@@ -48,6 +48,7 @@
 @media (min-width: 860px) {
     .chat-panel {
         height: 100vh;
+        height: 100dvh;
         position: sticky;
         top: 0;
     }

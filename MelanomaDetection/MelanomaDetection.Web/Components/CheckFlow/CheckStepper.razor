@@ -7,7 +7,16 @@
     @foreach (var (step, label, number) in Steps)
     {
         <li class="stepper-step @StateClass(step)">
-            <span class="stepper-dot">@(step < DisplayStep ? "✓" : number.ToString())</span>
+            <span class="stepper-dot">
+                @if (step < DisplayStep)
+                {
+                    <AppIcon Name="check" Size="sm" StrokeWidth="2.6" />
+                }
+                else
+                {
+                    @number
+                }
+            </span>
             <span class="stepper-label">@label</span>
         </li>
     }

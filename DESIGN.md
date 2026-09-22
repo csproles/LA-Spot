@@ -14,13 +14,13 @@ colors:
   app-bg-dark: "#12161A"
   app-bg-wash: "#E7E3D4"
   app-bg-wash-dark: "#171D23"
-  app-surface: "#C0C3B9"
+  app-surface: "#FFFDF8"
   app-surface-dark: "#1E252B"
-  app-surface-alt: "#D3D6CD"
+  app-surface-alt: "#F5F0E3"
   app-surface-alt-dark: "#262F36"
-  app-well: "#D7DAD1"
+  app-well: "#EAE4D3"
   app-well-dark: "#151A1F"
-  app-field: "#F0ECE0"
+  app-field: "#FFFEFB"
   app-field-dark: "#161B20"
   # Borders
   app-border: "#7D8476"
@@ -92,9 +92,9 @@ colors:
   app-nav-active-text: "#22322A"
   app-nav-active-text-dark: "#0B0F13"
   # Body diagram
-  app-body-fill: "#E4E6DD"
+  app-body-fill: "#DCE3D9"
   app-body-fill-dark: "#3B454D"
-  app-body-fill-back: "#CFD2C8"
+  app-body-fill-back: "#C7D0C4"
   app-body-fill-back-dark: "#2C353C"
 
   # Nexus Dev Days page: three colours. Ground and ink swap between themes;
@@ -107,17 +107,20 @@ colors:
   nexus-on-accent: "#1E3A2B"
   nexus-figure-line: "#F1F0E2"
 typography:
-  # App: Manrope for headings, Work Sans for everything else.
-  app-page-title-lg: { fontFamily: Manrope, fontSize: 30px, fontWeight: 800, lineHeight: 1.2 }
-  app-page-title-md: { fontFamily: Manrope, fontSize: 26px, fontWeight: 800, lineHeight: 1.2 }
-  app-panel-title: { fontFamily: Manrope, fontSize: 17px, fontWeight: 700, lineHeight: 1.2 }
-  app-subtitle: { fontFamily: Work Sans, fontSize: 15px, fontWeight: 400, lineHeight: 1.5 }
-  app-body: { fontFamily: Work Sans, fontSize: 1rem, fontWeight: 400, lineHeight: 1.5 }
-  app-detail: { fontFamily: Work Sans, fontSize: 14px, fontWeight: 400, lineHeight: 1.5 }
-  app-caption: { fontFamily: Work Sans, fontSize: 13px, fontWeight: 400, lineHeight: 1.5 }
-  app-eyebrow: { fontFamily: Work Sans, fontSize: 12.5px, fontWeight: 600, lineHeight: 1.5, letterSpacing: 0.04em }
-  app-badge: { fontFamily: Work Sans, fontSize: 11.5px, fontWeight: 700, lineHeight: 1.5 }
-  app-button: { fontFamily: Work Sans, fontSize: 1rem, fontWeight: 600, lineHeight: 1.5 }
+  # App: Bricolage Grotesque for headings, Atkinson Hyperlegible Next for everything else.
+  # Every size is rem; the root is 106.25%, so 1rem is 17px on screen and nothing renders under about 15px
+  # (the exceptions are pill counters and the phone nav labels).
+  app-hero-title: { fontFamily: Bricolage Grotesque, fontSize: 3.25rem, fontWeight: 800, lineHeight: 1.05 }
+  app-hero-summary: { fontFamily: Atkinson Hyperlegible Next, fontSize: 1.15rem, fontWeight: 400, lineHeight: 1.45 }
+  app-page-title-lg: { fontFamily: Bricolage Grotesque, fontSize: 1.875rem, fontWeight: 800, lineHeight: 1.2 }
+  app-page-title-md: { fontFamily: Bricolage Grotesque, fontSize: 1.625rem, fontWeight: 800, lineHeight: 1.2 }
+  app-panel-title: { fontFamily: Bricolage Grotesque, fontSize: 1.0625rem, fontWeight: 700, lineHeight: 1.2 }
+  app-subtitle: { fontFamily: Atkinson Hyperlegible Next, fontSize: 0.9375rem, fontWeight: 400, lineHeight: 1.5 }
+  app-body: { fontFamily: Atkinson Hyperlegible Next, fontSize: 1rem, fontWeight: 400, lineHeight: 1.5 }
+  app-detail: { fontFamily: Atkinson Hyperlegible Next, fontSize: 0.88rem, fontWeight: 400, lineHeight: 1.5 }
+  app-eyebrow: { fontFamily: Atkinson Hyperlegible Next, fontSize: 0.88rem, fontWeight: 600, lineHeight: 1.5, letterSpacing: 0.04em }
+  app-badge: { fontFamily: Atkinson Hyperlegible Next, fontSize: 0.8125rem, fontWeight: 700, lineHeight: 1.5 }
+  app-button: { fontFamily: Atkinson Hyperlegible Next, fontSize: 1rem, fontWeight: 600, lineHeight: 1.5 }
   # Nexus page: Bodoni Moda for display, DM Mono for everything else.
   # Fluid sizes are written at their maximum; the clamp() ranges are in the Typography section.
   nexus-h1: { fontFamily: Bodoni Moda, fontSize: 7.2rem, fontWeight: 500, lineHeight: 0.94, letterSpacing: -0.025em }
@@ -130,9 +133,9 @@ typography:
   nexus-label: { fontFamily: DM Mono, fontSize: 0.72rem, fontWeight: 400, lineHeight: 1.7, letterSpacing: 0.14em }
   nexus-button: { fontFamily: DM Mono, fontSize: 0.9rem, fontWeight: 500, lineHeight: 1.7, letterSpacing: 0.1em }
 rounded:
-  app-control: 9px
+  app-control: 14px
   app-tile: 12px
-  app-card: 15px
+  app-card: 20px
   app-pill: 999px
   nexus-square: 0px
 spacing:
@@ -142,7 +145,7 @@ spacing:
   app-gutter-desktop: 40px
   app-card-padding-y: 18px
   app-card-padding-x: 20px
-  app-nav-width: 168px
+  app-nav-width: 184px
   nexus-gutter-min: 16px
   nexus-gutter-max: 40px
   nexus-rail: 9.5rem
@@ -179,8 +182,9 @@ components:
     backgroundColor: "{colors.primary}"
     textColor: "{colors.app-on-accent}"
     typography: "{typography.app-button}"
-    rounded: 0.375rem
-    padding: 0.375rem 0.75rem
+    rounded: "{rounded.app-pill}"
+    padding: 0.6rem 1.4rem
+    height: 3rem
   app-button-primary-dark:
     backgroundColor: "{colors.app-accent-strong-dark}"
     textColor: "{colors.app-on-accent-dark}"
@@ -200,8 +204,9 @@ components:
     backgroundColor: "{colors.app-bg}"
     textColor: "{colors.app-accent-ink}"
     typography: "{typography.app-button}"
-    rounded: 0.375rem
-    padding: 0.375rem 0.75rem
+    rounded: "{rounded.app-pill}"
+    padding: 0.6rem 1.4rem
+    height: 3rem
   app-button-outline-dark:
     backgroundColor: "{colors.app-bg-dark}"
     textColor: "{colors.app-accent-ink-dark}"
@@ -228,14 +233,15 @@ components:
   app-field:
     backgroundColor: "{colors.app-field}"
     textColor: "{colors.app-text}"
-    rounded: 0.375rem
+    rounded: "{rounded.app-control}"
+    height: 3rem
   app-field-dark:
     backgroundColor: "{colors.app-field-dark}"
     textColor: "{colors.app-text-dark}"
   app-nav:
     backgroundColor: "{colors.app-nav-bg}"
     textColor: "{colors.app-nav-text}"
-    width: 168px
+    width: 184px
   app-nav-dark:
     backgroundColor: "{colors.app-nav-bg-dark}"
     textColor: "{colors.app-nav-text-dark}"
@@ -253,6 +259,34 @@ components:
   app-nav-primary-mark-active-dark:
     backgroundColor: "{colors.app-warn-dark}"
     textColor: "{colors.app-on-warn-dark}"
+  app-home-hero:
+    backgroundColor: "{colors.app-nav-bg}"
+    textColor: "{colors.app-nav-text}"
+    typography: "{typography.app-hero-summary}"
+    rounded: "{rounded.app-card}"
+    padding: 24px 22px
+  app-home-hero-dark:
+    backgroundColor: "{colors.app-nav-bg-dark}"
+    textColor: "{colors.app-nav-text-dark}"
+  app-home-hero-button:
+    backgroundColor: "{colors.app-nav-active-bg}"
+    textColor: "{colors.app-nav-active-text}"
+    typography: "{typography.app-button}"
+    rounded: "{rounded.app-pill}"
+    height: 3.5rem
+    padding: 0 1.75rem
+  app-home-hero-button-dark:
+    backgroundColor: "{colors.app-nav-active-bg-dark}"
+    textColor: "{colors.app-nav-active-text-dark}"
+  app-skip-link:
+    backgroundColor: "{colors.app-accent-strong}"
+    textColor: "{colors.app-on-accent}"
+    typography: "{typography.app-button}"
+    rounded: "{rounded.app-pill}"
+    padding: 0.75rem 1.25rem
+  app-skip-link-dark:
+    backgroundColor: "{colors.app-accent-strong-dark}"
+    textColor: "{colors.app-on-accent-dark}"
   app-status-banner:
     backgroundColor: "{colors.app-accent-soft}"
     textColor: "{colors.app-accent-ink}"
@@ -371,7 +405,7 @@ The values here were read from the code. When code and this file disagree, the c
 
 ### App: LA Spot
 
-The working product: a Blazor Server app for photographing a skin spot, getting a preliminary ABCDE read, and tracking spots over time. The feeling is calm, private and clinical-warm: sage and forest greens on a bone ground, with amber for "watch" and a brick-red alert for high risk and the medical disclaimer. It has a light and a dark theme, both declared once per token with `light-dark()`, and text is held to WCAG AAA (7:1) against both the page and the cards.
+The working product: a Blazor Server app for photographing a skin spot, getting a preliminary ABCDE read, and tracking spots over time. The feeling is calm, private and plainly friendly: sage and forest greens, airy near-white cards on a warm cream page, amber for "watch" and a brick-red alert for high risk and the medical disclaimer. It is written for every age and comfort level with technology, including people on slow phones and weak signal in rural areas: big text, big targets, plain words. It has a light and a dark theme, both declared once per token with `light-dark()`, and text tones target WCAG AAA (7:1).
 
 Source of truth: `MelanomaDetection/MelanomaDetection.Web/wwwroot/app.css`. Its own header states the rule this file inherits: *every colour comes from the token block; page and component stylesheets must not introduce new hex values.*
 
@@ -385,9 +419,9 @@ Source: the published page at `https://claude.ai/artifact/Ag3gQzDNgojUTFiDmTb1G8
 
 ### App
 
-Ten colours are fixed by the brand (background, surface, both accents, both text tones, per theme). The rest are derived. The light-mode sage accent is a mid-tone that cannot carry text at AAA, so each accent splits into a **fill** (`accent`), an **interactive fill that carries text** (`accent-strong`), and an **ink** for when the accent has to be text (`accent-ink`). Light value first, then dark:
+Ten colours are fixed by the brand (background, surface, both accents, both text tones, per theme). The rest are derived. The light-mode sage accent is a mid-tone that cannot carry text at AAA, so each accent splits into a **fill** (`accent`), an **interactive fill that carries text** (`accent-strong`), and an **ink** for when the accent has to be text (`accent-ink`). Cards are a warm near-white on the cream page, so text has room to spare, and nested zones (`well`) sit slightly darker than the card so they read as pressed in. Light value first, then dark:
 
-- **Ground and surfaces:** bg `#F3EFE3` / `#12161A` · bg-wash `#E7E3D4` / `#171D23` · surface `#C0C3B9` / `#1E252B` · surface-alt `#D3D6CD` / `#262F36` · well `#D7DAD1` / `#151A1F` · field `#F0ECE0` / `#161B20`
+- **Ground and surfaces:** bg `#F3EFE3` / `#12161A` · bg-wash `#E7E3D4` / `#171D23` · surface `#FFFDF8` / `#1E252B` · surface-alt `#F5F0E3` / `#262F36` · well `#EAE4D3` / `#151A1F` · field `#FFFEFB` / `#161B20`
 - **Borders:** border `#7D8476` / `#3E4A54` · border-strong `#565D51` / `#64727D`
 - **Text:** text `#1F2937` / `#F4F6F5` · text-muted `#24323F` / `#C2CAD1` · text-faint `#28342D` / `#AAB4BC`
 - **Sage accent:** accent `#769382` / `#8BB09B` · accent-strong `#2F4A3C` / `#9EC2AE` · accent-hover `#243A2E` / `#B2D2C0` · accent-ink `#223429` / `#A7C8B6` · accent-soft `#DDE4DC` / `#24352C` · on-accent `#F6F8F5` / `#0B0F13`
@@ -397,7 +431,7 @@ Ten colours are fixed by the brand (background, surface, both accents, both text
 - **Positive:** positive `#113725` / `#8FD9B0`
 - **Disabled:** disabled-bg `#9FA79F` / `#2E3840` · disabled-text `#2E3833` / `#9AA6AF`
 - **Navigation:** nav-bg `#2A3B31` / `#171D22` · nav-text `#EDF1EB` / `#EDF1EF` · nav-active-bg `#DDE4DC` / `#8BB09B` · nav-active-text `#22322A` / `#0B0F13`
-- **Body diagram:** body-fill `#E4E6DD` / `#3B454D` · body-fill-back `#CFD2C8` / `#2C353C`
+- **Body diagram:** body-fill `#DCE3D9` / `#3B454D` · body-fill-back `#C7D0C4` / `#2C353C`
 
 `primary` is an alias of `app-accent-strong`, added because the format expects a primary colour; it belongs to the app, and the Nexus page's equivalent is `nexus-ink`.
 
@@ -421,17 +455,23 @@ Colours inside the specimen illustration (skin, lesion, the C-row swatches) are 
 
 ### App
 
-Manrope for headings, Work Sans for body. Headings are 800 (page titles) or 700 (panel titles) and coloured `accent-ink`; links are `accent-ink`; inline `code` is `accent-2-ink`. Body text inherits Bootstrap's 1rem / 1.5, and headings its 1.2 line height. Sizes in use run from 11px to 34px, clustering at 12.5 to 14.5px for secondary text. Weight 600 is the button weight.
+**Bricolage Grotesque** for headings and **Atkinson Hyperlegible Next**, designed by the Braille Institute for low-vision readers, for everything else. Both are **self-hosted** (`wwwroot/fonts`, SIL Open Font License): no request leaves for Google on any page except the map, which keeps a health app from telling a third party who is using it and loads faster on a weak connection. Headings are 800 (titles) or 700 (panel titles) and coloured `accent-ink`; links are `accent-ink`; inline `code` is `accent-2-ink`. Body text is Bootstrap's 1rem / 1.5, and headings its 1.2.
 
-| Token | Face | Size | Weight |
+**All sizes are rem, and the root is 106.25%.** So 1rem is 17px, text follows the viewer's own browser text-size setting instead of overriding it, and nothing renders under about 15px. Two exceptions are deliberate: pill counters and the phone nav labels, which stay at 0.8125rem (about 13.8px) so they fit.
+
+**Prose is limited to 32em**, about 73 characters in this font. A `ch` limit would be wrong here: Atkinson's zero is unusually wide (0.648em against 0.438em for an average letter), so 72ch would allow about 106 characters. Headings wrap evenly (`text-wrap: balance`), and scores, counts and dates use **tabular figures** so they do not shift as they change.
+
+| Token | Face | Size (rem, x17px) | Weight |
 |---|---|---|---|
-| `app-page-title-lg` / `-md` | Manrope | 30px / 26px | 800 |
-| `app-panel-title` | Manrope | 17px | 700 |
-| `app-subtitle` | Work Sans | 15px | 400 |
-| `app-body` | Work Sans | 1rem | 400 |
-| `app-detail` / `app-caption` | Work Sans | 14px / 13px | 400 |
-| `app-eyebrow` | Work Sans, uppercase, 0.04em | 12.5px | 600 |
-| `app-badge` | Work Sans | 11.5px | 700 |
+| `app-hero-title` | Bricolage Grotesque | up to 3.25rem, fluid | 800 |
+| `app-hero-summary` | Atkinson | 1.15rem | 400 |
+| `app-page-title-lg` / `-md` | Bricolage Grotesque | 1.875rem / 1.625rem | 800 |
+| `app-panel-title` | Bricolage Grotesque | 1.0625rem | 700 |
+| `app-subtitle` | Atkinson | 0.9375rem | 400 |
+| `app-body` | Atkinson | 1rem | 400 |
+| `app-detail` | Atkinson | 0.88rem | 400 |
+| `app-eyebrow` | Atkinson, uppercase, 0.04em | 0.88rem | 600 |
+| `app-badge` | Atkinson | 0.8125rem | 700 |
 
 ### Nexus page
 
@@ -453,7 +493,7 @@ Manrope for headings, Work Sans for body. Headings are 800 (page titles) or 700 
 
 ### App
 
-Mobile-first. On phones the navigation is a bottom bar and content has 16px side gutters (`20px 16px 48px`). From **860px** the navigation becomes a **168px** sidebar and content padding grows to `36px 40px 56px`. Other breakpoints in use: 520, 560, 620, 640, 700, 760 and 780px. Cards use `18px 20px` padding; header rows use a 16px gap and action groups a 12px gap.
+Mobile-first. On phones the navigation is a bottom bar and content has 16px side gutters (`20px 16px 48px`). From **860px** the navigation becomes a **184px** sidebar with 48px-tall links, and content padding grows to `36px 40px 56px`. Other breakpoints in use: 520, 560, 620, 640, 700, 760 and 780px. Cards use `18px 20px` padding; header rows use a 16px gap and action groups a 12px gap. **Home opens with a deep-forest welcome band** (greeting, one plain sentence, one big "Check a spot" button, and the dog), not a grid of numbers. **Every tap target is at least 44px**: small links and dots keep their look but get an invisible 44px hit area. Screens use `100dvh`, not `100vh`, so a phone's collapsing address bar does not cut them off. The page opts into `viewport-fit=cover` and honours the device's safe areas, so the phone's top bar clears the status bar when the app is installed. Every page starts with a **skip link** to `<main id="main-content">`, and the sticky top bar and chat button are accounted for in `scroll-padding`, so keyboard focus is never hidden behind them.
 
 ### Nexus page
 
@@ -479,7 +519,7 @@ Focus is a single **3px amber ring** everywhere: rgba(146, 96, 20, 0.85) in ligh
 
 ### App
 
-Rounded and soft. Cards use **15px** (`--radius-card`), controls **9px** (`--radius-control`), badges and chips a full pill (**999px**), avatars and dots **50%** (this format only allows px, rem and em, so circles are described here rather than tokenised). A **12px** radius also appears inline in 16 places and a **10px** one in 8; neither is a token. Buttons and form fields currently fall back to **Bootstrap's 0.375rem** because `app.css` does not override it. That is an inconsistency with the 9px control radius, not a decision.
+Rounded and soft. Cards use **20px** (`--radius-card`), controls and form fields **14px** (`--radius-control`), **buttons, badges and chips a full pill (999px)**, avatars and dots **50%** (this format only allows px, rem and em, so circles are described here rather than tokenised). A **12px** radius also appears inline in 16 places and a **10px** one in 8; neither is a token.
 
 ### Nexus page
 
@@ -491,11 +531,14 @@ Rounded and soft. Cards use **15px** (`--radius-card`), controls **9px** (`--rad
 
 Every component below has a `-dark` twin in the YAML that uses the dark-theme tokens.
 
-- **Primary button:** `accent-strong` fill, `on-accent` text, weight 600; hover and active go to `accent-hover`; disabled uses `disabled-bg` and `disabled-text` at full opacity so the label stays readable.
-- **Outline button:** transparent, `accent-ink` text, 1.5px `accent-strong` border; fills on hover.
-- **Card panel:** `surface` fill, 1px `border-subtle`, 15px radius, `shadow-card`, `18px 20px` padding.
-- **Form field:** `field` fill, 1.5px `border-strong`; focus swaps the border to `accent-strong` and adds the amber ring.
-- **Navigation:** `nav-bg` ground with `nav-text`; the active item is `nav-active-bg` with `nav-active-text` at a 9px radius.
+- **Primary button:** a pill at least **3rem (51px) tall**, `accent-strong` fill, `on-accent` text, weight 600; hover and active go to `accent-hover`; disabled uses `disabled-bg` and `disabled-text` at full opacity so the label stays readable.
+- **Outline button:** the same pill, transparent, `accent-ink` text, 1.5px `accent-strong` border; fills on hover. Small buttons are still 2.75rem tall.
+- **Home welcome band:** `nav-bg` ground with `nav-text`, a 20px radius, the greeting in Bricolage 800, one plain summary sentence, a **3.5rem** "Check a spot" button in `nav-active-bg` / `nav-active-text`, and the dog as a `nav-active-bg` mask.
+- **Card panel:** `surface` fill (warm near-white), 1px `border-subtle`, 20px radius, `shadow-card`, `18px 20px` padding.
+- **Form field:** at least 3rem tall, 14px radius, `field` fill, 1.5px `border-strong`; focus swaps the border to `accent-strong` and adds the amber ring.
+- **Navigation:** `nav-bg` ground with `nav-text`; the active item is `nav-active-bg` with `nav-active-text` at a 14px radius.
+- **Skip link:** off-screen until it takes keyboard focus, then a pill in `accent-strong` / `on-accent` at the top left. It moves focus to `<main>` in place, because the document's `<base href="/">` would otherwise turn a bare `#main-content` link into a jump to the home page.
+- **Icons:** one line-icon set (`AppIcon`: 24-unit grid, round caps, 1.8 stroke), always SVG and hidden from screen readers when beside text. Never emoji or font glyphs, which can render as empty boxes on older Android phones.
 - **Risk badge:** pill with low `well` / `accent-ink`, moderate `warn-soft` / `warn-ink`, high `alert-soft` / `alert-ink`.
 - **Mascot and logo:** the Mela dog is a CSS **mask** filled with a theme colour (`nav-active-bg` in the sidebar, `accent-strong` on the sign-in page), never a tile. The LA SPOT logo ships as `la-spot-logo-on-dark.png` and `la-spot-logo-on-light.png` and switches by theme through `--brand-logo`, because its white outline disappears on the cream ground.
 
@@ -515,9 +558,18 @@ Every component below has a `-dark` twin in the YAML that uses the dark-theme to
 - **Do** take every colour from a token; adding a hex value in a component stylesheet breaks the rule the token block exists for.
 - **Do** pair each fill with its `on-` colour, and use `accent-ink` when the accent has to be text.
 - **Do** reserve alert red for high risk, destructive actions and the medical disclaimer; sage means calm and amber means watch.
-- **Do** keep text at AAA against the page and the cards, in both themes.
+- **Do** keep text tones at AAA against the page and the cards, in both themes.
+- **Do** write in plain words at roughly a 6th-grade reading level, and make a button say what will happen ("Check a spot", "Find a skin doctor").
+- **Do** keep text at 0.88rem (about 15px) or larger and every tap target at 44px or more; give small controls an invisible hit area instead of a bigger look.
+- **Do** give every page a skip link and a focusable `<main id="main-content">`, and say a trend or status in words for screen readers ("Risk trend since previous check: lower"), not as a bare arrow.
+- **Do** keep prose at 32em, use tabular figures for anything that changes, and use `100dvh` and the safe-area insets for anything that touches a screen edge.
+- **Do** show the dog as a friendly presence in empty states and the Home welcome, always as a mask, never a tile.
 - **Don't** put text on `accent` in light mode (`#769382`); it is a mid-tone and fails AAA either way.
 - **Don't** let Bootstrap defaults through: its `#0d6efd` blue on disabled buttons and its pink `code` colour were both bugs here.
+- **Don't** use emoji or font glyphs (▲ ✓ ← 🗙) as icons; use the `AppIcon` SVG set. Arrows that are part of a data expression, such as "62 → 49", are text and are fine.
+- **Don't** set font sizes in px (they ignore the viewer's text-size setting); use rem.
+- **Don't** load fonts or anything else from a third-party host; the two typefaces are self-hosted, and the map is the one exception.
+- **Don't** lead a screen with a grid of statistics; say the one thing that matters in a sentence.
 - **Don't** build on `accent-2` or `on-accent-2` until something needs them; they are defined but unused.
 
 ### Nexus page

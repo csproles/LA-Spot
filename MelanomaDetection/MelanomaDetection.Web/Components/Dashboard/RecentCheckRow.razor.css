@@ -34,13 +34,13 @@
 
 .recent-title {
     font-weight: 600;
-    font-size: 13.5px;
+    font-size: 0.88rem;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
 .recent-meta {
-    font-size: 12px;
+    font-size: 0.88rem;
     color: var(--color-text-muted);
 }

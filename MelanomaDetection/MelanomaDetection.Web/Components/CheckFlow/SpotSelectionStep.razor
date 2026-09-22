@@ -46,7 +46,8 @@
                 @if (Spots.Count > 0)
                 {
                     <button type="button" class="link-button spot-selection-back" @onclick="() => IsCreatingSpot = false">
-                        ← Choose an existing spot instead
+                        <AppIcon Name="chevron-left" Size="sm" />
+                        Choose an existing spot instead
                     </button>
                 }
             </section>

@@ -4,7 +4,7 @@
 
 .danger-lead {
     margin: 0 0 14px;
-    font-size: 13.5px;
+    font-size: 0.88rem;
     line-height: 1.5;
     color: var(--color-text-muted);
 }
@@ -23,7 +23,7 @@
 
 .danger-action-icon {
     display: inline-flex;
-    font-size: 17px;
+    font-size: 1.0625rem;
 }
 
 .btn-outline-danger {
@@ -51,20 +51,20 @@
     margin: 0;
     font-family: var(--font-heading);
     font-weight: 700;
-    font-size: 15px;
+    font-size: 0.9375rem;
     color: var(--color-alert-ink);
 }
 
 .delete-confirm-text {
     margin: 0;
-    font-size: 13px;
+    font-size: 0.88rem;
     line-height: 1.5;
     color: var(--color-text);
 }
 
 .delete-confirm-label {
     font-weight: 600;
-    font-size: 13px;
+    font-size: 0.88rem;
     color: var(--color-text);
     margin: 4px 0 0;
 }

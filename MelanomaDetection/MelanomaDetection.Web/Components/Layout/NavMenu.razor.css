@@ -3,6 +3,8 @@
     position: sticky;
     top: 0;
     z-index: 20;
+    /* On a phone this is the top bar: clear the status bar / notch when installed as an app. */
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left);
 }
 
 .app-nav-brand {
@@ -32,7 +34,7 @@
     color: var(--color-nav-text) !important;
     text-decoration: none !important;
     font-family: var(--font-body);
-    font-size: 11px;
+    font-size: 0.8125rem;
     font-weight: 600;
     min-width: 0;
     transition: background-color 0.2s ease, color 0.2s ease, transform 0.15s ease;
@@ -57,7 +59,7 @@
    across the component boundary, which a width/height rule could not do. */
 .app-nav-icon {
     display: inline-flex;
-    font-size: 18px;
+    font-size: 1.125rem;
     transition: transform 0.2s ease;
 }
 
@@ -81,7 +83,7 @@
 }
 
 .app-nav-primary-mark .app-nav-icon {
-    font-size: 22px;
+    font-size: 1.375rem;
 }
 
 ::deep .app-nav-link-primary:hover {
@@ -105,9 +107,10 @@
 
 @media (min-width: 860px) {
     .app-nav {
-        width: 168px;
+        width: 184px;
         flex-shrink: 0;
         height: 100vh;
+        height: 100dvh;
         position: sticky;
         top: 0;
         display: flex;
@@ -159,12 +162,13 @@
         flex-direction: row;
         justify-content: flex-start;
         gap: 10px;
-        padding: 8px 10px;
-        font-size: 13px;
+        padding: 8px 12px;
+        min-height: 3rem;
+        font-size: 0.9375rem;
     }
 
     .app-nav-icon {
-        font-size: 17px;
+        font-size: 1.0625rem;
     }
 
     /* In the sidebar the primary action sits inline as a compact filled disc. */
@@ -176,7 +180,7 @@
     }
 
     .app-nav-primary-mark .app-nav-icon {
-        font-size: 17px;
+        font-size: 1.0625rem;
     }
 
     ::deep .app-nav-link-primary:hover .app-nav-primary-mark {

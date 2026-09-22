@@ -1,12 +1,12 @@
 .legal-document {
-    max-width: 72ch;
+    max-width: 34em;
 }
 
 .legal-body {
     display: flex;
     flex-direction: column;
     gap: 18px;
-    font-size: 14.5px;
+    font-size: 0.9062rem;
     line-height: 1.6;
     color: var(--color-text);
 }
@@ -16,7 +16,7 @@
 ::deep .legal-body h2 {
     font-family: var(--font-heading);
     font-weight: 700;
-    font-size: 17px;
+    font-size: 1.0625rem;
     color: var(--color-accent-ink);
     margin: 6px 0 0;
 }

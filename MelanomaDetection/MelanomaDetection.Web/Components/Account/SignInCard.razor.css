@@ -8,21 +8,21 @@
 .signin-title {
     font-family: var(--font-heading);
     font-weight: 800;
-    font-size: 24px;
+    font-size: 1.5rem;
     color: var(--color-text);
     margin: 0;
 }
 
 .signin-lead {
     color: var(--color-text-muted);
-    font-size: 14.5px;
+    font-size: 0.9062rem;
     line-height: 1.5;
     margin: 0;
 }
 
 .signin-consent {
     color: var(--color-text-muted);
-    font-size: 12.5px;
+    font-size: 0.88rem;
     line-height: 1.5;
     margin: 0;
 }
@@ -38,7 +38,7 @@
     align-items: center;
     gap: 12px;
     color: var(--color-text-faint);
-    font-size: 12px;
+    font-size: 0.88rem;
     text-transform: uppercase;
     letter-spacing: 0.08em;
 }

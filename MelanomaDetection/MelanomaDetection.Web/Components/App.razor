@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <base href="/" />
     <!--
         theme-color-meta must appear before theme.js's <script> tag below: that script runs
@@ -15,13 +15,13 @@
     -->
     <meta id="theme-color-meta" name="theme-color" content="#2A3B31" />
     <ResourcePreloader />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@600;700;800&family=Work+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link rel="preload" href="fonts/atkinson-hyperlegible-next-latin.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="fonts/bricolage-grotesque-latin.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="stylesheet" href="@Assets["lib/bootstrap/dist/css/bootstrap.min.css"]" />
     <link rel="stylesheet" href="@Assets["app.css"]" />
     <link rel="stylesheet" href="@Assets["MelanomaDetection.Web.styles.css"]" />
     <script src="@Assets["theme.js"]"></script>
+    <script src="@Assets["skip-link.js"]" defer></script>
     <script src="@Assets["cameraCapture.js"]"></script>
     <ImportMap Nonce="@Nonce" />
     <link rel="manifest" href="manifest.json" />

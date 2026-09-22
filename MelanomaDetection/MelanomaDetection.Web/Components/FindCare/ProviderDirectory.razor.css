@@ -15,13 +15,13 @@
 .provider-status {
     margin: 0;
     color: var(--color-text-muted);
-    font-size: 14px;
+    font-size: 0.88rem;
 }
 
 .provider-panel-title {
     font-family: var(--font-heading);
     font-weight: 700;
-    font-size: 16px;
+    font-size: 1rem;
     color: var(--color-accent-ink);
     margin: 0 0 10px;
 }
@@ -37,6 +37,6 @@
 
 .provider-source {
     margin: 12px 0 0;
-    font-size: 12px;
+    font-size: 0.88rem;
     color: var(--color-text-muted);
 }

@@ -23,9 +23,9 @@ public static class RiskBands
 
     public static string Label(string band) => band switch
     {
-        "low" => "Low risk indicators",
-        "moderate" => "Some risk indicators present",
-        _ => "High risk indicators",
+        "low" => "Low risk signs",
+        "moderate" => "Some risk signs",
+        _ => "High risk signs",
     };
 
     public static string ShortLabel(string band) => band switch
@@ -37,9 +37,9 @@ public static class RiskBands
 
     public static string Recommendation(string band) => band switch
     {
-        "low" => "No immediate action needed. Continue routine skin self-exams and keep up with annual dermatologist checkups.",
-        "moderate" => "Consider scheduling a dermatologist visit in the coming months to have this spot evaluated.",
-        _ => "See a dermatologist as soon as possible for a professional evaluation of this spot.",
+        "low" => "You don't need to do anything right now. Keep checking your skin every so often, and see a skin doctor (a dermatologist) once a year.",
+        "moderate" => "Think about seeing a skin doctor (a dermatologist) in the next few months to have this spot looked at.",
+        _ => "Please see a skin doctor (a dermatologist) as soon as you can to have this spot looked at.",
     };
 
     /// <summary>Band for a single 0-10 ABCD sub-score, for the factor bars.</summary>
