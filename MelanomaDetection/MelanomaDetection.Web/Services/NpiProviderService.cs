@@ -14,12 +14,14 @@ public class NpiProviderService
     private readonly HttpClient _httpClient;
     private readonly IMemoryCache _cache;
     private readonly ILogger<NpiProviderService> _logger;
+    private readonly string? _googleMapsApiKey;
 
-    public NpiProviderService(HttpClient httpClient, IMemoryCache cache, ILogger<NpiProviderService> logger)
+    public NpiProviderService(HttpClient httpClient, IMemoryCache cache, ILogger<NpiProviderService> logger, IConfiguration configuration)
     {
         _httpClient = httpClient;
         _cache = cache;
         _logger = logger;
+        _googleMapsApiKey = configuration["GoogleMaps:ApiKey"];
     }
 
     /// <summary>
@@ -94,9 +96,39 @@ public class NpiProviderService
         }
 
         var fullAddress = $"{address.AddressLine1}, {address.City}, {address.State} {FormatZip(address.PostalCode)}";
-        var coordinates = await GeocodeAsync(fullAddress, cancellationToken);
+        var coordinatesTask = GeocodeAsync(fullAddress, cancellationToken);
+        var ratingTask = GetRatingAsync($"{name}, {fullAddress}", cancellationToken);
+        await Task.WhenAll(coordinatesTask, ratingTask);
+        var coordinates = coordinatesTask.Result;
+        var rating = ratingTask.Result;
 
-        return new DermatologyProvider(name, fullAddress, address.TelephoneNumber, coordinates?.Lat, coordinates?.Lng);
+        return new DermatologyProvider(name, fullAddress, address.TelephoneNumber, coordinates?.Lat, coordinates?.Lng, rating?.Rating, rating?.Count);
+    }
+
+    /// <summary>Google Places rating for a provider, via one Find Place from Text call (its
+    /// "fields" can return rating/user_ratings_total directly, so no second Place Details
+    /// call is needed). Returns null -- never throws -- if no key is configured, no match is
+    /// found, or the lookup fails; a missing rating just means the card shows none.</summary>
+    private async Task<(double Rating, int Count)?> GetRatingAsync(string query, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(_googleMapsApiKey))
+        {
+            return null;
+        }
+
+        try
+        {
+            var url = "https://maps.googleapis.com/maps/api/place/findplacefromtext/json" +
+                $"?input={Uri.EscapeDataString(query)}&inputtype=textquery&fields=rating,user_ratings_total&key={_googleMapsApiKey}";
+            var response = await _httpClient.GetFromJsonAsync<GoogleFindPlaceResponse>(url, cancellationToken);
+            var candidate = response?.Candidates.FirstOrDefault();
+            return candidate?.Rating is { } value ? (value, candidate.UserRatingsTotal ?? 0) : null;
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException)
+        {
+            _logger.LogWarning(ex, "Google Places rating lookup failed for {Query}", query);
+            return null;
+        }
     }
 
     private async Task<(double Lat, double Lng)?> GeocodeAsync(string address, CancellationToken cancellationToken)

@@ -2,8 +2,26 @@ using System.Text.Json.Serialization;
 
 namespace MelanomaDetection.Web.Models;
 
-/// <summary>A dermatology provider resolved from the NPI Registry and geocoded via the Census geocoder.</summary>
-public record DermatologyProvider(string Name, string Address, string? Phone, double? Lat, double? Lng);
+/// <summary>A dermatology provider resolved from the NPI Registry and geocoded via the Census geocoder.
+/// Rating/RatingCount come from Google Places (Find Place from Text) and are null if that lookup
+/// found no match or failed -- never blocks the rest of the provider from showing.</summary>
+public record DermatologyProvider(string Name, string Address, string? Phone, double? Lat, double? Lng, double? Rating = null, int? RatingCount = null);
+
+/// <summary>Shape of the "candidates" entries in Google's Find Place from Text response.</summary>
+public class GooglePlaceCandidate
+{
+    [JsonPropertyName("rating")]
+    public double? Rating { get; set; }
+
+    [JsonPropertyName("user_ratings_total")]
+    public int? UserRatingsTotal { get; set; }
+}
+
+public class GoogleFindPlaceResponse
+{
+    [JsonPropertyName("candidates")]
+    public List<GooglePlaceCandidate> Candidates { get; set; } = [];
+}
 
 /// <summary>Shape of https://npiregistry.cms.hhs.gov/api/ (version 2.1) responses.</summary>
 public class NpiSearchResponse

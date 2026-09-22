@@ -1,4 +1,4 @@
-"""LLM explanation layer -- turns MelanomaDetector's ABCDE output into a plain-
+"""LLM explanation layer -- turns the detector's ABCDE output into a plain-
 language explanation using OpenAI's API.
 
 This is a port of the repository's original `llm_explainer.py` prototype: the

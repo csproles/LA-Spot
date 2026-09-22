@@ -109,8 +109,11 @@ _FORBIDDEN = (
 
 # A reply may not name a risk band other than the one the app shows beside it. "higher risk"
 # (as in a risk factor) is deliberately not a band name, so it is not matched.
-_BAND_MENTION = re.compile(r"\b(low|moderate|high)[ -]risk\b|\b(some) risk signs?\b", re.IGNORECASE)
-_BAND_NAMES = {"low": "low", "some": "moderate", "moderate": "moderate", "high": "high"}
+# V5's two real verdicts, always paired with "visual concern" in policy.py's own
+# CONCERN_LABEL/CONCERN_ADVICE wording -- requiring that phrase (not a bare "elevated"
+# or "lower") avoids false positives from an unrelated use of either word (e.g. "elevated
+# sun exposure" is a risk-profile term, not this result).
+_CONCERN_MENTION = re.compile(r"\b(elevated|lower)\s+visual\s+concern\b", re.IGNORECASE)
 
 # Claims about how a spot changed. They are only allowed when the comparison with the
 # previous photo actually found that change; the cue words keep ordinary sentences
@@ -227,12 +230,12 @@ def _check_coherence(where: str, text: str, payload: dict) -> list:
     """Checks that only apply when the app supplied the overall result and the change data."""
     problems = []
 
-    overall = payload.get("overall")
-    if overall:
-        for match in _BAND_MENTION.finditer(text):
-            named = _BAND_NAMES[next(group for group in match.groups() if group).lower()]
-            if named != overall["band"]:
-                problems.append(f"{where}: names the {named} band, but this result is {overall['band']}.")
+    overall_result = payload.get("overall_result")
+    if overall_result in ("elevated", "lower"):
+        for match in _CONCERN_MENTION.finditer(text):
+            named = match.group(1).lower()
+            if named != overall_result:
+                problems.append(f"{where}: names {named} visual concern, but this result is {overall_result}.")
 
     change = payload.get("change_since_last_photo")
     if change is not None and _COMPARISON_CUE.search(text):
@@ -304,9 +307,12 @@ def parse_and_validate(content, payload: dict, passages: list):
 
     provided = {p.id: p for p in passages}
     problems = []
-    # When the app supplies the overall result it writes the first next step itself (the
-    # timeframe for seeing a doctor), so the model adds one to three more, not two to four.
-    step_range = (1, 3) if "overall" in payload else (2, 4)
+    # When the app supplies a known overall result (elevated/lower) it writes the first
+    # next step itself (the timeframe for seeing a doctor), so the model adds one to
+    # three more, not two to four. "overall_result" is always present in the payload
+    # (see llm_explainer._map_to_llm_schema), so check its value, not just its presence.
+    has_lead_step = payload.get("overall_result") in ("elevated", "lower")
+    step_range = (1, 3) if has_lead_step else (2, 4)
     for section, low, high in (("noticed", 1, 6), ("next_steps", *step_range)):
         items = data[section]
         if not isinstance(items, list) or not low <= len(items) <= high:
@@ -315,10 +321,10 @@ def parse_and_validate(content, payload: dict, passages: list):
         for index, item in enumerate(items, start=1):
             problems.extend(_check_statement(f"{section}[{index}]", item, payload, provided))
 
-    # When the app supplies "overall", its own BAND_ADVICE line (see llm_explainer's
-    # "lead") always recommends seeing a professional, so the model's own next_steps
-    # aren't required to repeat it.
-    if not problems and "overall" not in payload and not any(
+    # When the app supplies a known overall result, its own CONCERN_ADVICE line (see
+    # llm_explainer's "lead") always recommends seeing a professional, so the model's
+    # own next_steps aren't required to repeat it.
+    if not problems and not has_lead_step and not any(
         _SEES_A_PROFESSIONAL.search(step["text"]) for step in data["next_steps"]
     ):
         problems.append("At least one next step must recommend seeing a dermatologist or healthcare provider.")

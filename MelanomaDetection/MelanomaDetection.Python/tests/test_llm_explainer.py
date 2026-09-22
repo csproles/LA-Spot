@@ -4,6 +4,7 @@ from types import SimpleNamespace
 import pytest
 
 import llm_explainer
+import policy
 
 ABCDE = {
     "asymmetry": {"score": 4.0, "details": {"raw_asymmetry_ratio": 0.34, "concern": True}},
@@ -139,10 +140,10 @@ ONE_STEP_REPLY = json.dumps(
     }
 )
 
-WRONG_BAND_REPLY = json.dumps(
+WRONG_CONCERN_REPLY = json.dumps(
     {
         "noticed": [
-            {"text": "This came back high risk.", "basis": "analysis", "source_ids": [], "quote": None},
+            {"text": "This came back as elevated visual concern.", "basis": "analysis", "source_ids": [], "quote": None},
         ],
         "next_steps": [
             {
@@ -157,51 +158,75 @@ WRONG_BAND_REPLY = json.dumps(
 
 
 class TestOverallResult:
+    """explain_findings' summary line and first next step now come from V5's own
+    overall_visual_concern (policy.CONCERN_LABEL/CONCERN_ADVICE) rather than a band
+    derived from the raw score -- see docs/CV_PIPELINE.md's "Known integration TODOs"
+    for why deriving a band from risk_score is exactly the mistake this avoids.
+    risk_score/profile still matter: they drive the recheck-timing next step via
+    policy.recheck_advice, mirroring policy.cadence_days' own fallback.
+    """
+
     def test_summary_line_and_first_step_come_from_policy_not_the_model(self):
         client = FakeClient([ONE_STEP_REPLY])
-        text = llm_explainer.explain_findings(ABCDE, risk_score=20.0, client=client)
+        text = llm_explainer.explain_findings(
+            ABCDE, overall_visual_concern=policy.CONCERN_LOWER, risk_score=20.0, client=client
+        )
 
-        assert text.startswith("In short:\nThis check came back low risk signs (20/100).")
+        assert text.startswith("In short:\nLower visual concern. This photo's visual features did not cross")
         assert "Take a new photo of this spot in about 90 days" in text
         assert "Keep notes on this spot" in text
 
-    def test_high_risk_gets_no_recheck_reminder_since_the_advice_is_to_see_a_doctor_now(self):
+    def test_elevated_gets_no_recheck_reminder_since_the_advice_is_to_see_a_doctor_now(self):
         client = FakeClient([ONE_STEP_REPLY])
-        text = llm_explainer.explain_findings(ABCDE, risk_score=80.0, client=client)
+        text = llm_explainer.explain_findings(
+            ABCDE, overall_visual_concern=policy.CONCERN_ELEVATED, risk_score=80.0, client=client
+        )
 
-        assert "high risk signs" in text
+        assert "Elevated visual concern." in text
         assert "Take a new photo" not in text
 
     def test_risk_factors_shorten_the_recheck_window_in_the_rendered_text(self):
         client = FakeClient([ONE_STEP_REPLY])
-        text = llm_explainer.explain_findings(ABCDE, risk_score=20.0, profile={"familyHistory": True}, client=client)
+        text = llm_explainer.explain_findings(
+            ABCDE, overall_visual_concern=policy.CONCERN_LOWER, risk_score=20.0,
+            profile={"familyHistory": True}, client=client,
+        )
 
         assert "about 60 days" in text
 
-    def test_overall_reaches_the_model_and_shrinks_the_next_steps_range(self):
+    def test_overall_result_reaches_the_model_and_shrinks_the_next_steps_range(self):
         client = FakeClient([ONE_STEP_REPLY])
-        llm_explainer.explain_findings(ABCDE, risk_score=45.0, client=client)
+        llm_explainer.explain_findings(ABCDE, overall_visual_concern=policy.CONCERN_ELEVATED, client=client)
         content = user_message(client.calls[0])
 
-        assert '"overall"' in content
-        assert '"band": "moderate"' in content
+        assert '"overall_result": "elevated"' in content
 
-    def test_a_reply_naming_the_wrong_band_is_rejected_and_retried(self):
-        client = FakeClient([WRONG_BAND_REPLY, ONE_STEP_REPLY])
-        text = llm_explainer.explain_findings(ABCDE, risk_score=20.0, client=client)
+    def test_a_reply_naming_the_wrong_concern_is_rejected_and_retried(self):
+        client = FakeClient([WRONG_CONCERN_REPLY, ONE_STEP_REPLY])
+        text = llm_explainer.explain_findings(
+            ABCDE, overall_visual_concern=policy.CONCERN_LOWER, risk_score=20.0, client=client
+        )
 
         assert len(client.calls) == 2
-        assert "high risk" not in client.calls[1]["messages"][-1]["content"] or "rejected" in client.calls[1]["messages"][-1]["content"]
-        assert text.startswith("In short:\nThis check came back low risk signs")
+        assert "rejected" in client.calls[1]["messages"][-1]["content"]
+        assert text.startswith("In short:\nLower visual concern.")
 
-    def test_without_a_risk_score_behaviour_is_unchanged(self):
+    def test_no_detection_gets_no_app_authored_lead(self):
+        # A photo where no lesion could be located isn't a verdict to open an
+        # explanation with -- see llm_explainer's "not_available" handling.
+        client = FakeClient([VALID_REPLY])
+        text = llm_explainer.explain_findings(ABCDE, overall_visual_concern=policy.CONCERN_NO_DETECTION, client=client)
+
+        assert "In short:" not in text
+
+    def test_without_an_overall_concern_behaviour_is_unchanged(self):
         client = FakeClient([VALID_REPLY])
         text = llm_explainer.explain_findings(ABCDE, client=client)
 
         assert "In short:" not in text
-        # The prompt's own instructions mention the word "overall" (see rule 4c), so check
-        # for the JSON key specifically, not just the word appearing anywhere in the prompt.
-        assert '"overall": {' not in user_message(client.calls[0])
+        # The prompt's own instructions mention "overall_result" (see rule 4c), so check
+        # for the JSON value specifically, not just the word appearing anywhere in the prompt.
+        assert '"overall_result": "not_available"' in user_message(client.calls[0])
 
 
 class TestChangeAndSymptoms:

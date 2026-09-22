@@ -33,6 +33,10 @@
     // Spans, not paragraphs: a <button> may only hold phrasing content.
     private RenderFragment Details => @<text>
         <span class="provider-name">@Provider.Name</span>
+        @if (Provider.Rating is { } rating)
+        {
+            <span class="provider-rating">★ @rating.ToString("0.0") (@Provider.RatingCount)</span>
+        }
         <span class="provider-address">@Provider.Address</span>
         @if (!string.IsNullOrWhiteSpace(Provider.Phone))
         {
