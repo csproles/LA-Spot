@@ -34,3 +34,13 @@ CLAUDE.md
 MelanomaDetection/MelanomaDetection.Python/scripts/textbook_pages/*
 !MelanomaDetection/MelanomaDetection.Python/scripts/textbook_pages/.gitkeep
 MelanomaDetection/MelanomaDetection.Python/scripts/textbook_ocr_raw/
+
+# melanoma_pipeline/ (hybrid CNN+ABCD multimodal pipeline): never commit the
+# dataset itself, generated checkpoints/embeddings/trained models, or any
+# other run output -- these are large, regenerable from the code + external
+# assets documented in melanoma_pipeline/README.md, and specific to whoever
+# ran the pipeline on whichever device.
+melanoma_pipeline/data/
+melanoma_pipeline/outputs/
+melanoma_pipeline/.venv/
+melanoma_pipeline/venv/

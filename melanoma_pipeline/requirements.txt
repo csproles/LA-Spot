@@ -1,0 +1,37 @@
+# Core CNN / training stack
+torch
+torchvision
+timm
+
+# YOLO segmentation (features.py reuses the project's existing, already-
+# trained checkpoint via this project's own revised_abcd/pipeline_v5/Code
+# modules, which depend on ultralytics)
+ultralytics
+
+# Image augmentation (dataset.py)
+albumentations
+opencv-python-headless
+
+# Modeling / metrics
+scikit-learn
+catboost
+shap
+
+# Data handling
+pandas
+numpy
+tqdm
+
+# NOTE: `joblib` and a bare `pathlib` entry were both intentionally dropped
+# from an earlier version of this file: joblib is unused now that
+# features.py reuses this project's real YOLO-based extractor (a loaded
+# neural net, not safely parallelized across processes the way the earlier
+# pure-OpenCV placeholder was -- see features.py's module docstring), and
+# `pathlib` is part of the Python standard library (3.4+) -- the PyPI
+# package of that name is an unrelated, deprecated Python-2 backport that
+# can conflict with the stdlib module if installed.
+#
+# NOTE: this file intentionally does NOT pin exact versions -- see the
+# README's "Environment setup" section for the exact versions this was
+# developed/verified against, and why pinning is left to you (matching your
+# target device's CUDA version) rather than hardcoded here.
