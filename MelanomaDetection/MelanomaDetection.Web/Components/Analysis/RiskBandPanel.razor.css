@@ -14,10 +14,43 @@
     color: var(--color-warn-ink);
 }
 
+/* The one verdict that actually needs to command attention gets a solid
+   color-block, not the same soft tint as every other state -- visual weight
+   should escalate with clinical urgency. */
 .risk-band-high {
-    background: var(--color-alert-soft);
+    background: var(--color-alert);
     border-color: var(--color-alert);
-    color: var(--color-alert-ink);
+    color: var(--color-on-alert);
+}
+
+.risk-band-high .risk-band-score-caption {
+    color: color-mix(in srgb, var(--color-on-alert) 75%, transparent);
+}
+
+.risk-band-high .risk-band-score-block {
+    border-top-color: color-mix(in srgb, var(--color-on-alert) 25%, transparent);
+}
+
+/* Buttons flip to white-on-red on the solid band, same convention as the
+   home hero's CTA on its own dark-green background (see Home.razor.css). */
+.risk-band-high .risk-band-action.btn-primary {
+    --bs-btn-color: var(--color-alert);
+    --bs-btn-bg: var(--color-on-alert);
+    --bs-btn-border-color: var(--color-on-alert);
+    --bs-btn-hover-color: var(--color-alert);
+    --bs-btn-hover-bg: var(--color-on-alert);
+    --bs-btn-hover-border-color: var(--color-on-alert);
+    --bs-btn-active-color: var(--color-alert);
+    --bs-btn-active-bg: var(--color-on-alert);
+    --bs-btn-active-border-color: var(--color-on-alert);
+}
+
+.risk-band-high .risk-band-action.btn-outline-primary {
+    --bs-btn-color: var(--color-on-alert);
+    --bs-btn-border-color: var(--color-on-alert);
+    --bs-btn-hover-color: var(--color-alert);
+    --bs-btn-hover-bg: var(--color-on-alert);
+    --bs-btn-hover-border-color: var(--color-on-alert);
 }
 
 .risk-band-muted {

@@ -1,0 +1,90 @@
+@* Animated tab indicator. Tailwind utility classes style the shape/variant;
+   the sliding motion itself is a plain CSS transition (Tabs.razor.css), not
+   a JS animation library -- so using <Tabs> never makes a page load a
+   third-party script, matching how every other animation in this app works. *@
+@inject IJSRuntime JS
+@implements IAsyncDisposable
+
+<div class="relative inline-flex @Container">
+    <div @ref="indicator" class="tabs-indicator absolute left-0 w-0 @Indicator"></div>
+
+    @for (var i = 0; i < Items.Count; i++)
+    {
+        var idx = i;
+        <button @ref="tabRefs[idx]" @onclick="() => Select(idx)"
+                class="relative z-10 px-4 py-1.5 text-sm font-medium transition-colors duration-200 @(idx == Active ? ActiveText : "text-zinc-500 hover:text-zinc-800")">
+            @Items[idx]
+        </button>
+    }
+</div>
+
+@code {
+    public enum TabVariant { Pill, Segment, Underline }
+
+    [Parameter, EditorRequired] public IReadOnlyList<string> Items { get; set; } = [];
+    [Parameter] public TabVariant Variant { get; set; } = TabVariant.Pill;
+    [Parameter] public int Active { get; set; }
+    [Parameter] public EventCallback<int> ActiveChanged { get; set; }
+
+    ElementReference indicator;
+    ElementReference[] tabRefs = [];
+    IJSObjectReference? js;
+    int shown = -1;
+
+    string Container => Variant switch
+    {
+        TabVariant.Segment => "rounded-lg bg-zinc-100 p-1",
+        TabVariant.Underline => "border-b border-zinc-200",
+        _ => "gap-1",
+    };
+
+    string Indicator => Variant switch
+    {
+        TabVariant.Segment => "top-1 bottom-1 rounded-md bg-white shadow-sm",
+        TabVariant.Underline => "bottom-0 h-0.5 bg-zinc-900",
+        _ => "inset-y-0 rounded-full bg-zinc-900",
+    };
+
+    string ActiveText => Variant == TabVariant.Pill ? "text-white" : "text-zinc-900";
+
+    protected override void OnParametersSet()
+    {
+        if (tabRefs.Length != Items.Count)
+        {
+            tabRefs = new ElementReference[Items.Count];
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool first)
+    {
+        if (first)
+        {
+            js = await JS.InvokeAsync<IJSObjectReference>("import", "./js/tabs.js");
+        }
+
+        if (js is not null && shown != Active && Active < Items.Count)
+        {
+            await js.InvokeVoidAsync("move", indicator, tabRefs[Active], first);
+            shown = Active;
+        }
+    }
+
+    async Task Select(int idx)
+    {
+        if (idx == Active)
+        {
+            return;
+        }
+
+        Active = idx;
+        await ActiveChanged.InvokeAsync(idx);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (js is not null)
+        {
+            await js.DisposeAsync();
+        }
+    }
+}

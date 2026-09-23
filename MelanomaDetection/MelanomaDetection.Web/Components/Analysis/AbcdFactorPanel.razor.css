@@ -1,0 +1,17 @@
+/* FactorBar's own :last-child rule no longer sees its true siblings once each
+   one is wrapped for its diagram, so the row-to-row gap moves out here. */
+.abcd-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    margin-bottom: var(--space-4);
+}
+
+.abcd-row:last-child {
+    margin-bottom: 0;
+}
+
+.abcd-row ::deep .factor-row {
+    flex: 1;
+    min-width: 0;
+}

@@ -1,8 +1,17 @@
+/* Stacked on narrow screens; from 480px up it's a compact row (icon beside
+   text) instead of a tall block that leaves the rest of a wide card empty. */
 .empty-state {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: var(--space-2);
     align-items: flex-start;
+}
+
+.empty-state-body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    min-width: 0;
 }
 
 .empty-state-title {
@@ -18,14 +27,23 @@
 }
 
 .empty-state-action {
-    margin-top: 8px;
+    margin-top: var(--space-1);
+    align-self: flex-start;
 }
 
 .empty-state-dog {
-    width: 72px;
-    height: 72px;
-    margin-bottom: 4px;
+    width: 56px;
+    height: 56px;
+    flex-shrink: 0;
     background-color: var(--color-accent-strong);
     -webkit-mask: var(--brand-mascot) center / contain no-repeat;
     mask: var(--brand-mascot) center / contain no-repeat;
+}
+
+@media (min-width: 480px) {
+    .empty-state {
+        flex-direction: row;
+        align-items: flex-start;
+        gap: var(--space-4);
+    }
 }

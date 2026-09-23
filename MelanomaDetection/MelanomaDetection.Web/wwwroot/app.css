@@ -72,7 +72,6 @@
     --color-accent-2: light-dark(#D98880, #EAA096);
     --color-accent-2-ink: light-dark(#531E1A, #F7BDB4);
     --color-accent-2-soft: light-dark(#F8E3DF, #3C2824);
-    --color-on-accent-2: light-dark(#16202B, #12161A);
 
     --color-warn: light-dark(#C08A3E, #E0B070);
     /* Amber is too light to carry the near-white ink, so it gets its own. */
@@ -112,23 +111,33 @@
     --ring-accent: 0 0 0 3px light-dark(rgba(47, 74, 60, 0.4), rgba(158, 194, 174, 0.38));
     --ring-accent-color: light-dark(rgba(47, 74, 60, 0.45), rgba(158, 194, 174, 0.42));
 
-    --shadow-card: 0 1px 2px light-dark(rgba(31, 41, 55, 0.12), rgba(0, 0, 0, 0.4));
+    /* Two whisper-thin layers (a hairline contact shadow + a soft ambient one)
+       instead of one shadow -- reads as a quiet physical lift rather than a
+       drawn box. */
+    --shadow-card: 0 0 0.5px light-dark(rgba(31, 41, 55, 0.14), rgba(0, 0, 0, 0.3)), 0 1px 1px light-dark(rgba(31, 41, 55, 0.14), rgba(0, 0, 0, 0.35));
     --shadow-raised: 0 4px 12px light-dark(rgba(31, 41, 55, 0.18), rgba(0, 0, 0, 0.5));
     --shadow-lifted: 0 6px 16px light-dark(rgba(31, 41, 55, 0.22), rgba(0, 0, 0, 0.55));
     --shadow-tint-strong: light-dark(rgba(31, 41, 55, 0.35), rgba(0, 0, 0, 0.6));
 
-    --dot-near: light-dark(rgba(31, 41, 55, 0.12), rgba(244, 246, 245, 0.07));
-    --dot-far: light-dark(rgba(31, 41, 55, 0.07), rgba(244, 246, 245, 0.04));
-    --color-bg-wash: light-dark(#E7E3D4, #171D23);
     /* The body diagram needs to read as a silhouette against a card, which
        neither the border nor the well tone is far enough from. */
     --color-body-fill: light-dark(#DCE3D9, #3B454D);
     --color-body-fill-back: light-dark(#C7D0C4, #2C353C);
     --skeleton-sheen: light-dark(rgba(255, 255, 255, 0.85), rgba(244, 246, 245, 0.08));
 
-    --radius-card: 20px;
+    --radius-card: 16px;
     --radius-control: 14px;
     --radius-pill: 999px;
+
+    /* A 4px scale for the values actually wired up (card padding, panel-title
+       margin, page-container gaps). New spacing should come from here rather
+       than another one-off value; extend the scale when a real use needs a
+       larger step, rather than pre-declaring unused ones. */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 20px;
 
     --font-heading: "Bricolage Grotesque", system-ui, sans-serif;
     --font-body: "Atkinson Hyperlegible Next", system-ui, sans-serif;
@@ -308,16 +317,6 @@ a:focus-visible, button:focus-visible {
     }
 }
 
-@keyframes drift-wash {
-    from {
-        background-position: 13px 13px, 0 0, 0% 20%;
-    }
-
-    to {
-        background-position: 13px 13px, 0 0, 100% 80%;
-    }
-}
-
 /* The sweep that cycles across every loading placeholder. One shared
    definition so a dashboard tile, a timeline row and a provider card all
    pulse on the same rhythm rather than looking like three separate spinners. */
@@ -345,11 +344,6 @@ a:focus-visible, button:focus-visible {
 
     .risk-band-score {
         animation: pop-in 0.4s 0.15s cubic-bezier(0.16, 1, 0.3, 1) both;
-    }
-
-    .app-background {
-        background-size: 26px 26px, 26px 26px, 220% 220%;
-        animation: drift-wash 24s ease-in-out infinite alternate;
     }
 
     .skeleton-block {
@@ -400,7 +394,7 @@ a:focus-visible, button:focus-visible {
 }
 
 .btn-primary:active, .btn-outline-primary:active, .btn-outline-danger:active {
-    transform: translateY(0) scale(0.98);
+    transform: translateY(0) scale(0.95);
     box-shadow: none;
 }
 
@@ -487,7 +481,7 @@ a:focus-visible, button:focus-visible {
     border: 1px solid var(--color-border-subtle);
     border-radius: var(--radius-card);
     box-shadow: var(--shadow-card);
-    padding: 18px 20px;
+    padding: var(--space-5);
 }
 
 .panel-title {
@@ -495,7 +489,7 @@ a:focus-visible, button:focus-visible {
     font-weight: 700;
     font-size: 1.0625rem;
     color: var(--color-accent-ink);
-    margin: 0 0 14px;
+    margin: 0 0 var(--space-3);
 }
 
 .text-muted-small {
@@ -556,10 +550,7 @@ a:focus-visible, button:focus-visible {
     position: relative;
     min-height: 100vh;
     min-height: 100dvh;
-    background:
-        radial-gradient(circle, var(--dot-far) 1px, transparent 1.3px) 13px 13px / 26px 26px,
-        radial-gradient(circle, var(--dot-near) 1px, transparent 1.3px) 0 0 / 26px 26px,
-        linear-gradient(150deg, var(--color-bg) 0%, var(--color-bg-wash) 100%);
+    background: var(--color-bg);
 }
 
 h1:focus {

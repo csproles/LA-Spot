@@ -4,6 +4,11 @@ obj/
 Dockerfile
 .dockerignore
 
+# Reinstalled via `npm ci` in the build stage -- a host-installed node_modules
+# can carry platform-specific native binaries that don't run in the Linux image.
+node_modules/
+wwwroot/css/tailwind.css
+
 # Local data and secrets must never be baked into an image
 .env
 *.env

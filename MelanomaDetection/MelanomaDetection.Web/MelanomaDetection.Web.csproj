@@ -17,4 +17,23 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.12" />
   </ItemGroup>
 
+  <!-- wwwroot/css/tailwind.css is a build output, not source: like node_modules, it's
+       gitignored and regenerated here. Skips (rather than fails) when node_modules is
+       missing so a machine without Node can still `dotnet build`; the Dockerfile installs
+       Node and runs `npm ci` before publish so the real deploy always has it.
+
+       This app's MapStaticAssets() builds a compile-time endpoint manifest from whatever
+       wwwroot glob MSBuild evaluated when it loaded this project file, before any target
+       (including this one) has run; that is unlike the older UseStaticFiles(), which serves
+       whatever's on disk at request time. That means the FIRST `dotnet build` after a fresh
+       clone or `npm install` generates the file but still serves it with zero routes (falls
+       through to the Blazor SPA shell, MIME type text/html), confirmed by hand: no ordering
+       of this target fixes it within one build pass. A second `dotnet build` picks it up
+       correctly, since by then the file already exists when the project re-evaluates. The
+       Docker image sidesteps this by running the Tailwind CLI as its own step before
+       `dotnet publish`, not by relying on this target; see the Dockerfile. -->
+  <Target Name="TailwindBuild" BeforeTargets="BeforeBuild" Condition="Exists('node_modules')">
+    <Exec Command="npx @tailwindcss/cli -i Styles/tailwind.css -o wwwroot/css/tailwind.css --minify" />
+  </Target>
+
 </Project>

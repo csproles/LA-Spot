@@ -1,8 +1,22 @@
 # Place this file at: MelanomaDetection/MelanomaDetection.Web/Dockerfile
 
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+
+# Node, to run the Tailwind CLI (see MelanomaDetection.Web.csproj's TailwindBuild target).
+RUN curl -fsSL https://deb.nodesource.com/setup_lts.x | bash - \
+    && apt-get install -y --no-install-recommends nodejs \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /src
 COPY . .
+RUN npm ci
+# Run Tailwind as its own step, not just via the .csproj's TailwindBuild target: MSBuild's
+# static-web-assets manifest is built from a glob evaluated at project-load time, before any
+# target runs, so a file a target generates mid-build is invisible to that same build's
+# manifest (confirmed: wwwroot/css/tailwind.css existed on disk but had zero routes in the
+# endpoints.json until a second, separate build saw it already present at evaluation time).
+# Generating it here, before publish's evaluation even starts, is what actually avoids that.
+RUN npx @tailwindcss/cli -i Styles/tailwind.css -o wwwroot/css/tailwind.css --minify
 RUN dotnet publish -c Release -o /app
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0

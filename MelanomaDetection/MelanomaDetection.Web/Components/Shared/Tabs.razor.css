@@ -1,0 +1,10 @@
+/* A slight-overshoot easing approximates the spring feel without a physics
+   library -- tabs.js sets transform/width, this is what actually animates
+   it. Position transitions via `transform`, not `left`: `left` forces a
+   layout recalc every frame and often renders as barely-visible or choppy,
+   `transform` is GPU-composited. `will-change` hints the browser to promote
+   this to its own compositor layer up front rather than mid-animation. */
+.tabs-indicator {
+    transition: transform 0.35s cubic-bezier(0.32, 1.3, 0.55, 1), width 0.35s cubic-bezier(0.32, 1.3, 0.55, 1);
+    will-change: transform;
+}

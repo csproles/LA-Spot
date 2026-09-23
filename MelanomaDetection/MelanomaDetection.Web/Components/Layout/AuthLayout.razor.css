@@ -38,7 +38,7 @@
    dark-outlined artwork on the cream one. */
 .auth-brand-logo {
     height: 96px;
-    aspect-ratio: 1.476;
+    aspect-ratio: 1136 / 878;
     background: var(--brand-logo) center / contain no-repeat;
 }
 

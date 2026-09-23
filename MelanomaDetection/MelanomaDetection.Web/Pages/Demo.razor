@@ -1,0 +1,33 @@
+@page "/demo"
+@rendermode InteractiveServer
+
+<PageTitle>Tabs demo - LA Spot</PageTitle>
+
+<div class="check-page">
+    <PageHeader Title="Tabs demo" Subtitle="Tailwind CSS 4 + an animated tab indicator, proving out the new build pipeline." />
+
+    <div class="card-panel">
+        <Tabs Items="@(new[] { "Overview", "Results", "History" })"
+              Variant="Tabs.TabVariant.Segment"
+              @bind-Active="tab" />
+
+        <div class="mt-4">
+            @switch (tab)
+            {
+                case 0:
+                    <p>Overview stuff</p>
+                    break;
+                case 1:
+                    <p>Results stuff</p>
+                    break;
+                case 2:
+                    <p>History stuff</p>
+                    break;
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    int tab;
+}

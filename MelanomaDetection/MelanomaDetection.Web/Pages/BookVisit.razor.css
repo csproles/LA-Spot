@@ -110,11 +110,6 @@
     cursor: pointer;
 }
 
-.book-visit-no-slots {
-    color: var(--color-text-muted);
-    margin: 0;
-}
-
 .book-visit-optional {
     font-weight: 400;
     color: var(--color-text-muted);

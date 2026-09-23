@@ -1,0 +1,9 @@
+/* Theme tokens + utility classes only -- deliberately NOT `@import "tailwindcss";`,
+   which also pulls in Preflight (a global CSS reset) and would silently override
+   margins/typography/form-control styling on every existing page, not just
+   components that opt into Tailwind. See app.css for why those values are what
+   they are; Tailwind here is additive, for new components only. */
+@import "tailwindcss/theme.css";
+@import "tailwindcss/utilities.css";
+
+@source "../**/*.razor";

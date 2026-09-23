@@ -4,22 +4,24 @@
 
 <div class="card-panel empty-state">
     <span class="empty-state-dog" aria-hidden="true"></span>
-    @if (!string.IsNullOrEmpty(Title))
-    {
-        <h2 class="panel-title empty-state-title">@Title</h2>
-    }
-    @if (!string.IsNullOrEmpty(Description))
-    {
-        <p class="empty-state-description">@Description</p>
-    }
-    @if (ChildContent is not null)
-    {
-        @ChildContent
-    }
-    @if (!string.IsNullOrEmpty(ActionHref))
-    {
-        <a href="@ActionHref" class="btn btn-primary empty-state-action">@ActionText</a>
-    }
+    <div class="empty-state-body">
+        @if (!string.IsNullOrEmpty(Title))
+        {
+            <h2 class="panel-title empty-state-title">@Title</h2>
+        }
+        @if (!string.IsNullOrEmpty(Description))
+        {
+            <p class="empty-state-description">@Description</p>
+        }
+        @if (ChildContent is not null)
+        {
+            @ChildContent
+        }
+        @if (!string.IsNullOrEmpty(ActionHref))
+        {
+            <a href="@ActionHref" class="btn btn-primary empty-state-action">@ActionText</a>
+        }
+    </div>
 </div>
 
 @code {

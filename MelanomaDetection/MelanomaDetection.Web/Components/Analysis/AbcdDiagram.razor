@@ -1,0 +1,39 @@
+@* Small original line-art illustrating what each ABCDE criterion is actually
+   looking at -- not a photo. This app never uses stock or clinical photography
+   (licensing risk, and no source to pull real lesion imagery from); these are
+   schematic diagrams instead, drawn in the app's own palette. Purely
+   illustrative: FactorBar's score next to each one remains the real data. *@
+
+<svg class="abcd-diagram" viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+    @switch (Criterion)
+    {
+        case "asymmetry":
+            <line class="abcd-diagram-axis" x1="32" y1="6" x2="32" y2="58" />
+            <path class="abcd-diagram-outline" d="M32,10 C18,12 10,22 12,34 C13,44 20,52 32,54 C40,50 46,42 46,32 C46,20 40,12 32,10 Z" />
+            break;
+
+        case "border":
+            <path class="abcd-diagram-outline" d="M59,32 L45.9,40 L45,54.5 L32,47 L18,56.2 L17.3,40.5 L7,32 L19.9,25 L18.5,8.6 L32,16 L45,9.5 L45,24.5 Z" />
+            break;
+
+        case "color":
+            <circle class="abcd-diagram-tone-1" cx="32" cy="32" r="24" />
+            <path class="abcd-diagram-tone-2" d="M32,32 L56,32 A24,24 0 0,1 16.6,50.4 Z" />
+            <path class="abcd-diagram-tone-3" d="M32,32 L16.6,50.4 A24,24 0 0,1 13.6,16.6 Z" />
+            break;
+
+        case "diameter":
+            <circle class="abcd-diagram-outline" cx="22" cy="32" r="17" />
+            <line class="abcd-diagram-axis" x1="5" y1="32" x2="39" y2="32" />
+            <line class="abcd-diagram-tick" x1="5" y1="28" x2="5" y2="36" />
+            <line class="abcd-diagram-tick" x1="39" y1="28" x2="39" y2="36" />
+            <circle class="abcd-diagram-ref" cx="54" cy="32" r="7" />
+            break;
+    }
+</svg>
+
+@code {
+    /// <summary>"asymmetry", "border", "color", or "diameter".</summary>
+    [Parameter, EditorRequired]
+    public string Criterion { get; set; } = string.Empty;
+}

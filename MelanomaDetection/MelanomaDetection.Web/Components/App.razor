@@ -19,6 +19,10 @@
     <link rel="preload" href="fonts/bricolage-grotesque-latin.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="stylesheet" href="@Assets["lib/bootstrap/dist/css/bootstrap.min.css"]" />
     <link rel="stylesheet" href="@Assets["app.css"]" />
+    <!-- Utilities only, no Preflight: see Styles/tailwind.css for why. Loaded after
+         app.css/Bootstrap so a Tailwind utility class can still win a specificity tie
+         when a component opts into one, without resetting anything it doesn't touch. -->
+    <link rel="stylesheet" href="@Assets["css/tailwind.css"]" />
     <link rel="stylesheet" href="@Assets["MelanomaDetection.Web.styles.css"]" />
     <script src="@Assets["theme.js"]"></script>
     <script src="@Assets["skip-link.js"]" defer></script>

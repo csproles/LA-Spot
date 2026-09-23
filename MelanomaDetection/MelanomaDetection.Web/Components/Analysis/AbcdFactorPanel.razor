@@ -4,10 +4,22 @@
 
 <div class="card-panel">
     <h2 class="panel-title">What we looked at</h2>
-    <FactorBar Label="Shape symmetry" Score="Scores.Asymmetry.Score" Detail="Do both halves match?" />
-    <FactorBar Label="Border regularity" Score="Scores.Border.Score" Detail="Is the edge smooth and even?" />
-    <FactorBar Label="Color variation" Score="Scores.Color.Score" Detail="Is it one color, or several?" />
-    <FactorBar Label="Diameter" Score="Scores.Diameter.Score" Detail="How wide is it?" />
+    <div class="abcd-row">
+        <AbcdDiagram Criterion="asymmetry" />
+        <FactorBar Label="Shape symmetry" Score="Scores.Asymmetry.Score" Detail="Do both halves match?" />
+    </div>
+    <div class="abcd-row">
+        <AbcdDiagram Criterion="border" />
+        <FactorBar Label="Border regularity" Score="Scores.Border.Score" Detail="Is the edge smooth and even?" />
+    </div>
+    <div class="abcd-row">
+        <AbcdDiagram Criterion="color" />
+        <FactorBar Label="Color variation" Score="Scores.Color.Score" Detail="Is it one color, or several?" />
+    </div>
+    <div class="abcd-row">
+        <AbcdDiagram Criterion="diameter" />
+        <FactorBar Label="Diameter" Score="Scores.Diameter.Score" Detail="How wide is it?" />
+    </div>
 </div>
 
 @code {
