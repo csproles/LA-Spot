@@ -43,6 +43,9 @@ function showProviders(providers) {
                 title: provider.name,
             });
             markers.set(provider.id, { marker, provider });
+            // Clicking the pin itself is how most people expect to open a provider,
+            // not just clicking its card in the list below the map.
+            marker.addListener('click', () => focusProvider(provider.id));
         });
 }
 
@@ -68,6 +71,17 @@ function buildInfoContent(provider) {
     addLine(provider.name, 'font-size:15px;font-weight:700;line-height:1.25;margin-bottom:4px;');
     addLine(provider.address, 'font-size:13px;color:#4b5563;');
     addLine(provider.phone, 'font-size:13px;color:#4b5563;margin-top:2px;');
+
+    if (provider.website) {
+        const link = document.createElement('a');
+        link.href = provider.website;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        link.textContent = 'Visit website';
+        link.style.cssText = 'display:inline-block;font-size:13px;font-weight:600;color:#1d4ed8;margin-top:4px;';
+        card.appendChild(link);
+    }
+
     return card;
 }
 

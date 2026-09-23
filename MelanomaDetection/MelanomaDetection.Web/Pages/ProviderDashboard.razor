@@ -24,6 +24,9 @@ else
             </Actions>
         </PageHeader>
 
+        <MedicalDisclaimer Role="note"
+            Message="This app does not provide a diagnosis. Consultations are for informational purposes. This demo is not HIPAA-compliant." />
+
         <ErrorAlert Message="@ErrorMessage" />
 
         <section class="card-panel">
@@ -43,6 +46,40 @@ else
                     }
                 </div>
             }
+        </section>
+
+        <section class="card-panel">
+            <h2 class="panel-title">Your profile</h2>
+            <p class="text-muted-small">What patients see when browsing dermatologists. Self-reported -- not verified against a licensing board.</p>
+            <div class="provider-form-grid">
+                <label class="provider-field">
+                    Specialty
+                    <input type="text" class="form-control" maxlength="100" @bind="ProfileSpecialty" />
+                </label>
+                <label class="provider-field">
+                    License #
+                    <input type="text" class="form-control" maxlength="50" @bind="ProfileLicenseNumber" />
+                </label>
+                <label class="provider-field">
+                    Credentials
+                    <input type="text" class="form-control" maxlength="200" placeholder="MD, Board-Certified Dermatologist" @bind="ProfileCredentials" />
+                </label>
+                <label class="provider-field">
+                    Photo URL
+                    <input type="text" class="form-control" maxlength="2048" placeholder="https://..." @bind="ProfilePhotoUrl" />
+                </label>
+            </div>
+            <label class="provider-field">
+                Bio
+                <textarea class="form-control" rows="3" maxlength="2000" @bind="ProfileBio"></textarea>
+            </label>
+            <button type="button" class="btn btn-primary btn-sm" disabled="@IsSavingProfile" @onclick="SaveProfileAsync">
+                @if (IsSavingProfile)
+                {
+                    <span class="btn-spinner" aria-hidden="true"></span>
+                }
+                Save profile
+            </button>
         </section>
 
         <section class="card-panel">
@@ -200,6 +237,13 @@ else
     private string SettingsTimeZoneId = "America/Chicago";
     private bool IsSavingSettings;
 
+    private string ProfileSpecialty = "Dermatology";
+    private string? ProfileLicenseNumber;
+    private string? ProfileCredentials;
+    private string? ProfileBio;
+    private string? ProfilePhotoUrl;
+    private bool IsSavingProfile;
+
     private List<AvailabilityRule> Rules = [];
     private DayOfWeek NewRuleWeekday = DayOfWeek.Monday;
     private TimeOnly NewRuleStart = new(9, 0);
@@ -230,6 +274,13 @@ else
             SettingsLengthMinutes = provider.AppointmentLengthMinutes;
             SettingsBufferMinutes = provider.BufferMinutes;
             SettingsTimeZoneId = provider.TimeZoneId;
+
+            ProfileSpecialty = provider.Specialty;
+            ProfileLicenseNumber = provider.LicenseNumber;
+            ProfileCredentials = provider.Credentials;
+            ProfileBio = provider.Bio;
+            // Default to the Google avatar so most providers never have to touch this field.
+            ProfilePhotoUrl = provider.PhotoUrl ?? await CurrentUser.GetPictureUrlAsync();
         }
 
         await ReloadAllAsync();
@@ -303,6 +354,28 @@ else
         finally
         {
             IsSavingSettings = false;
+        }
+    }
+
+    private async Task SaveProfileAsync()
+    {
+        IsSavingProfile = true;
+        ErrorMessage = null;
+        StateHasChanged();
+
+        try
+        {
+            await Availability.UpdateProviderProfileAsync(
+                ProviderId, ProfileSpecialty, ProfileLicenseNumber, ProfileCredentials, ProfileBio, ProfilePhotoUrl);
+            ProviderSpecialty = ProfileSpecialty;
+        }
+        catch (Exception ex) when (ex is ArgumentException)
+        {
+            ErrorMessage = ex.Message;
+        }
+        finally
+        {
+            IsSavingProfile = false;
         }
     }
 

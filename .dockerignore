@@ -1,0 +1,19 @@
+# Repo-root context for python-api's build (see docker-compose.yml). Keeps
+# the build from shipping the .NET projects and the Python venv (~2GB) as
+# context, since the Dockerfile only COPYs Code/, revised_abcd/, pipeline_v5/
+# and MelanomaDetection/MelanomaDetection.Python/ anyway.
+.git/
+MelanomaDetection/MelanomaDetection.Web/
+MelanomaDetection/MelanomaDetection.Web.Tests/
+MelanomaDetection/MelanomaDetection.Python/venv/
+MelanomaDetection/MelanomaDetection.Python/.venv/
+**/__pycache__/
+**/*.pyc
+**/.pytest_cache/
+.env
+*.env
+*.db
+*.db-shm
+*.db-wal
+pipeline_v4/
+docs/

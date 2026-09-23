@@ -36,34 +36,30 @@ else
             </span>
         </div>
 
-        <div class="video-room-stage">
-            <div class="video-tile video-tile-self">
-                <video id="video-self-preview" autoplay playsinline muted></video>
-                <span class="video-tile-label">You</span>
+        <MedicalDisclaimer Role="note"
+            Message="This app does not provide a diagnosis. Consultations are for informational purposes. This demo is not HIPAA-compliant -- don't share anything you wouldn't want on an unsecured call." />
+
+        @if (IsProviderView && HasScan)
+        {
+            <div class="card-panel video-room-scan">
+                <h2 class="panel-title">Patient's scan result</h2>
+                <p class="video-room-scan-score">
+                    @Appointment!.ScanOverallVisualConcern
+                    <span class="text-muted-small">(score @Appointment.ScanRiskScore?.ToString("F0")/100)</span>
+                </p>
+                @if (!string.IsNullOrWhiteSpace(Appointment.ScanExplanation))
+                {
+                    <p>@Appointment.ScanExplanation</p>
+                }
             </div>
-            <div class="video-tile video-tile-remote">
-                <div class="video-tile-placeholder">
-                    <AppIcon Name="person" Size="hero" />
-                    @if (OtherPartyPresent)
-                    {
-                        <span>@OtherPartyName is in the call</span>
-                        <span class="text-muted-small">(demo room -- no live video between participants)</span>
-                    }
-                    else
-                    {
-                        <span>Waiting for @OtherPartyName...</span>
-                    }
-                </div>
-            </div>
+        }
+
+        <div class="video-room-frame-wrap">
+            <iframe class="video-room-frame" src="@Appointment!.MeetingUrl"
+                    allow="camera; microphone; fullscreen; display-capture; autoplay" title="Video visit"></iframe>
         </div>
 
         <div class="video-room-controls">
-            <button type="button" class="btn btn-outline-primary btn-sm" @onclick="ToggleMicAsync">
-                @(MicOn ? "Mute" : "Unmute")
-            </button>
-            <button type="button" class="btn btn-outline-primary btn-sm" @onclick="ToggleCameraAsync">
-                @(CameraOn ? "Turn camera off" : "Turn camera on")
-            </button>
             @if (IsProviderView)
             {
                 <button type="button" class="btn btn-outline-danger btn-sm" @onclick="EndVisitAsync">End visit</button>
@@ -71,7 +67,7 @@ else
             <a href="@BackHref" class="btn btn-primary btn-sm">Leave call</a>
         </div>
 
-        @if (!string.IsNullOrWhiteSpace(Appointment!.Reason))
+        @if (!string.IsNullOrWhiteSpace(Appointment.Reason))
         {
             <div class="card-panel video-room-reason">
                 <h2 class="panel-title">Reason for visit</h2>
@@ -91,15 +87,14 @@ else
     private Guid MyUserId;
     private bool IsProviderView;
     private bool OtherPartyPresent;
-    private bool MicOn = true;
-    private bool CameraOn = true;
-    private bool _cameraStarted;
+    private bool _joined;
     private string? _browserTimeZoneId;
 
     private string Role => IsProviderView ? "provider" : "patient";
     private string OtherRole => IsProviderView ? "patient" : "provider";
     private string OtherPartyName => Appointment is null ? "" : (IsProviderView ? Appointment.PatientName : Appointment.ProviderName);
     private string BackHref => IsProviderView ? "/provider" : "/visits";
+    private bool HasScan => !string.IsNullOrWhiteSpace(Appointment?.ScanProcessingId);
 
     private bool IsJoinWindowOpen => Appointment is not null
         && Appointment.Status != AppointmentStatus.Cancelled
@@ -159,21 +154,14 @@ else
         // Gating this to firstRender only (an earlier version of this method did)
         // meant a patient who arrived early would see the live room UI once the
         // window opened (IsJoinWindowOpen is re-evaluated every render) but their
-        // own camera/presence would never actually start, since OnAfterRenderAsync
+        // own presence would never actually register, since OnAfterRenderAsync
         // had already returned early on its one and only firstRender pass.
         // There's still no timer forcing a render purely from time passing -- if
         // nothing else re-renders the page, a manual refresh is needed.
-        if (Appointment is not null && IsJoinWindowOpen && !_cameraStarted)
+        if (Appointment is not null && IsJoinWindowOpen && !_joined)
         {
-            _cameraStarted = true;
+            _joined = true;
             Presence.Join(AppointmentId, Role);
-            try
-            {
-                await JS.InvokeVoidAsync("skinCheckVideoRoom.start", "video-self-preview");
-            }
-            catch (JSException)
-            {
-            }
         }
     }
 
@@ -188,51 +176,24 @@ else
         _ = InvokeAsync(StateHasChanged);
     }
 
-    private async Task ToggleMicAsync()
-    {
-        MicOn = !MicOn;
-        await JS.InvokeVoidAsync("skinCheckVideoRoom.setAudioEnabled", MicOn);
-    }
-
-    private async Task ToggleCameraAsync()
-    {
-        CameraOn = !CameraOn;
-        await JS.InvokeVoidAsync("skinCheckVideoRoom.setVideoEnabled", CameraOn);
-    }
-
     private async Task EndVisitAsync()
     {
         await Booking.CompleteAsync(AppointmentId, MyUserId);
         NavigationManager.NavigateTo("/provider");
     }
 
-    public async ValueTask DisposeAsync()
+    public ValueTask DisposeAsync()
     {
         if (Appointment is not null)
         {
             Presence.PresenceChanged -= OnPresenceChanged;
         }
 
-        if (!_cameraStarted)
+        if (_joined)
         {
-            // Never got past OnAfterRenderAsync -- either the join window wasn't
-            // open, or this is the ephemeral prerendered instance Blazor disposes
-            // right after producing static HTML, before any JS runtime exists.
-            // Calling JS interop here would throw InvalidOperationException.
-            return;
+            Presence.Leave(AppointmentId, Role);
         }
 
-        Presence.Leave(AppointmentId, Role);
-        try
-        {
-            await JS.InvokeVoidAsync("skinCheckVideoRoom.stop");
-        }
-        catch (JSException)
-        {
-        }
-        catch (JSDisconnectedException)
-        {
-            // The circuit is already gone (tab closed, navigated away) -- nothing to clean up client-side.
-        }
+        return ValueTask.CompletedTask;
     }
 }

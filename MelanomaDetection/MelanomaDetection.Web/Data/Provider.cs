@@ -18,6 +18,20 @@ public class Provider
 
     /// <summary>IANA id (e.g. "America/Chicago"). AvailabilityRule times are local to this zone.</summary>
     public string TimeZoneId { get; set; } = "America/Chicago";
+
+    /// <summary>State medical license number, self-reported. Not verified against any
+    /// licensing board -- see the profile form's own disclaimer for why that's out of
+    /// scope here.</summary>
+    public string? LicenseNumber { get; set; }
+
+    /// <summary>Free text, e.g. "MD, Board-Certified Dermatologist".</summary>
+    public string? Credentials { get; set; }
+
+    public string? Bio { get; set; }
+
+    /// <summary>URL of a profile photo. No upload/storage pipeline for this demo --
+    /// a provider pastes a link (their Google avatar is offered as a default).</summary>
+    public string? PhotoUrl { get; set; }
 }
 
 /// <summary>One recurring weekly open window, e.g. "Mon 09:00-12:00". Local to

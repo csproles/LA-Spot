@@ -3,7 +3,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace MelanomaDetection.Web.Services.Scheduling;
 
-public sealed record ProviderSummary(Guid Id, string DisplayName, string Specialty);
+public sealed record ProviderSummary(
+    Guid Id, string DisplayName, string Specialty, string? Credentials, string? Bio, string? PhotoUrl);
 
 /// <summary>
 /// DB-backed wrapper around <see cref="SlotGenerator"/>: loads one provider's
@@ -16,7 +17,8 @@ public sealed class AvailabilityService(IDbContextFactory<AppDbContext> dbFactor
     {
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
         return await db.Providers.AsNoTracking()
-            .Join(db.Users.AsNoTracking(), p => p.Id, u => u.Id, (p, u) => new ProviderSummary(p.Id, u.DisplayName, p.Specialty))
+            .Join(db.Users.AsNoTracking(), p => p.Id, u => u.Id, (p, u) =>
+                new ProviderSummary(p.Id, u.DisplayName, p.Specialty, p.Credentials, p.Bio, p.PhotoUrl))
             .ToListAsync(cancellationToken);
     }
 
@@ -86,6 +88,28 @@ public sealed class AvailabilityService(IDbContextFactory<AppDbContext> dbFactor
         provider.AppointmentLengthMinutes = appointmentLengthMinutes;
         provider.BufferMinutes = bufferMinutes;
         provider.TimeZoneId = timeZoneId;
+        await db.SaveChangesAsync(cancellationToken);
+    }
+
+    /// <summary>Update the self-reported credentialing fields patients see when browsing
+    /// providers. Nothing here is verified against a licensing board -- see Provider.LicenseNumber.</summary>
+    public async Task UpdateProviderProfileAsync(
+        Guid providerId, string specialty, string? licenseNumber, string? credentials, string? bio, string? photoUrl,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(specialty))
+        {
+            throw new ArgumentException("Specialty can't be blank.");
+        }
+
+        await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+        var provider = await db.Providers.SingleOrDefaultAsync(p => p.Id == providerId, cancellationToken)
+            ?? throw new KeyNotFoundException($"No provider {providerId}.");
+        provider.Specialty = specialty.Trim();
+        provider.LicenseNumber = string.IsNullOrWhiteSpace(licenseNumber) ? null : licenseNumber.Trim();
+        provider.Credentials = string.IsNullOrWhiteSpace(credentials) ? null : credentials.Trim();
+        provider.Bio = string.IsNullOrWhiteSpace(bio) ? null : bio.Trim();
+        provider.PhotoUrl = string.IsNullOrWhiteSpace(photoUrl) ? null : photoUrl.Trim();
         await db.SaveChangesAsync(cancellationToken);
     }
 

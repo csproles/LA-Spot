@@ -16,10 +16,17 @@ public sealed record BookingResult(BookingOutcome Outcome, Appointment? Appointm
     public static readonly BookingResult Conflict = new(BookingOutcome.Conflict);
 }
 
-/// <summary>An appointment plus the two display names neither side has to look up separately.</summary>
+/// <summary>An appointment plus the two display names neither side has to look up separately,
+/// the video room to join, and a snapshot of the scan the patient chose to attach (if any).</summary>
 public sealed record AppointmentView(
     Guid Id, Guid ProviderId, string ProviderName, Guid PatientId, string PatientName,
-    DateTime StartUtc, DateTime EndUtc, AppointmentStatus Status, string? Reason);
+    DateTime StartUtc, DateTime EndUtc, AppointmentStatus Status, string? Reason, string? MeetingUrl,
+    string? ScanProcessingId, double? ScanRiskScore, string? ScanOverallVisualConcern, string? ScanExplanation);
+
+/// <summary>A specific completed check the patient is choosing to share, fetched (as the
+/// patient, in their own browser session) before booking -- see Appointment.ScanProcessingId
+/// for why this is a snapshot rather than a live reference.</summary>
+public sealed record AttachedScan(string ProcessingId, double RiskScore, string? OverallVisualConcern, string? Explanation);
 
 /// <summary>
 /// Books and cancels appointments. The real double-booking guard is the
@@ -28,10 +35,12 @@ public sealed record AppointmentView(
 /// for the common case, not as the source of truth for concurrent requests.
 /// </summary>
 public sealed class BookingService(
-    IDbContextFactory<AppDbContext> dbFactory, AvailabilityService availability, NotificationService notifications, ILogger<BookingService> logger)
+    IDbContextFactory<AppDbContext> dbFactory, AvailabilityService availability, NotificationService notifications,
+    IVideoRoomProvider videoRooms, ILogger<BookingService> logger)
 {
     public async Task<BookingResult> BookAsync(
-        Guid providerId, Guid patientId, DateTime startUtc, string? reason, CancellationToken cancellationToken = default)
+        Guid providerId, Guid patientId, DateTime startUtc, string? reason, AttachedScan? scan = null,
+        CancellationToken cancellationToken = default)
     {
         var provider = await GetProviderAsync(providerId, cancellationToken)
             ?? throw new KeyNotFoundException($"No provider {providerId}.");
@@ -45,14 +54,22 @@ public sealed class BookingService(
             return BookingResult.SlotNotAvailable;
         }
 
+        var appointmentId = Guid.NewGuid();
+        var room = videoRooms.CreateRoom(appointmentId);
         var appointment = new Appointment
         {
-            Id = Guid.NewGuid(),
+            Id = appointmentId,
             ProviderId = providerId,
             PatientId = patientId,
             StartUtc = startUtc,
             EndUtc = startUtc.AddMinutes(provider.AppointmentLengthMinutes),
             Reason = reason,
+            MeetingId = room.RoomName,
+            MeetingUrl = room.JoinUrl,
+            ScanProcessingId = scan?.ProcessingId,
+            ScanRiskScore = scan?.RiskScore,
+            ScanOverallVisualConcern = scan?.OverallVisualConcern,
+            ScanExplanation = scan?.Explanation,
             CreatedAtUtc = DateTime.UtcNow,
         };
 
@@ -189,11 +206,17 @@ public sealed class BookingService(
                 x.a.EndUtc,
                 x.a.Status,
                 x.a.Reason,
+                x.a.MeetingUrl,
+                x.a.ScanProcessingId,
+                x.a.ScanRiskScore,
+                x.a.ScanOverallVisualConcern,
+                x.a.ScanExplanation,
             })
             .ToListAsync(cancellationToken);
 
         return [.. rows.Select(r => new AppointmentView(
-            r.Id, r.ProviderId, r.ProviderName, r.PatientId, r.PatientName, r.StartUtc, r.EndUtc, r.Status, r.Reason))];
+            r.Id, r.ProviderId, r.ProviderName, r.PatientId, r.PatientName, r.StartUtc, r.EndUtc, r.Status, r.Reason,
+            r.MeetingUrl, r.ScanProcessingId, r.ScanRiskScore, r.ScanOverallVisualConcern, r.ScanExplanation))];
     }
 
     private async Task<Provider?> GetProviderAsync(Guid providerId, CancellationToken cancellationToken)

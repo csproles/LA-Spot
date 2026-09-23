@@ -3,13 +3,16 @@ using System.Text.Json.Serialization;
 namespace MelanomaDetection.Web.Models;
 
 /// <summary>A dermatology provider resolved from the NPI Registry and geocoded via the Census geocoder.
-/// Rating/RatingCount come from Google Places (Find Place from Text) and are null if that lookup
-/// found no match or failed -- never blocks the rest of the provider from showing.</summary>
-public record DermatologyProvider(string Name, string Address, string? Phone, double? Lat, double? Lng, double? Rating = null, int? RatingCount = null);
+/// Rating/RatingCount/Website come from Google Places and are null if that lookup found no match
+/// or failed -- never blocks the rest of the provider from showing.</summary>
+public record DermatologyProvider(string Name, string Address, string? Phone, double? Lat, double? Lng, double? Rating = null, int? RatingCount = null, string? Website = null);
 
 /// <summary>Shape of the "candidates" entries in Google's Find Place from Text response.</summary>
 public class GooglePlaceCandidate
 {
+    [JsonPropertyName("place_id")]
+    public string? PlaceId { get; set; }
+
     [JsonPropertyName("rating")]
     public double? Rating { get; set; }
 
@@ -21,6 +24,20 @@ public class GoogleFindPlaceResponse
 {
     [JsonPropertyName("candidates")]
     public List<GooglePlaceCandidate> Candidates { get; set; } = [];
+}
+
+/// <summary>Shape of the "result" object in Google's Place Details response, narrowed to the one
+/// field (website) Find Place from Text can't return directly.</summary>
+public class GooglePlaceDetailsResponse
+{
+    [JsonPropertyName("result")]
+    public GooglePlaceDetailsResult? Result { get; set; }
+}
+
+public class GooglePlaceDetailsResult
+{
+    [JsonPropertyName("website")]
+    public string? Website { get; set; }
 }
 
 /// <summary>Shape of https://npiregistry.cms.hhs.gov/api/ (version 2.1) responses.</summary>

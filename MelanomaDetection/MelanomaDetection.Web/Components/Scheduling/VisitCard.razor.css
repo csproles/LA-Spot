@@ -43,3 +43,19 @@
     background: color-mix(in srgb, var(--bs-danger) 16%, transparent);
     color: var(--bs-danger);
 }
+
+.visit-card-scan {
+    margin-top: 4px;
+    font-size: 0.8125rem;
+}
+
+.visit-card-scan summary {
+    color: var(--color-accent-ink);
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.visit-card-scan p {
+    margin: 4px 0 0;
+    color: var(--color-text-muted);
+}

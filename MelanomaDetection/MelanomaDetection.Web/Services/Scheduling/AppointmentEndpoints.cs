@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace MelanomaDetection.Web.Services.Scheduling;
 
-public sealed record BookAppointmentRequest(Guid ProviderId, DateTime StartUtc, string? Reason);
+public sealed record BookAppointmentRequest(Guid ProviderId, DateTime StartUtc, string? Reason, AttachedScan? Scan = null);
 
 public sealed record AppointmentSummary(
     Guid Id, Guid ProviderId, Guid PatientId, DateTime StartUtc, DateTime EndUtc, string Status, string? Reason);
@@ -40,7 +40,7 @@ public static class AppointmentEndpoints
         BookingResult result;
         try
         {
-            result = await booking.BookAsync(request.ProviderId, patientId, request.StartUtc, request.Reason, cancellationToken);
+            result = await booking.BookAsync(request.ProviderId, patientId, request.StartUtc, request.Reason, request.Scan, cancellationToken);
         }
         catch (KeyNotFoundException)
         {

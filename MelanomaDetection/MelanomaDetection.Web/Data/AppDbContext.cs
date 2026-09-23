@@ -39,6 +39,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             provider.HasKey(p => p.Id);
             provider.Property(p => p.Specialty).HasMaxLength(100);
             provider.Property(p => p.TimeZoneId).HasMaxLength(100);
+            provider.Property(p => p.LicenseNumber).HasMaxLength(50);
+            provider.Property(p => p.Credentials).HasMaxLength(200);
+            provider.Property(p => p.Bio).HasMaxLength(2000);
+            provider.Property(p => p.PhotoUrl).HasMaxLength(2048);
         });
 
         modelBuilder.Entity<AvailabilityRule>(rule =>
@@ -56,6 +60,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             appointment.Property(a => a.MeetingId).HasMaxLength(100);
             appointment.Property(a => a.MeetingUrl).HasMaxLength(2048);
             appointment.Property(a => a.CancelledBy).HasMaxLength(20);
+            appointment.Property(a => a.ScanProcessingId).HasMaxLength(100);
+            appointment.Property(a => a.ScanOverallVisualConcern).HasMaxLength(50);
             appointment.HasIndex(a => a.PatientId);
             // The double-booking guard: SQLite supports a filtered (partial) unique
             // index, so two non-cancelled rows can never share a provider+start time,

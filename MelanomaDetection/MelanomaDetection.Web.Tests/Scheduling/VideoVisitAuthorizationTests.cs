@@ -37,7 +37,7 @@ public class VideoVisitAuthorizationTests
         }
 
         var factory = new SingleOptionsDbContextFactory(options);
-        var booking = new BookingService(factory, new AvailabilityService(factory), new NotificationService(factory), NullLogger<BookingService>.Instance);
+        var booking = new BookingService(factory, new AvailabilityService(factory), new NotificationService(factory), new JitsiVideoRoomProvider(), NullLogger<BookingService>.Instance);
         return (booking, providerId, patientId, appointmentId, dbPath);
     }
 

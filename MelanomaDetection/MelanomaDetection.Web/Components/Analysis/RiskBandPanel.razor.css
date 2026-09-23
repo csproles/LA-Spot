@@ -37,8 +37,15 @@
     font-size: 0.875rem;
 }
 
-.risk-band-action {
+.risk-band-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
     margin: 0 0 14px;
+}
+
+.risk-band-action {
+    margin: 0;
 }
 
 .risk-band-score-block {

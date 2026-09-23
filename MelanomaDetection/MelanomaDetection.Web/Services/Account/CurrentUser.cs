@@ -31,6 +31,13 @@ public sealed class CurrentUser(AuthenticationStateProvider authenticationStateP
         return state.User.Identity?.Name;
     }
 
+    /// <summary>Their Google avatar URL, if Google sent one -- straight from the claim.</summary>
+    public async ValueTask<string?> GetPictureUrlAsync()
+    {
+        var state = await authenticationStateProvider.GetAuthenticationStateAsync();
+        return state.User.FindFirstValue(AppClaimTypes.Picture);
+    }
+
     /// <summary>True when the principal is a throw-away demo session.</summary>
     public static bool IsDemo(ClaimsPrincipal principal) => principal.HasClaim(AppClaimTypes.Demo, "true");
 

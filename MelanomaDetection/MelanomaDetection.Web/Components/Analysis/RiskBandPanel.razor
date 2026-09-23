@@ -7,9 +7,18 @@
 <div class="card-panel risk-band risk-band-@Tone">
     <p class="risk-band-label">@VisualConcern.Label(OverallVisualConcern)</p>
     <p class="risk-band-recommendation">@VisualConcern.Guidance(OverallVisualConcern)</p>
-    @if (ShowDoctorLink && OverallVisualConcern == VisualConcern.Elevated)
+    @if (ShowDoctorLink)
     {
-        <a href="/map" class="btn btn-primary risk-band-action">Find a skin doctor</a>
+        <div class="risk-band-actions">
+            @if (OverallVisualConcern == VisualConcern.Elevated)
+            {
+                <a href="/map" class="btn btn-primary risk-band-action">Find a skin doctor</a>
+            }
+            @if (!string.IsNullOrWhiteSpace(ProcessingId))
+            {
+                <a href="@($"/book-visit?scan={Uri.EscapeDataString(ProcessingId)}")" class="btn btn-outline-primary risk-band-action">Consult a Dermatologist</a>
+            }
+        </div>
     }
 
     <div class="risk-band-score-block">
@@ -31,9 +40,14 @@
     [Parameter]
     public string? OverallVisualConcern { get; set; }
 
-    /// <summary>Offer "Find a skin doctor" for an elevated result. Off while a check is unsaved, so leaving the page never loses it.</summary>
+    /// <summary>Offer "Find a skin doctor" / "Consult a Dermatologist". Off while a check is unsaved, so leaving the page never loses it.</summary>
     [Parameter]
     public bool ShowDoctorLink { get; set; }
+
+    /// <summary>The check's processing id, so "Consult a Dermatologist" can carry it into
+    /// the booking flow (see BookVisit.razor's Scan query param). Null hides that button.</summary>
+    [Parameter]
+    public string? ProcessingId { get; set; }
 
     private string Tone => VisualConcern.CssTone(OverallVisualConcern);
 }

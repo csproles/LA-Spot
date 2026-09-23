@@ -15,6 +15,11 @@
         @Details
         <span class="provider-map-hint provider-map-hint-off">Not available on the map</span>
     }
+    @if (!string.IsNullOrWhiteSpace(Provider.Website))
+    {
+        @* Outside the button above: an <a> can't nest inside a <button>. *@
+        <a class="provider-website-link" href="@Provider.Website" target="_blank" rel="noopener noreferrer">Visit website</a>
+    }
 </li>
 
 @code {

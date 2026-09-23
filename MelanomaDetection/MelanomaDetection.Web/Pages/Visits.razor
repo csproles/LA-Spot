@@ -14,6 +14,9 @@
         </Actions>
     </PageHeader>
 
+    <MedicalDisclaimer Role="note"
+        Message="This app does not provide a diagnosis. Consultations are for informational purposes. This demo is not HIPAA-compliant." />
+
     <ErrorAlert Message="@LoadError" />
 
     @if (IsLoading)
@@ -23,8 +26,7 @@
     }
     else if (Appointments.Count == 0)
     {
-        <EmptyState Title="No visits yet" Description="Book a video visit with a dermatologist."
-                    ActionHref="/book-visit" ActionText="Book a visit" />
+        <EmptyState Title="No visits yet" Description="Book a video visit with a dermatologist." />
     }
     else
     {

@@ -9,6 +9,16 @@
         {
             <p class="visit-card-reason">@Appointment.Reason</p>
         }
+        @if (!string.IsNullOrWhiteSpace(Appointment.ScanProcessingId))
+        {
+            <details class="visit-card-scan">
+                <summary>Scan attached -- @Appointment.ScanOverallVisualConcern (score @Appointment.ScanRiskScore?.ToString("F0")/100)</summary>
+                @if (!string.IsNullOrWhiteSpace(Appointment.ScanExplanation))
+                {
+                    <p>@Appointment.ScanExplanation</p>
+                }
+            </details>
+        }
     </div>
     <div class="visit-card-actions">
         @if (Appointment.Status == AppointmentStatus.Booked)

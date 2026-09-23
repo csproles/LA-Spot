@@ -98,6 +98,9 @@ builder.Services.AddScoped<NotificationService>();
 builder.Services.AddScoped<BookingService>();
 builder.Services.AddSingleton<VideoRoomPresence>();
 builder.Services.AddHostedService<ReminderSweeper>();
+// Jitsi today (free, keyless, iframe-embedded); swap this one registration for a
+// Google Meet implementation later without touching BookingService or any page.
+builder.Services.AddSingleton<IVideoRoomProvider, JitsiVideoRoomProvider>();
 
 var app = builder.Build();
 
@@ -132,6 +135,7 @@ app.Use(async (context, next) =>
 });
 
 await app.MigrateAccountsDatabaseAsync();
+await app.SeedDemoDermatologistsAsync();
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())

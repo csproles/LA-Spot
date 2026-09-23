@@ -11,6 +11,14 @@ namespace MelanomaDetection.Web.Services;
 /// </summary>
 public class NpiProviderService
 {
+    // A parish pick fans out to up to 8 providers, each needing a geocode call plus one or two
+    // Google Places calls -- up to ~24 simultaneous outbound HTTPS requests. Census and Google
+    // both started resetting connections under that burst (visible in prod logs as "Connection
+    // reset by peer" and near-timeout latencies), which silently drops the pin for whichever
+    // providers lost the race -- this is why pins that used to show stopped showing. Capping how
+    // many providers are looked up at once keeps each request well under HttpClient's timeout.
+    private static readonly SemaphoreSlim LookupThrottle = new(4, 4);
+
     private readonly HttpClient _httpClient;
     private readonly IMemoryCache _cache;
     private readonly ILogger<NpiProviderService> _logger;
@@ -96,20 +104,30 @@ public class NpiProviderService
         }
 
         var fullAddress = $"{address.AddressLine1}, {address.City}, {address.State} {FormatZip(address.PostalCode)}";
-        var coordinatesTask = GeocodeAsync(fullAddress, cancellationToken);
-        var ratingTask = GetRatingAsync($"{name}, {fullAddress}", cancellationToken);
-        await Task.WhenAll(coordinatesTask, ratingTask);
-        var coordinates = coordinatesTask.Result;
-        var rating = ratingTask.Result;
 
-        return new DermatologyProvider(name, fullAddress, address.TelephoneNumber, coordinates?.Lat, coordinates?.Lng, rating?.Rating, rating?.Count);
+        await LookupThrottle.WaitAsync(cancellationToken);
+        try
+        {
+            var coordinatesTask = GeocodeAsync(fullAddress, cancellationToken);
+            var placeTask = GetPlaceInfoAsync($"{name}, {fullAddress}", cancellationToken);
+            await Task.WhenAll(coordinatesTask, placeTask);
+            var coordinates = coordinatesTask.Result;
+            var place = placeTask.Result;
+
+            return new DermatologyProvider(name, fullAddress, address.TelephoneNumber, coordinates?.Lat, coordinates?.Lng, place?.Rating, place?.RatingCount, place?.Website);
+        }
+        finally
+        {
+            LookupThrottle.Release();
+        }
     }
 
-    /// <summary>Google Places rating for a provider, via one Find Place from Text call (its
-    /// "fields" can return rating/user_ratings_total directly, so no second Place Details
-    /// call is needed). Returns null -- never throws -- if no key is configured, no match is
-    /// found, or the lookup fails; a missing rating just means the card shows none.</summary>
-    private async Task<(double Rating, int Count)?> GetRatingAsync(string query, CancellationToken cancellationToken)
+    /// <summary>Google Places rating and website for a provider. Rating/count come back directly
+    /// from one Find Place from Text call; website is a Place Details-only field, so it costs a
+    /// second call, made only when Find Place actually matched something. Returns null fields --
+    /// never throws -- if no key is configured, no match is found, or a lookup fails; a missing
+    /// rating or website just means the card shows none.</summary>
+    private async Task<(double? Rating, int? RatingCount, string? Website)?> GetPlaceInfoAsync(string query, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(_googleMapsApiKey))
         {
@@ -118,15 +136,40 @@ public class NpiProviderService
 
         try
         {
-            var url = "https://maps.googleapis.com/maps/api/place/findplacefromtext/json" +
-                $"?input={Uri.EscapeDataString(query)}&inputtype=textquery&fields=rating,user_ratings_total&key={_googleMapsApiKey}";
-            var response = await _httpClient.GetFromJsonAsync<GoogleFindPlaceResponse>(url, cancellationToken);
-            var candidate = response?.Candidates.FirstOrDefault();
-            return candidate?.Rating is { } value ? (value, candidate.UserRatingsTotal ?? 0) : null;
+            var findUrl = "https://maps.googleapis.com/maps/api/place/findplacefromtext/json" +
+                $"?input={Uri.EscapeDataString(query)}&inputtype=textquery&fields=place_id,rating,user_ratings_total&key={_googleMapsApiKey}";
+            var findResponse = await _httpClient.GetFromJsonAsync<GoogleFindPlaceResponse>(findUrl, cancellationToken);
+            var candidate = findResponse?.Candidates.FirstOrDefault();
+            if (candidate is null)
+            {
+                return null;
+            }
+
+            var website = candidate.PlaceId is { } placeId
+                ? await GetWebsiteAsync(placeId, cancellationToken)
+                : null;
+
+            return (candidate.Rating, candidate.UserRatingsTotal, website);
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException)
         {
-            _logger.LogWarning(ex, "Google Places rating lookup failed for {Query}", query);
+            _logger.LogWarning(ex, "Google Places lookup failed for {Query}", query);
+            return null;
+        }
+    }
+
+    private async Task<string?> GetWebsiteAsync(string placeId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var url = "https://maps.googleapis.com/maps/api/place/details/json" +
+                $"?place_id={Uri.EscapeDataString(placeId)}&fields=website&key={_googleMapsApiKey}";
+            var response = await _httpClient.GetFromJsonAsync<GooglePlaceDetailsResponse>(url, cancellationToken);
+            return response?.Result?.Website;
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException)
+        {
+            _logger.LogWarning(ex, "Google Place Details website lookup failed for {PlaceId}", placeId);
             return null;
         }
     }

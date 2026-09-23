@@ -55,7 +55,7 @@ public class BookingServiceConcurrencyTests
 
             var factory = new SingleOptionsDbContextFactory(options);
             var availability = new AvailabilityService(factory);
-            var booking = new BookingService(factory, availability, new NotificationService(factory), NullLogger<BookingService>.Instance);
+            var booking = new BookingService(factory, availability, new NotificationService(factory), new JitsiVideoRoomProvider(), NullLogger<BookingService>.Instance);
             var slotStartUtc = date.ToDateTime(TimeOnly.Parse("09:00"), DateTimeKind.Utc);
 
             // Real thread-pool parallelism (not cooperative async interleaving on one
@@ -64,7 +64,7 @@ public class BookingServiceConcurrencyTests
             // pre-check, can resolve safely.
             const int competitors = 8;
             var tasks = Enumerable.Range(0, competitors)
-                .Select(_ => Task.Run(() => booking.BookAsync(providerId, Guid.NewGuid(), slotStartUtc, "patient", CancellationToken.None)))
+                .Select(_ => Task.Run(() => booking.BookAsync(providerId, Guid.NewGuid(), slotStartUtc, "patient", cancellationToken: CancellationToken.None)))
                 .ToArray();
             var results = await Task.WhenAll(tasks);
 

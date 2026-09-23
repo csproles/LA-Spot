@@ -32,6 +32,19 @@ public class Appointment
 
     public string? MeetingUrl { get; set; }
 
+    /// <summary>Flask-side processing id of the check the patient chose to attach, if any.
+    /// Never used to re-fetch from Flask on the provider's behalf (there's no cross-user
+    /// auth path for that) -- ScanRiskScore/ScanOverallVisualConcern/ScanExplanation below
+    /// are a snapshot taken in the patient's own browser session at booking time.</summary>
+    public string? ScanProcessingId { get; set; }
+
+    public double? ScanRiskScore { get; set; }
+
+    public string? ScanOverallVisualConcern { get; set; }
+
+    /// <summary>PHI -- never log this. Snapshot of the plain-language explanation at booking time.</summary>
+    public string? ScanExplanation { get; set; }
+
     public DateTime CreatedAtUtc { get; set; }
 
     public DateTime? CancelledAtUtc { get; set; }

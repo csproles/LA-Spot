@@ -50,7 +50,7 @@ public class BookingServiceListTests
             }
 
             var factory = new SingleOptionsDbContextFactory(options);
-            var booking = new BookingService(factory, new AvailabilityService(factory), new NotificationService(factory), NullLogger<BookingService>.Instance);
+            var booking = new BookingService(factory, new AvailabilityService(factory), new NotificationService(factory), new JitsiVideoRoomProvider(), NullLogger<BookingService>.Instance);
 
             var forPatient = await booking.ListForPatientAsync(patientId);
             var forProvider = await booking.ListForProviderAsync(providerId);

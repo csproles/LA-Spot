@@ -2,13 +2,17 @@
 @rendermode InteractiveServer
 @inject AvailabilityService Availability
 @inject BookingService Booking
+@inject ImageProcessingService ImageProcessingService
 @inject CurrentUser CurrentUser
 @inject IJSRuntime JS
 
 <PageTitle>Book a visit - LA Spot</PageTitle>
 
 <div class="book-visit-page">
-    <PageHeader Title="Book a video visit" Subtitle="Talk to a dermatologist from home. Pick a provider, then an open time." />
+    <PageHeader Title="Consult a Dermatologist" Subtitle="Talk to a dermatologist from home. Pick a provider, then an open time." />
+
+    <MedicalDisclaimer Role="note"
+        Message="This app does not provide a diagnosis. Consultations are for informational purposes. This demo is not HIPAA-compliant." />
 
     <ErrorAlert Message="@LoadError" />
 
@@ -43,7 +47,11 @@
                         <ChoiceCard Layout="column" Selected="@(SelectedProvider?.Id == provider.Id)"
                                     OnSelect="() => SelectProviderAsync(provider)">
                             <strong>@provider.DisplayName</strong>
-                            <span>@provider.Specialty</span>
+                            <span>@(string.IsNullOrWhiteSpace(provider.Credentials) ? provider.Specialty : provider.Credentials)</span>
+                            @if (!string.IsNullOrWhiteSpace(provider.Bio))
+                            {
+                                <span class="provider-card-bio">@provider.Bio</span>
+                            }
                         </ChoiceCard>
                     }
                 </div>
@@ -54,49 +62,71 @@
         {
             <section class="card-panel">
                 <h2 class="panel-title">2. Choose a time</h2>
-                <div class="date-stepper">
+                <div class="week-nav">
                     <button type="button" class="btn btn-outline-primary btn-sm"
-                            disabled="@(SelectedDate <= MinDate)" @onclick="() => ChangeDateAsync(-1)">
-                        <AppIcon Name="chevron-left" Size="sm" /> Prev day
+                            disabled="@(WeekStart <= MinDate)" @onclick="() => ChangeWeekAsync(-7)">
+                        <AppIcon Name="chevron-left" Size="sm" /> Prev week
                     </button>
-                    <span class="date-stepper-label">@SelectedDate.ToString("dddd, MMM d")</span>
+                    <span class="week-nav-label">@WeekStart.ToString("MMM d") - @WeekStart.AddDays(6).ToString("MMM d")</span>
                     <button type="button" class="btn btn-outline-primary btn-sm"
-                            disabled="@(SelectedDate >= MaxDate)" @onclick="() => ChangeDateAsync(1)">
-                        Next day <AppIcon Name="chevron-right" Size="sm" />
+                            disabled="@(WeekStart.AddDays(7) > MaxDate)" @onclick="() => ChangeWeekAsync(7)">
+                        Next week <AppIcon Name="chevron-right" Size="sm" />
                     </button>
                 </div>
 
-                @if (IsLoadingSlots)
-                {
-                    <div class="choice-grid">
-                        @for (var i = 0; i < 6; i++)
-                        {
-                            <SkeletonBlock Height="44px" Shape="pill" />
-                        }
-                    </div>
-                }
-                else if (Slots.Count == 0)
-                {
-                    <p class="book-visit-no-slots">No open times that day. Try another day.</p>
-                }
-                else
-                {
-                    <div class="choice-grid">
-                        @foreach (var slot in Slots)
-                        {
-                            <ChoiceCard Selected="@(SelectedSlotUtc == slot)" OnSelect="() => SelectedSlotUtc = slot">
-                                @FormatSlotTime(slot)
-                            </ChoiceCard>
-                        }
-                    </div>
-                }
+                <div class="week-grid">
+                    @foreach (var day in WeekDays)
+                    {
+                        <div class="week-day-column">
+                            <div class="week-day-header">
+                                <span>@day.ToString("ddd")</span>
+                                <strong>@day.Day</strong>
+                            </div>
+                            @if (IsLoadingSlots)
+                            {
+                                <SkeletonBlock Height="30px" Shape="pill" />
+                            }
+                            else
+                            {
+                                var daySlots = SlotsForDay(day);
+                                if (daySlots.Count == 0)
+                                {
+                                    <span class="week-day-empty">No slots</span>
+                                }
+                                else
+                                {
+                                    @foreach (var slot in daySlots)
+                                    {
+                                        <button type="button" class="week-slot-btn @(SelectedSlotUtc == slot ? "is-selected" : "")"
+                                                @onclick="() => SelectedSlotUtc = slot">
+                                            @FormatSlotTime(slot)
+                                        </button>
+                                    }
+                                }
+                            }
+                        </div>
+                    }
+                </div>
             </section>
         }
 
         @if (SelectedSlotUtc is not null)
         {
             <section class="card-panel">
-                <h2 class="panel-title">3. What's this about? <span class="book-visit-optional">(optional)</span></h2>
+                @if (ScanResult is not null)
+                {
+                    <h2 class="panel-title">3. Share your scan result <span class="book-visit-optional">(optional)</span></h2>
+                    <label class="book-visit-scan-toggle">
+                        <input type="checkbox" @bind="AttachScan" />
+                        Share the @ScanResult.OverallVisualConcern result (score @ScanResult.RiskScore.ToString("F0")/100) and its AI explanation with @SelectedProvider!.DisplayName
+                    </label>
+                }
+                else if (ScanLoadError is not null)
+                {
+                    <p class="text-muted-small">@ScanLoadError</p>
+                }
+
+                <h2 class="panel-title">@(ScanResult is not null ? "4." : "3.") What's this about? <span class="book-visit-optional">(optional)</span></h2>
                 <textarea class="form-control" rows="3" maxlength="500" @bind="Reason"
                           placeholder="A new spot, a follow-up, etc."></textarea>
 
@@ -113,16 +143,23 @@
 </div>
 
 @code {
+    [SupplyParameterFromQuery(Name = "scan")]
+    public string? ScanQuery { get; set; }
+
     private List<ProviderSummary> Providers = [];
     private bool IsLoadingProviders = true;
     private ProviderSummary? SelectedProvider;
 
     private DateOnly MinDate;
     private DateOnly MaxDate;
-    private DateOnly SelectedDate;
+    private DateOnly WeekStart;
     private bool IsLoadingSlots;
     private List<DateTime> Slots = [];
     private DateTime? SelectedSlotUtc;
+
+    private ImageProcessingResults? ScanResult;
+    private string? ScanLoadError;
+    private bool AttachScan = true;
 
     private string? Reason;
     private bool IsBooking;
@@ -134,11 +171,13 @@
     private Guid? PatientId;
     private string? BrowserTimeZoneId;
 
+    private IEnumerable<DateOnly> WeekDays => Enumerable.Range(0, 7).Select(WeekStart.AddDays);
+
     protected override async Task OnInitializedAsync()
     {
         MinDate = DateOnly.FromDateTime(DateTime.UtcNow);
         MaxDate = MinDate.AddDays(30);
-        SelectedDate = MinDate;
+        WeekStart = MinDate;
 
         PatientId = await CurrentUser.GetUserIdAsync();
 
@@ -154,6 +193,18 @@
         {
             IsLoadingProviders = false;
         }
+
+        if (!string.IsNullOrWhiteSpace(ScanQuery))
+        {
+            try
+            {
+                ScanResult = await ImageProcessingService.GetResultsAsync(ScanQuery);
+            }
+            catch (ImageProcessingApiException)
+            {
+                ScanLoadError = "Couldn't load that scan result. You can still book without it.";
+            }
+        }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -167,6 +218,7 @@
         {
             // Best-effort: if JS interop isn't available yet, times just stay in UTC.
             BrowserTimeZoneId = await JS.InvokeAsync<string>("skinCheckScheduling.getTimeZone");
+            StateHasChanged();
         }
         catch (JSException)
         {
@@ -177,18 +229,19 @@
     {
         SelectedProvider = provider;
         SelectedSlotUtc = null;
+        WeekStart = MinDate;
         await LoadSlotsAsync();
     }
 
-    private async Task ChangeDateAsync(int deltaDays)
+    private async Task ChangeWeekAsync(int deltaDays)
     {
-        var next = SelectedDate.AddDays(deltaDays);
+        var next = WeekStart.AddDays(deltaDays);
         if (next < MinDate || next > MaxDate)
         {
             return;
         }
 
-        SelectedDate = next;
+        WeekStart = next;
         SelectedSlotUtc = null;
         await LoadSlotsAsync();
     }
@@ -206,7 +259,7 @@
 
         try
         {
-            Slots = [.. await Availability.GetOpenSlotsUtcAsync(SelectedProvider.Id, SelectedDate, SelectedDate)];
+            Slots = [.. await Availability.GetOpenSlotsUtcAsync(SelectedProvider.Id, WeekStart, WeekStart.AddDays(6))];
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -218,6 +271,11 @@
             IsLoadingSlots = false;
         }
     }
+
+    /// <summary>Slots on this calendar day, in the visitor's own timezone (falls back to UTC
+    /// until the browser's zone id arrives -- see OnAfterRenderAsync).</summary>
+    private List<DateTime> SlotsForDay(DateOnly day) =>
+        [.. Slots.Where(s => DateOnly.FromDateTime(ClientTimeZone.ToLocal(s, BrowserTimeZoneId)) == day).OrderBy(s => s)];
 
     private async Task SubmitBookingAsync()
     {
@@ -231,7 +289,26 @@
         StateHasChanged();
 
         var reason = string.IsNullOrWhiteSpace(Reason) ? null : Reason.Trim();
-        var result = await Booking.BookAsync(SelectedProvider.Id, PatientId.Value, SelectedSlotUtc.Value, reason);
+
+        AttachedScan? scan = null;
+        if (AttachScan && ScanResult is not null && !string.IsNullOrWhiteSpace(ScanQuery))
+        {
+            string? explanation = null;
+            try
+            {
+                // Best-effort: Flask caches this per processingId, so if the patient
+                // already generated it viewing their results this just re-reads the
+                // cache. A booking is worth the (possibly first) generation cost either way.
+                explanation = await ImageProcessingService.ExplainAsync(ScanQuery);
+            }
+            catch (ImageProcessingApiException)
+            {
+            }
+
+            scan = new AttachedScan(ScanQuery, ScanResult.RiskScore, ScanResult.OverallVisualConcern, explanation);
+        }
+
+        var result = await Booking.BookAsync(SelectedProvider.Id, PatientId.Value, SelectedSlotUtc.Value, reason, scan);
 
         IsBooking = false;
         if (result.Outcome == BookingOutcome.Booked)
