@@ -17,3 +17,6 @@ MelanomaDetection/MelanomaDetection.Python/.venv/
 *.db-wal
 pipeline_v4/
 docs/
+# Risk model weights: bind-mounted as a volume (docker-compose.yml), never
+# COPY'd into the image -- excluding them keeps the build context small.
+models/

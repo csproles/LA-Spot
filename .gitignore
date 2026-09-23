@@ -27,6 +27,10 @@ MelanomaDetection/MelanomaDetection.Web/wwwroot/css/tailwind.css
 .DS_Store
 .vscode/
 
+# Melanoma risk model weights (Kaggle-trained), mounted as a Docker volume --
+# large binaries, never committed. See NOTES.md.
+/models/
+
 # SQLite store for tracked spots / saved checks (MelanomaDetection.Python/store.py)
 *.db
 
