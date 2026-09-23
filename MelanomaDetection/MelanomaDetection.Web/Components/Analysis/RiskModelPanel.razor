@@ -1,0 +1,51 @@
+@* A separate, experimental screening score from the Kaggle-trained CNN+CatBoost
+   risk model (POST /predict), shown alongside V5's own RiskBandPanel result above --
+   not a replacement for it and not a diagnosis. Null when /predict wasn't called or
+   failed; the rest of the results page still works without this panel. *@
+
+@if (Result is not null)
+{
+    <div class="card-panel risk-band risk-band-@Tone risk-model-panel">
+        <p class="risk-band-label">AI risk model: @LevelLabel</p>
+        <p class="risk-band-recommendation">
+            An experimental screening score from a separate, image-and-metadata model.
+            This is not a diagnosis and not a substitute for the visual-concern result above --
+            always have a new or changing spot evaluated by a licensed dermatologist.
+        </p>
+
+        @if (!Result.YoloFoundLesion)
+        {
+            <p class="risk-model-panel-caveat">
+                Lesion not clearly detected in this photo -- this result is less reliable.
+                Retaking the photo with the spot centered, in focus, and well-lit may help.
+            </p>
+        }
+
+        <div class="risk-band-score-block">
+            <p class="risk-band-score">@((Result.RiskScore * 100).ToString("F0")) <span class="risk-band-score-total">/100</span></p>
+            <p class="risk-band-score-caption">Model score -- not a calibrated probability of melanoma.</p>
+        </div>
+    </div>
+}
+
+@code {
+    /// <summary>Null when /predict wasn't called (e.g. the request failed) -- renders nothing.</summary>
+    [Parameter]
+    public PredictResponse? Result { get; set; }
+
+    private string LevelLabel => Result?.RiskLevel switch
+    {
+        "high" => "Higher",
+        "medium" => "Medium",
+        "low" => "Lower",
+        _ => "Not available",
+    };
+
+    private string Tone => Result?.RiskLevel switch
+    {
+        "high" => "high",
+        "medium" => "moderate",
+        "low" => "low",
+        _ => "muted",
+    };
+}

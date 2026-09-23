@@ -42,12 +42,14 @@
         case CheckStep.Details:
             <CheckDetailsStep PreviewDataUrl="@PreviewDataUrl" Spot="SelectedSpot" FileName="@SelectedFileName"
                               Symptoms="SelectedSymptoms" @bind-Notes="Notes"
+                              @bind-Age="Age" @bind-Sex="Sex" @bind-BodySite="BodySite"
                               OnRetake="RetakePhoto"
-                              OnContinue="() => CurrentStep = CheckStep.Results" />
+                              OnContinue="ContinueToResults" />
             break;
 
         case CheckStep.Results when AnalysisResults is not null:
             <CheckResultsStep Results="AnalysisResults" ProcessingId="@CurrentProcessingId"
+                              RiskModelResult="RiskModelResult"
                               IsSaving="IsSaving" IsSaved="IsSaved"
                               OnSave="SaveToHistory" OnStartAnother="StartNewCheck" />
             break;
@@ -83,6 +85,12 @@
 
     private HashSet<string> SelectedSymptoms = new();
     private string Notes = string.Empty;
+
+    // Optional metadata for the separate AI risk model (POST /predict).
+    private int? Age;
+    private string Sex = string.Empty;
+    private string BodySite = string.Empty;
+    private PredictResponse? RiskModelResult;
 
     private bool IsAnalyzing;
     private bool IsSaving;
@@ -174,6 +182,7 @@
         SelectedFileName = null;
         SelectedFileBytes = null;
         AnalysisResults = null;
+        RiskModelResult = null;
         CurrentProcessingId = string.Empty;
         CurrentStep = CheckStep.Capture;
     }
@@ -292,6 +301,29 @@
         }
     }
 
+    /// <summary>
+    /// Runs the separate AI risk model (POST /predict) once age/sex/body site are known,
+    /// then shows results regardless of whether that call succeeds -- it's an additional,
+    /// experimental score alongside V5's own analysis above, not a required step.
+    /// </summary>
+    private async Task ContinueToResults()
+    {
+        if (SelectedFileBytes is not null && SelectedFileName is not null)
+        {
+            try
+            {
+                RiskModelResult = await ImageProcessingService.PredictRiskAsync(
+                    SelectedFileBytes, SelectedFileName, Age, Sex, BodySite);
+            }
+            catch (ImageProcessingApiException)
+            {
+                RiskModelResult = null; // V5's results above still show; this panel just won't.
+            }
+        }
+
+        CurrentStep = CheckStep.Results;
+    }
+
     private async Task SaveToHistory()
     {
         if (string.IsNullOrEmpty(CurrentProcessingId))
@@ -327,7 +359,11 @@
         SelectedSpot = null;
         SelectedSymptoms = new HashSet<string>();
         Notes = string.Empty;
+        Age = null;
+        Sex = string.Empty;
+        BodySite = string.Empty;
         AnalysisResults = null;
+        RiskModelResult = null;
         CurrentProcessingId = string.Empty;
         IsSaved = false;
         RetakeHint = null;

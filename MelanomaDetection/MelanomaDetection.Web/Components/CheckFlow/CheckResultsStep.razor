@@ -4,6 +4,8 @@
 <div class="results-step">
     <RiskBandPanel Score="Results.RiskScore" OverallVisualConcern="Results.OverallVisualConcern" ShowDoctorLink="IsSaved" ProcessingId="@ProcessingId" />
 
+    <RiskModelPanel Result="RiskModelResult" />
+
     <MultiLesionNotice Results="Results" />
 
     <ChangePanel Results="Results" />
@@ -38,6 +40,10 @@
 
     [Parameter, EditorRequired]
     public string ProcessingId { get; set; } = string.Empty;
+
+    /// <summary>Null when POST /predict wasn't called or failed -- RiskModelPanel renders nothing then.</summary>
+    [Parameter]
+    public PredictResponse? RiskModelResult { get; set; }
 
     [Parameter]
     public bool IsSaving { get; set; }

@@ -16,6 +16,39 @@ public class ErrorResponse
     public string? Error { get; set; }
 }
 
+/// <summary>
+/// Response from POST /predict -- the Kaggle-trained CNN+CatBoost melanoma
+/// risk model (risk_model.py), separate from V5's own visual-concern pipeline
+/// above. RiskScore is CatBoost's raw mean-of-5-folds output (0-1), not a
+/// calibrated probability of malignancy -- see risk_model.RISK_THRESHOLDS'
+/// own TODO. ProcessingId lets the existing POST /api/image/explain/{id} be
+/// reused for this pipeline's results too.
+/// </summary>
+public class PredictResponse
+{
+    [JsonPropertyName("risk_score")]
+    public double RiskScore { get; set; }
+
+    /// <summary>"low", "medium", or "high" -- placeholder bands, not clinically validated cut points.</summary>
+    [JsonPropertyName("risk_level")]
+    public string RiskLevel { get; set; } = string.Empty;
+
+    [JsonPropertyName("abcd_features")]
+    public Dictionary<string, double?> AbcdFeatures { get; set; } = new();
+
+    /// <summary>False means no lesion could be segmented in the photo -- every score above is
+    /// still returned (NaN ABCD features became a "missing" input to CatBoost, not a rejection),
+    /// but should be shown as less reliable.</summary>
+    [JsonPropertyName("yolo_found_lesion")]
+    public bool YoloFoundLesion { get; set; }
+
+    [JsonPropertyName("fold_scores")]
+    public List<double> FoldScores { get; set; } = new();
+
+    [JsonPropertyName("processingId")]
+    public string ProcessingId { get; set; } = string.Empty;
+}
+
 public class ExplainResponse
 {
     [JsonPropertyName("explanation")]

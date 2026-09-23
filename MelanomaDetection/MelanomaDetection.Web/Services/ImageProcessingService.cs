@@ -109,6 +109,58 @@ public class ImageProcessingService
         return result ?? throw new ImageProcessingApiException("The analysis service returned an empty response.");
     }
 
+    /// <summary>
+    /// Maps to POST /predict -- the Kaggle-trained CNN+CatBoost melanoma risk
+    /// model (risk_model.py), run alongside (not instead of) V5's own
+    /// /api/image/process pipeline. age/sex/bodySite are optional: the model
+    /// was trained tolerating missing metadata (see risk_model.py).
+    /// </summary>
+    public async Task<PredictResponse> PredictRiskAsync(
+        byte[] data, string filename, int? age, string? sex, string? bodySite)
+    {
+        if (data.Length == 0)
+        {
+            throw new ImageProcessingApiException("The photo is empty. Please choose another one.");
+        }
+
+        if (data.Length > InputLimits.ImageMaxBytes)
+        {
+            throw new ImageProcessingApiException("The photo is too large. Maximum allowed size is 5 MB.");
+        }
+
+        if (!InputLimits.LooksLikeImage(data))
+        {
+            throw new ImageProcessingApiException("That file doesn't look like a photo. Please use a JPEG, PNG or BMP image.");
+        }
+
+        await ThrottleAsync(LimitedOperation.AnalyzePhoto);
+
+        using var content = new MultipartFormDataContent();
+        using var fileContent = new ByteArrayContent(data);
+        fileContent.Headers.ContentType = new MediaTypeHeaderValue(GetContentType(filename));
+        content.Add(fileContent, "image", filename);
+
+        if (age is not null)
+        {
+            content.Add(new StringContent(age.Value.ToString()), "age");
+        }
+
+        if (!string.IsNullOrWhiteSpace(sex))
+        {
+            content.Add(new StringContent(sex), "sex");
+        }
+
+        if (!string.IsNullOrWhiteSpace(bodySite))
+        {
+            content.Add(new StringContent(bodySite), "body_site");
+        }
+
+        using var response = await SendAsync(() => _httpClient.PostAsync("/predict", content));
+
+        var result = await response.Content.ReadFromJsonAsync<PredictResponse>();
+        return result ?? throw new ImageProcessingApiException("The analysis service returned an empty response.");
+    }
+
     /// <summary>Maps to GET /api/image/results/{id}.</summary>
     public async Task<ImageProcessingResults> GetResultsAsync(string processingId)
     {
