@@ -19,6 +19,7 @@ RUN pip install --no-cache-dir -r MelanomaDetection/MelanomaDetection.Python/req
 COPY Code Code
 COPY revised_abcd revised_abcd
 COPY pipeline_v5 pipeline_v5
+COPY melanoma_pipeline melanoma_pipeline
 COPY MelanomaDetection/MelanomaDetection.Python MelanomaDetection/MelanomaDetection.Python
 
 WORKDIR /app/MelanomaDetection/MelanomaDetection.Python

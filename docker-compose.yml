@@ -33,6 +33,10 @@ services:
       - SKINCHECK_INTERNAL_KEY=${SKINCHECK_INTERNAL_KEY:?Set SKINCHECK_INTERNAL_KEY in .env (any long random string)}
     volumes:
       - skincheck-data:/app/data
+      # Kaggle-trained melanoma risk model weights (risk_model.py). Large,
+      # gitignored binaries -- never baked into the image; bind-mount the
+      # host's repo-root models/ folder (see NOTES.md "Setup") read-only.
+      - ./models:/app/models:ro
     # Analysis results are held in memory (bounded, see resultstore.py); this is the backstop.
     mem_limit: 1g
     restart: unless-stopped
