@@ -32,6 +32,13 @@ MAX_IMAGE_PIXELS = 25_000_000  # ~5000x5000; a small PNG can otherwise inflate t
 
 SPOT_ID_PATTERN = re.compile(r"^spot_[0-9a-f]{12}$")
 
+# /predict's own metadata fields -- risk_model.py falls back to "missing" for
+# sex/anatom_site_general (the CatBoost models were trained with that literal
+# string standing in for unknown/absent metadata; see NOTES.md).
+AGE_MIN, AGE_MAX = 0, 120
+VALID_SEX = {"male", "female"}
+VALID_BODY_SITES = {"head/neck", "upper extremity", "lower extremity", "anterior torso", "posterior torso"}
+
 # Control characters (everything below space except tab/newline/carriage return, plus DEL).
 _CONTROL_CHARS = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
 
@@ -171,6 +178,36 @@ def optional_int_in_range(value, field: str, low: int, high: int):
     if isinstance(value, bool) or not isinstance(value, int) or not low <= value <= high:
         raise ValidationError(f"{field} must be a whole number from {low} to {high}.")
     return value
+
+
+def clean_age(value) -> float | None:
+    """A whole-number age 0-120, or None when blank -- risk_model.py sends
+    None on to the model as NaN, which CatBoost handles natively."""
+    if value is None or value == "":
+        return None
+    try:
+        age = int(value)
+    except (TypeError, ValueError):
+        raise ValidationError("age must be a whole number.")
+    if not AGE_MIN <= age <= AGE_MAX:
+        raise ValidationError(f"age must be from {AGE_MIN} to {AGE_MAX}.")
+    return float(age)
+
+
+def clean_sex(value) -> str:
+    """"male"/"female" (case-insensitive), or "missing" when blank/unrecognized."""
+    if not value:
+        return "missing"
+    cleaned = value.strip().lower()
+    return cleaned if cleaned in VALID_SEX else "missing"
+
+
+def clean_body_site(value) -> str:
+    """One of VALID_BODY_SITES (case-insensitive), or "missing" when blank/unrecognized."""
+    if not value:
+        return "missing"
+    cleaned = value.strip().lower()
+    return cleaned if cleaned in VALID_BODY_SITES else "missing"
 
 
 # --- uploaded images ---------------------------------------------------------

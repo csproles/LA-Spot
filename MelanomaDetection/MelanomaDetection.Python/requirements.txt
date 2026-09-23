@@ -43,3 +43,13 @@ Werkzeug==3.1.8
 ultralytics==8.4.155
 torch==2.6.0
 scikit-learn==1.9.1
+# Kaggle-trained melanoma risk model (risk_model.py / melanoma_pipeline/) --
+# CNN backbone, tabular decision model, and its image augmentation pipeline.
+# Versions below are what the dev venv actually resolved/tested against, not
+# necessarily the exact Kaggle training environment (unknown) -- see NOTES.md.
+# Only the val-time transforms (Resize/CenterCrop/Normalize/ToTensorV2) are
+# used at inference, which are stable across albumentations 1.x/2.x.
+timm==1.0.30
+catboost==1.2.10
+albumentations==2.0.8
+pandas==2.2.3

@@ -20,8 +20,9 @@ import validation
 from llm_explainer import explain_findings
 from ratelimit import RateLimiter
 from resultstore import ResultStore
+from risk_model import RiskModel
 from textbook_chat import answer_question
-from v5_detector import V5Detector
+from v5_detector import V5Detector, _scaled_0_10
 from validation import ValidationError
 
 ALLOWED_EXTENSIONS = {".png", ".jpg", ".jpeg", ".bmp"}
@@ -46,6 +47,7 @@ app.json = NumpyJSONProvider(app)
 app.config["MAX_CONTENT_LENGTH"] = MAX_CONTENT_LENGTH
 
 detector = V5Detector()
+risk_model = RiskModel()
 store.init_db()
 
 # Full-size pipeline imagery for the current session only. Everything that has
@@ -98,6 +100,7 @@ RATE_WINDOW_SECONDS = 60
 DEFAULT_RATE_LIMIT = 120
 ENDPOINT_RATE_LIMITS = {
     "process_image_endpoint": ("analyze", 10),
+    "predict_risk_endpoint": ("analyze", 10),
     "explain_results": ("explain", 5),
     "textbook_chat_endpoint": ("chat", 8),
     "export_account_endpoint": ("account", 5),
@@ -240,6 +243,98 @@ def process_image_endpoint():
     _results_store[processing_id] = results
 
     return jsonify({"processingId": processing_id})
+
+
+def _abcd_features_to_abcde_scores(abcd: dict) -> dict:
+    """Adapts the risk model's raw 17-value ABCD feature dict into the
+    {"asymmetry": {"score", "details"}, ...} shape llm_explainer.explain_findings
+    and the existing UI panels expect, reusing V5Detector's own display-scaling
+    (_scaled_0_10) and thresholds (0.20/0.50/0.35) since these are the same
+    ABCD features V5 computes, just fed to a different (CatBoost) decision
+    model instead of V5's frozen logistic regression.
+
+    ponytail: "concern" here is approximated as raw_value > threshold, not
+    the fuller per-criterion logic in melanoma_pipeline/abcd/pipeline.py
+    (asymmetry/border/color scoring functions each compute their own concern
+    flag from more than a single threshold comparison). Good enough for the
+    explanation prompt's flagged/unflagged split; call abcd.pipeline.score_instance
+    directly instead if per-letter concern accuracy ever matters for this model.
+    """
+    a, b, c = abcd.get("A_value"), abcd.get("B_circularity"), abcd.get("C_value")
+    return {
+        "asymmetry": {
+            "score": _scaled_0_10(a, 0.20),
+            "details": {"raw_asymmetry_ratio": a, "concern": bool(a is not None and a > 0.20)},
+        },
+        "border": {
+            "score": _scaled_0_10(b, 0.50),
+            "details": {"raw_border_irregularity": b, "concern": bool(b is not None and b > 0.50)},
+        },
+        "color": {
+            "score": _scaled_0_10(c, 0.35),
+            "details": {"color_cv": c, "concern": bool(c is not None and c > 0.35)},
+        },
+        "diameter": {
+            "score": None,
+            "details": {
+                "reason": "no validated physical (mm) calibration is available for this pipeline",
+                "diameter_px": abcd.get("D_px"),
+            },
+        },
+        "evolving": {"score": None, "details": {"reason": "no prior check to compare against"}},
+    }
+
+
+@app.route("/predict", methods=["POST"])
+def predict_risk_endpoint():
+    if "image" not in request.files:
+        return jsonify({"error": "No file provided (expected multipart field 'image')"}), 400
+
+    uploaded = request.files["image"]
+    if uploaded.filename == "":
+        return jsonify({"error": "Empty filename"}), 400
+
+    ext = os.path.splitext(uploaded.filename)[1].lower()
+    if ext not in ALLOWED_EXTENSIONS:
+        return jsonify({"error": f"Unsupported file type: {ext}"}), 400
+
+    data = uploaded.read()
+    validation.check_image_upload(data)
+
+    age = validation.clean_age(request.form.get("age"))
+    sex = validation.clean_sex(request.form.get("sex"))
+    body_site = validation.clean_body_site(request.form.get("body_site"))
+
+    fd, tmp_path = tempfile.mkstemp(suffix=ext)
+    with os.fdopen(fd, "wb") as tmp_file:
+        tmp_file.write(data)
+
+    try:
+        result = risk_model.predict(tmp_path, age, sex, body_site)
+    except FileNotFoundError:
+        return jsonify({
+            "error": "Could not read the uploaded file as an image. It may be corrupted or in an unsupported format.",
+        }), 400
+    except Exception:
+        app.logger.exception("Unexpected error while running the risk model")
+        return jsonify({"error": "An internal error occurred while analyzing the image."}), 500
+    finally:
+        os.remove(tmp_path)
+
+    # Stash a minimal, compatible result under a new processing id so the
+    # existing POST /api/image/explain/{id} endpoint (llm_explainer.py) works
+    # unchanged for this pipeline's results too -- no new explanation code.
+    processing_id = f"pred_{uuid.uuid4().hex[:12]}"
+    _results_store[processing_id] = {
+        "user_id": g.user_id,
+        "abcde_scores": _abcd_features_to_abcde_scores(result["abcd_features"]),
+        "risk_score": round(result["risk_score"] * 100, 1),
+        "overall_visual_concern": None,
+        "symptoms": [],
+    }
+
+    result["processingId"] = processing_id
+    return jsonify(result)
 
 
 def _score_evolution(results: dict):
