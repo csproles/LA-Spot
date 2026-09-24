@@ -2,9 +2,9 @@
    this check under the spot. *@
 
 <div class="results-step">
-    <RiskBandPanel Score="Results.RiskScore" OverallVisualConcern="Results.OverallVisualConcern" ShowDoctorLink="IsSaved" ProcessingId="@ProcessingId" />
-
     <RiskModelPanel Result="RiskModelResult" />
+
+    <RiskBandPanel Score="Results.RiskScore" OverallVisualConcern="@Results.OverallVisualConcern" ShowDoctorLink="IsSaved" ProcessingId="@ProcessingId" />
 
     <MultiLesionNotice Results="Results" />
 
