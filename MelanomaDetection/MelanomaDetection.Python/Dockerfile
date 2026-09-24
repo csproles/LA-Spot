@@ -54,7 +54,7 @@ COPY MelanomaDetection/MelanomaDetection.Python/requirements.txt MelanomaDetecti
 # pip's download cache across builds (in Docker's build cache, not the image),
 # so re-running this after an unrelated code change doesn't re-download
 # anything; --no-cache-dir is dropped since we want that cache to stick.
-RUN --mount=type=cache,id=pip-cache,target=/root/.cache/pip \
+RUN --mount=type=cache,id=cacheKey=pip-cache,target=/root/.cache/pip \
     pip install --extra-index-url https://download.pytorch.org/whl/cpu \
     -r MelanomaDetection/MelanomaDetection.Python/requirements.txt
 
