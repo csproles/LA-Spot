@@ -4,6 +4,37 @@
 # that live next to MelanomaDetection/, not inside it, so the image has to
 # mirror the repo layout instead of flattening this service into /app.
 
+# Risk model weights (~1.8GB: 5 CNN checkpoints + PCA/CatBoost pairs + a YOLO
+# segmentation model -- see NOTES.md). Locally these are bind-mounted from the
+# repo root's gitignored models/ (docker-compose.yml); a plain Docker build has
+# no such mount and can't COPY a file that was never committed to git, so
+# instead this stage downloads a zip of that same folder from a private GitHub
+# Release asset using a token. It's its own stage, built separately from the
+# final image below and only ever COPY --from=models'd for its extracted
+# files, so GITHUB_TOKEN never ends up in a layer of the image that actually
+# ships (ARG values otherwise persist in layer history -- Railway doesn't
+# support BuildKit's --mount=type=secret, which would avoid this outright).
+FROM python:3.12-slim AS models
+WORKDIR /models
+ARG GITHUB_TOKEN
+ARG GITHUB_REPO=csproles/LA-Spot
+ARG MODELS_RELEASE_TAG=models-v1
+ARG MODELS_ASSET_NAME=models.zip
+RUN apt-get update && apt-get install -y --no-install-recommends curl unzip \
+    && rm -rf /var/lib/apt/lists/* \
+    && test -n "$GITHUB_TOKEN" || { echo "GITHUB_TOKEN build arg is required (models-v1 is a private-repo release asset)"; exit 1; } \
+    && ASSET_API_URL=$(curl -fsSL \
+         -H "Authorization: Bearer $GITHUB_TOKEN" \
+         -H "Accept: application/vnd.github+json" \
+         "https://api.github.com/repos/$GITHUB_REPO/releases/tags/$MODELS_RELEASE_TAG" \
+       | python3 -c "import sys,json; d=json.load(sys.stdin); print(next(a['url'] for a in d['assets'] if a['name']=='$MODELS_ASSET_NAME'))") \
+    && curl -fsSL \
+         -H "Authorization: Bearer $GITHUB_TOKEN" \
+         -H "Accept: application/octet-stream" \
+         "$ASSET_API_URL" -o models.zip \
+    && unzip -q models.zip -d . \
+    && rm models.zip
+
 FROM python:3.12-slim
 
 WORKDIR /app
@@ -14,6 +45,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
+COPY --from=models /models models
+
 COPY MelanomaDetection/MelanomaDetection.Python/requirements.txt MelanomaDetection/MelanomaDetection.Python/requirements.txt
 # --extra-index-url pulls CPU-only PyTorch wheels: the default PyPI build drags
 # in several GB of NVIDIA CUDA runtime packages (cublas, cudnn, cufft, ...)
@@ -21,7 +54,7 @@ COPY MelanomaDetection/MelanomaDetection.Python/requirements.txt MelanomaDetecti
 # pip's download cache across builds (in Docker's build cache, not the image),
 # so re-running this after an unrelated code change doesn't re-download
 # anything; --no-cache-dir is dropped since we want that cache to stick.
-RUN --mount=type=cache,target=/root/.cache/pip \
+RUN --mount=type=cache,id=pip-cache,target=/root/.cache/pip \
     pip install --extra-index-url https://download.pytorch.org/whl/cpu \
     -r MelanomaDetection/MelanomaDetection.Python/requirements.txt
 
