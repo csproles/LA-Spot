@@ -34,7 +34,7 @@
     }
     else if (AnalysisResults is not null)
     {
-        <RiskBandPanel Score="AnalysisResults.RiskScore" OverallVisualConcern="AnalysisResults.OverallVisualConcern" ShowDoctorLink="true" ProcessingId="@ProcessingId" />
+        <RiskBandPanel Score="AnalysisResults.RiskScore" OverallVisualConcern="@AnalysisResults.OverallVisualConcern" ShowDoctorLink="true" ProcessingId="@ProcessingId" />
 
         <MultiLesionNotice Results="AnalysisResults" />
 

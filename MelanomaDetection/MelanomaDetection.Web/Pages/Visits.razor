@@ -37,7 +37,7 @@
                 <div class="visits-list">
                     @foreach (var appt in Upcoming)
                     {
-                        <VisitCard Appointment="appt" BrowserTimeZoneId="BrowserTimeZoneId"
+                        <VisitCard Appointment="appt" BrowserTimeZoneId="@BrowserTimeZoneId"
                                    ShowCancel="true" IsCancelling="CancellingIds.Contains(appt.Id)"
                                    OnCancel="() => CancelAsync(appt.Id)" />
                     }
@@ -52,7 +52,7 @@
                 <div class="visits-list">
                     @foreach (var appt in Past)
                     {
-                        <VisitCard Appointment="appt" BrowserTimeZoneId="BrowserTimeZoneId" ShowCancel="false" />
+                        <VisitCard Appointment="appt" BrowserTimeZoneId="@BrowserTimeZoneId" ShowCancel="false" />
                     }
                 </div>
             </section>

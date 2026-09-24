@@ -8,7 +8,7 @@
             <span class="spot-card-label">@Spot.Label</span>
             @if (Spot.LastRiskScore is not null)
             {
-                <RiskScoreBadge Score="Spot.LastRiskScore" Concern="Spot.LastOverallVisualConcern" Format="band-score" />
+                <RiskScoreBadge Score="Spot.LastRiskScore" Concern="@Spot.LastOverallVisualConcern" Format="band-score" />
             }
         </div>
         <p class="spot-card-meta">@MetaLine</p>

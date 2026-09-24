@@ -31,7 +31,7 @@
         <div class="spot-badges">
             @if (Spot.LastRiskScore is not null)
             {
-                <RiskScoreBadge Score="Spot.LastRiskScore" Concern="Spot.LastOverallVisualConcern" Format="detail" />
+                <RiskScoreBadge Score="Spot.LastRiskScore" Concern="@Spot.LastOverallVisualConcern" Format="detail" />
             }
             <RecheckBadge Spot="Spot" />
         </div>

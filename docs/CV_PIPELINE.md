@@ -250,10 +250,21 @@ require or should prompt any change to the frozen model, its 17 features,
 the 0.25 threshold, or the YOLO segmentation model** -- they are UI/response
 wiring issues to verify and fix in the surrounding application code only.
 
-- **Results page sometimes shows "Visual concern not available" instead of
-  LOWER/ELEVATED for a successful V5 result.** Needs investigation into
-  whether `overall_visual_concern` is reaching the Results page correctly
-  in every code path (fresh analysis vs. reload).
+- ~~**Results page sometimes shows "Visual concern not available" instead of
+  LOWER/ELEVATED for a successful V5 result.**~~ **Fixed (2026-09-23).** Root
+  cause: `RiskBandPanel`'s and `RiskScoreBadge`'s `string?` concern parameters
+  were bound as `OverallVisualConcern="Results.OverallVisualConcern"` --
+  missing the `@` prefix. Blazor can't tell a literal string apart from a C#
+  expression for `string`-typed component parameters, so the component
+  received the literal 29-character text "Results.OverallVisualConcern" as
+  its value on every single check, not the real verdict -- confirmed by
+  inspecting the compiled Razor output (`AddComponentParameter(..., "Results.
+  OverallVisualConcern")`, a quoted literal, vs. `Score`'s correctly-compiled
+  `TypeCheck<Double>(Results.RiskScore)`). This was never a race condition or
+  a reload-vs-fresh issue: it reproduced 100% of the time, everywhere the app
+  shows a risk verdict. Fixed at all 9 call sites (CheckResultsStep, Results
+  page, HistoryCard, HistoryComparePanel, RecentCheckRow, SpotCard,
+  SpotDetailHeader, SpotTimeline, SpotTimelineEntry) by adding `@`.
 - **Multi-lesion rendering needs verification.** Confirm all YOLO instances
   the detector returns are consistently reflected in the browser (overlay
   image, instance count, notice text) across fresh-analysis and

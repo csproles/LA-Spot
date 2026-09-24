@@ -40,7 +40,7 @@ else
                 <div class="visits-list">
                     @foreach (var appt in Upcoming)
                     {
-                        <VisitCard Appointment="appt" PerspectiveOf="patient" BrowserTimeZoneId="BrowserTimeZoneId"
+                        <VisitCard Appointment="appt" PerspectiveOf="patient" BrowserTimeZoneId="@BrowserTimeZoneId"
                                    ShowCancel="true" IsCancelling="CancellingIds.Contains(appt.Id)"
                                    OnCancel="() => CancelAppointmentAsync(appt.Id)" />
                     }

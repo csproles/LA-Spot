@@ -12,7 +12,7 @@
     <div class="history-card-body">
         <div class="history-card-top">
             <span class="history-location">@Title</span>
-            <RiskScoreBadge Score="Entry.RiskScore" Concern="Entry.OverallVisualConcern" Format="band" />
+            <RiskScoreBadge Score="Entry.RiskScore" Concern="@Entry.OverallVisualConcern" Format="band" />
         </div>
         <p class="history-date">@Subtitle</p>
         @if (Entry.NumLesionInstances is > 1)
