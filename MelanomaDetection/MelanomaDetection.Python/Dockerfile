@@ -8,32 +8,23 @@
 # segmentation model -- see NOTES.md). Locally these are bind-mounted from the
 # repo root's gitignored models/ (docker-compose.yml); a plain Docker build has
 # no such mount and can't COPY a file that was never committed to git, so
-# instead this stage downloads a zip of that same folder from a private GitHub
-# Release asset using a token. It's its own stage, built separately from the
-# final image below and only ever COPY --from=models'd for its extracted
-# files, so GITHUB_TOKEN never ends up in a layer of the image that actually
-# ships (ARG values otherwise persist in layer history -- Railway doesn't
-# support BuildKit's --mount=type=secret, which would avoid this outright).
+# instead this stage downloads a zip of that same folder from Google Drive
+# (shared "anyone with the link" -- DRIVE_FILE_ID is not a secret, so unlike
+# the private-GitHub-release approach this used to use, there's nothing here
+# for Railway's build-log renderer to leak: it prints resolved ARG values into
+# step descriptions, which is what kept exposing GITHUB_TOKEN). gdown handles
+# Drive's large-file download-confirmation flow, which plain curl doesn't.
+# Still its own stage, only ever COPY --from=models'd for its extracted files,
+# so none of this stage's tooling ends up in the final image.
 FROM python:3.12-slim AS models
 WORKDIR /models
-ARG GITHUB_TOKEN
-ARG GITHUB_REPO=csproles/LA-Spot
-ARG MODELS_RELEASE_TAG=models-v1
-ARG MODELS_ASSET_NAME=app_models.zip
-RUN apt-get update && apt-get install -y --no-install-recommends curl unzip \
+ARG DRIVE_FILE_ID=1IoveXXDaiaK05ChaRJHVw5A4aChyGPEj
+RUN apt-get update && apt-get install -y --no-install-recommends unzip \
     && rm -rf /var/lib/apt/lists/* \
-    && test -n "$GITHUB_TOKEN" || { echo "GITHUB_TOKEN build arg is required (models-v1 is a private-repo release asset)"; exit 1; } \
-    && ASSET_API_URL=$(curl -fsSL \
-         -H "Authorization: Bearer $GITHUB_TOKEN" \
-         -H "Accept: application/vnd.github+json" \
-         "https://api.github.com/repos/$GITHUB_REPO/releases/tags/$MODELS_RELEASE_TAG" \
-       | python3 -c "import sys,json; d=json.load(sys.stdin); print(next(a['url'] for a in d['assets'] if a['name']=='$MODELS_ASSET_NAME'))") \
-    && curl -fsSL \
-         -H "Authorization: Bearer $GITHUB_TOKEN" \
-         -H "Accept: application/octet-stream" \
-         "$ASSET_API_URL" -o models.zip \
-    && unzip -q models.zip -d . \
-    && rm models.zip \
+    && pip install --no-cache-dir gdown \
+    && gdown --id "$DRIVE_FILE_ID" -O app_models.zip \
+    && unzip -q app_models.zip -d . \
+    && rm app_models.zip \
     && find . -mindepth 2 -type f -exec mv -t . {} + \
     && find . -mindepth 1 -type d -empty -delete \
     && MISSING="" \
