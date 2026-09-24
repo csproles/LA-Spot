@@ -19,7 +19,7 @@ WORKDIR /models
 ARG GITHUB_TOKEN
 ARG GITHUB_REPO=csproles/LA-Spot
 ARG MODELS_RELEASE_TAG=models-v1
-ARG MODELS_ASSET_NAME=app_model.zip
+ARG MODELS_ASSET_NAME=app_models.zip
 RUN apt-get update && apt-get install -y --no-install-recommends curl unzip \
     && rm -rf /var/lib/apt/lists/* \
     && test -n "$GITHUB_TOKEN" || { echo "GITHUB_TOKEN build arg is required (models-v1 is a private-repo release asset)"; exit 1; } \
