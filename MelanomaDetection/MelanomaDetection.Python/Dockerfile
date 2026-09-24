@@ -22,7 +22,7 @@ ARG DRIVE_FILE_ID=1IoveXXDaiaK05ChaRJHVw5A4aChyGPEj
 RUN apt-get update && apt-get install -y --no-install-recommends unzip \
     && rm -rf /var/lib/apt/lists/* \
     && pip install --no-cache-dir gdown \
-    && gdown --id "$DRIVE_FILE_ID" -O app_models.zip \
+    && gdown "$DRIVE_FILE_ID" -O app_models.zip \
     && unzip -q app_models.zip -d . \
     && rm app_models.zip \
     && find . -mindepth 2 -type f -exec mv -t . {} + \
