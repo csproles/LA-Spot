@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1.7
 # Build context is the REPO ROOT (see docker-compose.yml), not this directory --
 # v5_detector.py imports sibling packages (Code/, revised_abcd/, pipeline_v5/)
 # that live next to MelanomaDetection/, not inside it, so the image has to
@@ -14,7 +15,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 COPY MelanomaDetection/MelanomaDetection.Python/requirements.txt MelanomaDetection/MelanomaDetection.Python/requirements.txt
-RUN pip install --no-cache-dir -r MelanomaDetection/MelanomaDetection.Python/requirements.txt
+# --extra-index-url pulls CPU-only PyTorch wheels: the default PyPI build drags
+# in several GB of NVIDIA CUDA runtime packages (cublas, cudnn, cufft, ...)
+# that this container -- no GPU, ever -- never uses. The cache mount persists
+# pip's download cache across builds (in Docker's build cache, not the image),
+# so re-running this after an unrelated code change doesn't re-download
+# anything; --no-cache-dir is dropped since we want that cache to stick.
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install --extra-index-url https://download.pytorch.org/whl/cpu \
+    -r MelanomaDetection/MelanomaDetection.Python/requirements.txt
 
 COPY Code Code
 COPY revised_abcd revised_abcd

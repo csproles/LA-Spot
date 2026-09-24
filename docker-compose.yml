@@ -37,8 +37,15 @@ services:
       # gitignored binaries -- never baked into the image; bind-mount the
       # host's repo-root models/ folder (see NOTES.md "Setup") read-only.
       - ./models:/app/models:ro
-    # Analysis results are held in memory (bounded, see resultstore.py); this is the backstop.
-    mem_limit: 1g
+    # Analysis results are held in memory (bounded, see resultstore.py); this is
+    # part of the backstop, but the real floor is risk_model.py's own models:
+    # RiskModel loads 5 separate ConvNeXt-Base CNNs (fp32 in memory regardless
+    # of the fp16 checkpoint files on disk, since load_state_dict upcasts to
+    # match the model's own dtype) plus their PCA/CatBoost pairs and a second
+    # YOLO model, alongside V5Detector's own YOLO model. ~1.8GB just for the
+    # 5 CNNs' weights. 1g was sized for V5Detector alone and OOM-kills the
+    # gunicorn worker (SIGKILL) once RiskModel also loads at startup.
+    mem_limit: 4g
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true
@@ -47,6 +54,12 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+      # /health can't respond until main.py finishes importing, which loads
+      # every model (V5Detector's YOLO + RiskModel's 5 CNNs/PCAs/CatBoosts)
+      # synchronously first. Failed checks during start_period don't count
+      # against retries, so a slow cold start doesn't get marked unhealthy
+      # before the app has had a real chance to finish loading.
+      start_period: 90s
 
   web:
     build:
