@@ -19,7 +19,7 @@ WORKDIR /models
 ARG GITHUB_TOKEN
 ARG GITHUB_REPO=csproles/LA-Spot
 ARG MODELS_RELEASE_TAG=models-v1
-ARG MODELS_ASSET_NAME=models.zip
+ARG MODELS_ASSET_NAME=app_model.zip
 RUN apt-get update && apt-get install -y --no-install-recommends curl unzip \
     && rm -rf /var/lib/apt/lists/* \
     && test -n "$GITHUB_TOKEN" || { echo "GITHUB_TOKEN build arg is required (models-v1 is a private-repo release asset)"; exit 1; } \
@@ -36,7 +36,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl unzip \
     && rm models.zip \
     && find . -mindepth 2 -type f -exec mv -t . {} + \
     && find . -mindepth 1 -type d -empty -delete \
-    && test -f yolo_melanoma_seg.pt || { echo "yolo_melanoma_seg.pt not found anywhere in the extracted zip"; exit 1; }
+    && MISSING="" \
+    && for f in yolo_melanoma_seg.pt \
+                fold_0_best.pt fold_1_best.pt fold_2_best.pt fold_3_best.pt fold_4_best.pt \
+                pca_app_fold_0.pkl pca_app_fold_1.pkl pca_app_fold_2.pkl pca_app_fold_3.pkl pca_app_fold_4.pkl \
+                catboost_app_fold_0.cbm catboost_app_fold_1.cbm catboost_app_fold_2.cbm catboost_app_fold_3.cbm catboost_app_fold_4.cbm \
+                catboost_app_fold_0_feature_names.npy catboost_app_fold_1_feature_names.npy catboost_app_fold_2_feature_names.npy catboost_app_fold_3_feature_names.npy catboost_app_fold_4_feature_names.npy; \
+       do [ -f "$f" ] || MISSING="$MISSING $f"; done \
+    && if [ -n "$MISSING" ]; then echo "Missing from the models zip:$MISSING"; exit 1; fi
 
 FROM python:3.12-slim
 
