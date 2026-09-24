@@ -34,10 +34,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl unzip \
          "$ASSET_API_URL" -o models.zip \
     && unzip -q models.zip -d . \
     && rm models.zip \
-    && FOUND=$(find . -name yolo_melanoma_seg.pt -print -quit) \
-    && test -n "$FOUND" || { echo "yolo_melanoma_seg.pt not found anywhere in the extracted zip"; exit 1; } \
-    && NESTED=$(dirname "$FOUND") \
-    && if [ "$NESTED" != "." ]; then mv "$NESTED"/* . && rmdir "$NESTED" 2>/dev/null || true; fi
+    && find . -mindepth 2 -type f -exec mv -t . {} + \
+    && find . -mindepth 1 -type d -empty -delete \
+    && test -f yolo_melanoma_seg.pt || { echo "yolo_melanoma_seg.pt not found anywhere in the extracted zip"; exit 1; }
 
 FROM python:3.12-slim
 
