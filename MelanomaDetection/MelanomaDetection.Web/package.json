@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build:js": "esbuild wwwroot/theme.js wwwroot/skip-link.js wwwroot/cameraCapture.js wwwroot/scheduling.js wwwroot/registerServiceWorker.js --minify --allow-overwrite --outdir=wwwroot"
   },
   "keywords": [],
   "author": "",
@@ -12,6 +13,7 @@
   "type": "commonjs",
   "devDependencies": {
     "@tailwindcss/cli": "^4.3.3",
+    "esbuild": "^0.24.0",
     "tailwindcss": "^4.3.3"
   }
 }

@@ -11,3 +11,9 @@
     font-size: 0.88rem;
     margin: 0;
 }
+
+.history-load-more {
+    display: flex;
+    justify-content: center;
+    margin-top: 4px;
+}

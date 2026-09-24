@@ -3,8 +3,12 @@ using System.Text.Json;
 using MelanomaDetection.Web.Models;
 using MelanomaDetection.Web.Services.Account;
 using MelanomaDetection.Web.Services.RateLimiting;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace MelanomaDetection.Web.Services;
+
+/// <summary>One page of GetHistoryPageAsync -- the entries for that page, and the account's total check count.</summary>
+public record HistoryPage(List<HistoryEntry> Entries, int Total);
 
 /// <summary>
 /// Thrown for any failure talking to the Flask API (network, timeout, or an error
@@ -36,15 +40,19 @@ public class ImageProcessingService
     public const string UserIdHeader = "X-User-Id";
     public const string InternalKeyHeader = "X-Internal-Api-Key";
 
+    private static readonly TimeSpan ProfileCacheDuration = TimeSpan.FromSeconds(30);
+
     private readonly HttpClient _httpClient;
     private readonly CurrentUser _currentUser;
     private readonly OperationRateLimiter _limiter;
+    private readonly IMemoryCache _cache;
 
-    public ImageProcessingService(HttpClient httpClient, CurrentUser currentUser, OperationRateLimiter limiter)
+    public ImageProcessingService(HttpClient httpClient, CurrentUser currentUser, OperationRateLimiter limiter, IMemoryCache cache)
     {
         _httpClient = httpClient;
         _currentUser = currentUser;
         _limiter = limiter;
+        _cache = cache;
     }
 
     /// <summary>
@@ -213,6 +221,23 @@ public class ImageProcessingService
         return result?.Entries ?? new List<HistoryEntry>();
     }
 
+    /// <summary>
+    /// Maps to GET /api/image/history?limit=&amp;offset= -- one page of saved checks,
+    /// newest first, plus the account's total check count. Use this instead of
+    /// <see cref="GetHistoryAsync()"/> for a list that can grow without bound
+    /// (the "All checks" page); callers that need the account's complete history
+    /// at once (dashboard recent-checks widget, chat context, data export) should
+    /// keep using the parameterless overload.
+    /// </summary>
+    public async Task<HistoryPage> GetHistoryPageAsync(int limit, int offset)
+    {
+        using var response = await SendAsync(() =>
+            _httpClient.GetAsync($"/api/image/history?limit={limit}&offset={offset}"));
+
+        var result = await response.Content.ReadFromJsonAsync<HistoryResponse>();
+        return new HistoryPage(result?.Entries ?? new List<HistoryEntry>(), result?.Total ?? 0);
+    }
+
     /// <summary>Maps to GET /api/spots -- every tracked spot with its aggregates and next-due date.</summary>
     public async Task<List<Spot>> GetSpotsAsync()
     {
@@ -257,14 +282,32 @@ public class ImageProcessingService
         return result ?? throw new ImageProcessingApiException("The analysis service returned an empty response.");
     }
 
-    /// <summary>Maps to GET /api/profile. Configured is false until the user fills it in.</summary>
+    /// <summary>
+    /// Maps to GET /api/profile. Configured is false until the user fills it in.
+    /// Cached briefly per account -- Home, Onboarding and Profile all fetch it on
+    /// load, and it rarely changes between those visits -- and invalidated by
+    /// <see cref="SaveProfileAsync"/> so an edit is never served stale.
+    /// </summary>
     public async Task<RiskProfile> GetProfileAsync()
     {
+        var userId = await _currentUser.GetUserIdAsync();
+        if (userId is { } id && _cache.TryGetValue(ProfileCacheKey(id), out RiskProfile? cached) && cached is not null)
+        {
+            return cached;
+        }
+
         using var response = await SendAsync(() => _httpClient.GetAsync("/api/profile"));
 
-        var result = await response.Content.ReadFromJsonAsync<RiskProfile>();
-        return result ?? new RiskProfile();
+        var result = await response.Content.ReadFromJsonAsync<RiskProfile>() ?? new RiskProfile();
+        if (userId is { } cacheableId)
+        {
+            _cache.Set(ProfileCacheKey(cacheableId), result, ProfileCacheDuration);
+        }
+
+        return result;
     }
+
+    private static string ProfileCacheKey(Guid userId) => $"profile:{userId}";
 
     /// <summary>Maps to PUT /api/profile.</summary>
     public async Task<RiskProfile> SaveProfileAsync(RiskProfile profile)
@@ -289,7 +332,17 @@ public class ImageProcessingService
             }));
 
         var result = await response.Content.ReadFromJsonAsync<RiskProfile>();
-        return result ?? throw new ImageProcessingApiException("The analysis service returned an empty response.");
+        if (result is null)
+        {
+            throw new ImageProcessingApiException("The analysis service returned an empty response.");
+        }
+
+        if (await _currentUser.GetUserIdAsync() is { } userId)
+        {
+            _cache.Set(ProfileCacheKey(userId), result, ProfileCacheDuration);
+        }
+
+        return result;
     }
 
     /// <summary>
@@ -312,6 +365,7 @@ public class ImageProcessingService
     public async Task DeleteUserDataAsync(Guid userId)
     {
         using var response = await SendAsync(() => _httpClient.DeleteAsync("/api/account"), userId);
+        _cache.Remove(ProfileCacheKey(userId));
     }
 
     /// <summary>

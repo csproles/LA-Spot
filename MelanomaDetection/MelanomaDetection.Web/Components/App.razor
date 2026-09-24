@@ -26,8 +26,12 @@
     <link rel="stylesheet" href="@Assets["MelanomaDetection.Web.styles.css"]" />
     <script src="@Assets["theme.js"]"></script>
     <script src="@Assets["skip-link.js"]" defer></script>
-    <script src="@Assets["cameraCapture.js"]"></script>
-    <script src="@Assets["scheduling.js"]"></script>
+    <!-- Only needed on the camera-capture and scheduling/booking pages, not every
+         page load, but still safe to defer everywhere: both just attach functions
+         to window (no document.write, nothing needs to run before parse), so
+         running after the DOM is parsed instead of blocking it costs nothing. -->
+    <script src="@Assets["cameraCapture.js"]" defer></script>
+    <script src="@Assets["scheduling.js"]" defer></script>
     <ImportMap Nonce="@Nonce" />
     <link rel="manifest" href="manifest.json" />
     <link rel="icon" type="image/png" href="favicon.png" />

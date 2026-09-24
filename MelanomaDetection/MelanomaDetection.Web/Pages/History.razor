@@ -17,7 +17,9 @@
             else
             {
                 <span>
-                    @Entries.Count saved check@(Entries.Count == 1 ? "" : "s") across every spot ·
+                    @(Entries.Count == Total
+                        ? $"{Entries.Count} saved check{(Entries.Count == 1 ? "" : "s")}"
+                        : $"{Entries.Count} of {Total} saved checks") across every spot ·
                     <a href="/spots">view by spot</a>
                 </span>
             }
@@ -55,6 +57,15 @@
             <HistoryGrid Entries="SortedEntries" IsLoading="IsLoading"
                          SelectedIds="SelectedForCompare" OnCardClick="HandleCardClick" />
 
+            @if (!IsLoading && Entries.Count < Total)
+            {
+                <div class="history-load-more">
+                    <button type="button" class="btn btn-outline-primary" disabled="@IsLoadingMore" @onclick="LoadMoreAsync">
+                        @(IsLoadingMore ? "Loading…" : $"Load {Math.Min(PageSize, Total - Entries.Count)} more")
+                    </button>
+                </div>
+            }
+
             @if (IsCompareMode && ComparedEntries.Count > 0)
             {
                 <HistoryComparePanel Entries="ComparedEntries" />
@@ -64,8 +75,15 @@
 </div>
 
 @code {
+    /// <summary>How many checks a "Load more" click fetches at a time. Keeps the
+    /// initial page (and every subsequent one) from rendering an unbounded DOM
+    /// as someone's history grows -- see store.list_checks/count_checks.</summary>
+    private const int PageSize = 40;
+
     private List<HistoryEntry> Entries = new();
+    private int Total;
     private bool IsLoading = true;
+    private bool IsLoadingMore;
     private string? LoadError;
     private string SortField = "Date";
     private bool SortDescending = true;
@@ -90,7 +108,9 @@
     {
         try
         {
-            Entries = await ImageProcessingService.GetHistoryAsync();
+            var page = await ImageProcessingService.GetHistoryPageAsync(PageSize, 0);
+            Entries = page.Entries;
+            Total = page.Total;
             SetChatContext();
         }
         catch (ImageProcessingApiException ex)
@@ -103,13 +123,35 @@
         }
     }
 
-    /// <summary>Lets the chat widget answer questions about the person's overall check history.</summary>
+    private async Task LoadMoreAsync()
+    {
+        IsLoadingMore = true;
+        try
+        {
+            var page = await ImageProcessingService.GetHistoryPageAsync(PageSize, Entries.Count);
+            Entries.AddRange(page.Entries);
+            Total = page.Total;
+            SetChatContext();
+        }
+        catch (ImageProcessingApiException ex)
+        {
+            LoadError = ex.Message;
+        }
+        finally
+        {
+            IsLoadingMore = false;
+        }
+    }
+
+    /// <summary>Lets the chat widget answer questions about the person's overall check history.
+    /// earliest/latestCheck reflect only what's loaded so far, not the full history, once
+    /// "Load more" pagination means Entries isn't the complete list.</summary>
     private void SetChatContext()
     {
         ChatPageContext.Set("history", new Dictionary<string, object?>
         {
-            ["totalChecks"] = Entries.Count,
-            ["earliestCheck"] = Entries.Select(e => e.ProcessedAt).Min()?.ToString("yyyy-MM-dd"),
+            ["totalChecks"] = Total,
+            ["loadedChecks"] = Entries.Count,
             ["latestCheck"] = Entries.Select(e => e.ProcessedAt).Max()?.ToString("yyyy-MM-dd"),
         });
     }

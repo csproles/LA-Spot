@@ -6,7 +6,7 @@
         @foreach (var entry in Entries)
         {
             <div class="compare-item">
-                <img src="@ImageData.PngUrl(entry.Thumbnail)" alt="Comparison thumbnail" class="compare-thumb" />
+                <img src="@ImageData.PngUrl(entry.Thumbnail)" alt="Comparison thumbnail" class="compare-thumb" loading="lazy" />
                 <p class="compare-label">@(entry.SpotLabel ?? (string.IsNullOrEmpty(entry.Location) ? "Unfiled" : entry.Location))</p>
                 <RiskScoreBadge Score="entry.RiskScore" Concern="@entry.OverallVisualConcern" Format="band" />
                 <p class="compare-date">@(entry.ProcessedAt?.ToLocalTime().ToString("MMM d, yyyy") ?? "Unknown date")</p>

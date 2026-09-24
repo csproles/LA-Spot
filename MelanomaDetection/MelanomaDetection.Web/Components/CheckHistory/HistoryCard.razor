@@ -3,7 +3,7 @@
 
 <div class="history-card @(Selected ? "history-card-selected" : "")" @onclick="() => OnClick.InvokeAsync(Entry)">
     <div class="history-thumb-wrap">
-        <img src="@ImageData.PngUrl(Entry.Thumbnail)" alt="Saved check thumbnail" class="history-thumb" />
+        <img src="@ImageData.PngUrl(Entry.Thumbnail)" alt="Saved check thumbnail" class="history-thumb" loading="lazy" />
         @if (Selected)
         {
             <span class="history-check-overlay" aria-hidden="true">&#10003;</span>

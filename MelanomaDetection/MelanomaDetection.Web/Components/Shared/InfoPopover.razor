@@ -1,0 +1,39 @@
+@* A small "i" trigger that opens a centred explainer card -- for the odd label
+   or control that needs more room than a hover title attribute gives, and
+   needs to work on touch (no hover) as well as desktop. *@
+
+<span class="info-popover">
+    <button type="button" class="info-popover-trigger" @onclick="Toggle" aria-label="@($"More info: {Title}")" aria-expanded="@IsOpen">
+        <AppIcon Name="info" Size="sm" />
+    </button>
+
+    @if (IsOpen)
+    {
+        <div class="info-popover-backdrop" @onclick="Close"></div>
+        <div class="info-popover-card" role="dialog" aria-modal="true" aria-label="@Title">
+            <div class="info-popover-header">
+                <span class="info-popover-title">@Title</span>
+                <button type="button" class="info-popover-close" @onclick="Close" aria-label="Close">
+                    <AppIcon Name="close" Size="md" />
+                </button>
+            </div>
+            <div class="info-popover-body">
+                @ChildContent
+            </div>
+        </div>
+    }
+</span>
+
+@code {
+    [Parameter, EditorRequired]
+    public string Title { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public RenderFragment? ChildContent { get; set; }
+
+    private bool IsOpen;
+
+    private void Toggle() => IsOpen = !IsOpen;
+
+    private void Close() => IsOpen = false;
+}

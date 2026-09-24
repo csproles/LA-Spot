@@ -480,18 +480,27 @@ def get_checks_for_spot(user_id: str, spot_id: str) -> list:
     return [_check_row_to_dict(row) for row in rows]
 
 
-def list_checks(user_id: str) -> list:
-    """Every stored check of the user's across all spots, newest first (the "All checks" list)."""
+def list_checks(user_id: str, limit: int = None, offset: int = 0) -> list:
+    """Every stored check of the user's across all spots, newest first (the "All checks" list).
+
+    limit/offset are optional: omitted, this returns the full list exactly as
+    before (existing callers -- the dashboard's recent-checks widget, chat
+    context, data export -- rely on that). Pass limit to page through a
+    history that can otherwise grow unbounded; see count_checks for the total.
+    """
+    query = """
+        SELECT checks.*, spots.label AS spot_label, spots.body_region AS spot_region
+        FROM checks LEFT JOIN spots ON spots.id = checks.spot_id
+        WHERE checks.user_id = ?
+        ORDER BY checks.processed_at DESC
+        """
+    params = [user_id]
+    if limit is not None:
+        query += " LIMIT ? OFFSET ?"
+        params.extend([limit, offset])
+
     with _connect() as connection:
-        rows = connection.execute(
-            """
-            SELECT checks.*, spots.label AS spot_label, spots.body_region AS spot_region
-            FROM checks LEFT JOIN spots ON spots.id = checks.spot_id
-            WHERE checks.user_id = ?
-            ORDER BY checks.processed_at DESC
-            """,
-            (user_id,),
-        ).fetchall()
+        rows = connection.execute(query, params).fetchall()
 
     checks = []
     for row in rows:
@@ -500,6 +509,14 @@ def list_checks(user_id: str) -> list:
         check["bodyRegion"] = row["spot_region"]
         checks.append(check)
     return checks
+
+
+def count_checks(user_id: str) -> int:
+    """Total number of stored checks for the user, for paging list_checks."""
+    with _connect() as connection:
+        return connection.execute(
+            "SELECT COUNT(*) FROM checks WHERE user_id = ?", (user_id,)
+        ).fetchone()[0]
 
 
 def _lab_of(row):

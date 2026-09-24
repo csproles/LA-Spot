@@ -104,6 +104,11 @@ public class HistoryResponse
 {
     [JsonPropertyName("entries")]
     public List<HistoryEntry> Entries { get; set; } = new();
+
+    /// <summary>Total checks the account has, across every page. Only set when the
+    /// request passed limit/offset -- see ImageProcessingService.GetHistoryAsync.</summary>
+    [JsonPropertyName("total")]
+    public int? Total { get; set; }
 }
 
 public class AbcdeScore

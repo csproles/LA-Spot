@@ -4,7 +4,7 @@
 <div class="pipeline-tile">
     @if (ImageData.HasImage(Base64))
     {
-        <img src="@ImageData.PngUrl(Base64!)" alt="@Label" class="pipeline-tile-img" />
+        <img src="@ImageData.Url(Base64!, IsJpeg)" alt="@Label" class="pipeline-tile-img" />
     }
     else
     {
@@ -19,4 +19,7 @@
 
     [Parameter]
     public string? Base64 { get; set; }
+
+    [Parameter]
+    public bool IsJpeg { get; set; }
 }

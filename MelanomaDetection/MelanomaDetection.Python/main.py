@@ -12,6 +12,7 @@ import cv2
 import numpy as np
 from flask import Flask, g, jsonify, request
 from flask.json.provider import DefaultJSONProvider
+from flask_compress import Compress
 
 import evolution
 import policy
@@ -45,6 +46,12 @@ class NumpyJSONProvider(DefaultJSONProvider):
 app = Flask(__name__)
 app.json = NumpyJSONProvider(app)
 app.config["MAX_CONTENT_LENGTH"] = MAX_CONTENT_LENGTH
+# Every response here is JSON, and the analysis endpoints' bodies are mostly
+# base64 image data (each ~5-7MB uncompressed) -- exactly the kind of
+# repetitive text gzip shrinks hardest. Compress() only engages above its
+# default size floor, so small responses (health check, profile) skip the
+# per-request gzip cost entirely.
+Compress(app)
 
 detector = V5Detector()
 risk_model = RiskModel()
@@ -382,10 +389,10 @@ def get_results(processing_id):
 
     return jsonify({
         "processingId": processing_id,
-        "original": _encode_image_base64(results["original"]),
-        "bilateral_filtered": _encode_image_base64(results["bilateral_filtered"]),
-        "noise_removed": _encode_image_base64(results["noise_removed"]),
-        "hair_removed": _encode_image_base64(results["hair_removed"]),
+        "original": _encode_stage_base64("original", results["original"]),
+        "bilateral_filtered": _encode_stage_base64("bilateral_filtered", results["bilateral_filtered"]),
+        "noise_removed": _encode_stage_base64("noise_removed", results["noise_removed"]),
+        "hair_removed": _encode_stage_base64("hair_removed", results["hair_removed"]),
         "segmentation": _encode_image_base64(results["segmentation"]),
         "edges": _encode_image_base64(results["edges"]),
         "asymmetry_visual": _encode_image_base64(results["asymmetry_visual"]),
@@ -481,8 +488,30 @@ def save_to_history(processing_id):
     return jsonify({"saved": True, "spotId": spot_id})
 
 
+def _query_paging(default_limit=None, max_limit=200):
+    """(limit, offset) from ?limit=&offset=, or (None, 0) when limit is absent.
+
+    Omitting limit preserves the historical "give me everything" behavior for
+    callers that still need the full list (the dashboard's recent-checks
+    widget, chat context, data export). Passing it enables real paging.
+    """
+    raw_limit = request.args.get("limit")
+    if raw_limit is None:
+        return default_limit, 0
+
+    try:
+        limit = int(raw_limit)
+        offset = int(request.args.get("offset", 0))
+    except ValueError:
+        raise ValidationError("limit and offset must be whole numbers.")
+    if not 0 < limit <= max_limit or offset < 0:
+        raise ValidationError(f"limit must be 1-{max_limit} and offset must be 0 or more.")
+    return limit, offset
+
+
 @app.route("/api/image/history", methods=["GET"])
 def get_history():
+    limit, offset = _query_paging()
     entries = [
         {
             "processingId": check["processingId"],
@@ -499,9 +528,12 @@ def get_history():
             if check["thumbnail"]
             else "",
         }
-        for check in store.list_checks(g.user_id)
+        for check in store.list_checks(g.user_id, limit=limit, offset=offset)
     ]
-    return jsonify({"entries": entries})
+    response = {"entries": entries}
+    if limit is not None:
+        response["total"] = store.count_checks(g.user_id)
+    return jsonify(response)
 
 
 # --- spots ---------------------------------------------------------------
@@ -726,6 +758,28 @@ def _encode_image_png(image: np.ndarray) -> bytes:
 
 def _encode_image_base64(image: np.ndarray) -> str:
     return base64.b64encode(_encode_image_png(image)).decode("utf-8")
+
+
+# Photographic-only pipeline stages: real camera pixels with no drawn
+# measurement lines on top, where JPEG's lossy artifacts don't risk hiding or
+# distorting anything diagnostic. Encoding these as JPEG rather than lossless
+# PNG is most of this endpoint's payload weight (base64 amplifies it another
+# 33%). Everything else here -- segmentation/edges/the *_visual overlays --
+# stays PNG: those are thin drawn lines and masks where compression artifacts
+# could blur exactly the boundary the UI is trying to show.
+_JPEG_STAGES = {"original", "bilateral_filtered", "noise_removed", "hair_removed"}
+_JPEG_QUALITY = 85
+
+
+def _encode_image_base64_lossy(image: np.ndarray) -> str:
+    success, buffer = cv2.imencode(".jpg", image, [cv2.IMWRITE_JPEG_QUALITY, _JPEG_QUALITY])
+    if not success:
+        raise ValueError("Failed to encode image to JPEG")
+    return base64.b64encode(buffer.tobytes()).decode("utf-8")
+
+
+def _encode_stage_base64(stage: str, image: np.ndarray) -> str:
+    return _encode_image_base64_lossy(image) if stage in _JPEG_STAGES else _encode_image_base64(image)
 
 
 def _make_thumbnail(image: np.ndarray, max_width: int = 160) -> np.ndarray:

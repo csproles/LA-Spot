@@ -3,7 +3,7 @@
 
 <li class="timeline-entry">
     <button type="button" class="timeline-item @(Selected ? "is-selected" : "")" @onclick="() => OnClick.InvokeAsync(Check)">
-        <img src="@ImageData.PngUrl(Check.Thumbnail)" alt="" class="timeline-thumb" />
+        <img src="@ImageData.PngUrl(Check.Thumbnail)" alt="" class="timeline-thumb" loading="lazy" />
         <span class="timeline-text">
             <span class="timeline-date">@Date</span>
             <span class="timeline-meta">@Meta</span>

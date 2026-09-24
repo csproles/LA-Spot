@@ -3,7 +3,7 @@
 <figure class="photo-figure photo-figure-@Shape">
     @if (ImageData.HasImage(Base64))
     {
-        <img src="@ImageData.PngUrl(Base64!)" alt="@Alt" class="photo-figure-image" />
+        <img src="@ImageData.Url(Base64!, IsJpeg)" alt="@Alt" class="photo-figure-image" />
     }
     else
     {
@@ -24,6 +24,10 @@
 @code {
     [Parameter]
     public string? Base64 { get; set; }
+
+    /// <summary>True when Base64 is JPEG-encoded (main.py's _JPEG_STAGES), not PNG.</summary>
+    [Parameter]
+    public bool IsJpeg { get; set; }
 
     [Parameter]
     public string Alt { get; set; } = string.Empty;

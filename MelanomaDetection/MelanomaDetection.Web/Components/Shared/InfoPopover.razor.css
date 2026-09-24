@@ -1,0 +1,98 @@
+.info-popover {
+    display: inline-flex;
+}
+
+.info-popover-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: none;
+    padding: 0;
+    background: none;
+    color: var(--color-text-faint);
+    cursor: pointer;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.info-popover-trigger:hover {
+    background: var(--color-well);
+    color: var(--color-accent-ink);
+}
+
+.info-popover-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 900;
+    background: rgba(0, 0, 0, 0.35);
+}
+
+.info-popover-card {
+    position: fixed;
+    z-index: 901;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: min(360px, calc(100vw - 32px));
+    max-height: calc(100dvh - 64px);
+    overflow-y: auto;
+    background: var(--color-surface);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-lifted);
+    padding: 16px;
+}
+
+.info-popover-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+.info-popover-title {
+    font-family: var(--font-heading);
+    font-weight: 700;
+    color: var(--color-accent-ink);
+}
+
+.info-popover-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    flex-shrink: 0;
+    border: none;
+    border-radius: 50%;
+    background: none;
+    color: var(--color-text-faint);
+    cursor: pointer;
+    margin: -4px -4px 0 0;
+}
+
+.info-popover-close:hover {
+    background: var(--color-well);
+    color: var(--color-text);
+}
+
+.info-popover-body {
+    color: var(--color-text-muted);
+    font-size: 0.9rem;
+}
+
+.info-popover-body p {
+    margin: 0 0 8px;
+}
+
+.info-popover-body p:last-child {
+    margin-bottom: 0;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .info-popover-card {
+        animation: pop-in 0.18s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+}

@@ -17,6 +17,12 @@ RUN npm ci
 # endpoints.json until a second, separate build saw it already present at evaluation time).
 # Generating it here, before publish's evaluation even starts, is what actually avoids that.
 RUN npx @tailwindcss/cli -i Styles/tailwind.css -o wwwroot/css/tailwind.css --minify
+# Minifies the hand-written interop scripts in place (see package.json's build:js).
+# Safe to overwrite here, unlike tailwind.css above: these files already exist in
+# wwwroot at project-load time, so MSBuild's static-web-assets manifest already
+# has routes for them -- only Tailwind's from-scratch output needs the two-build
+# workaround described above.
+RUN npm run build:js
 RUN dotnet publish -c Release -o /app
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0

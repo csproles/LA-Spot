@@ -2,7 +2,7 @@
 
 <li>
     <a href="/results/@Entry.ProcessingId" class="recent-item">
-        <img src="@ImageData.PngUrl(Entry.Thumbnail)" alt="" class="recent-thumb" />
+        <img src="@ImageData.PngUrl(Entry.Thumbnail)" alt="" class="recent-thumb" loading="lazy" />
         <span class="recent-text">
             <span class="recent-title">@(Entry.SpotLabel ?? "Unfiled check")</span>
             <span class="recent-meta">@Entry.Location · @Recheck.Ago(Entry.ProcessedAt)</span>

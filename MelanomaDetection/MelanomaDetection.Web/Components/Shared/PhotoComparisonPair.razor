@@ -4,7 +4,7 @@
 <div class="photo-comparison">
     <PhotoFigure Base64="@BeforeBase64" Alt="@BeforeAlt" CaptionText="@BeforeCaption" />
     <span class="photo-comparison-arrow" aria-hidden="true"><AppIcon Name="arrow-right" Size="xl" StrokeWidth="2" /></span>
-    <PhotoFigure Base64="@AfterBase64" Alt="@AfterAlt" CaptionText="@AfterCaption" />
+    <PhotoFigure Base64="@AfterBase64" IsJpeg="@AfterIsJpeg" Alt="@AfterAlt" CaptionText="@AfterCaption" />
 </div>
 
 @code {
@@ -19,6 +19,10 @@
 
     [Parameter]
     public string? AfterBase64 { get; set; }
+
+    /// <summary>True when AfterBase64 is JPEG-encoded (e.g. Results.Original), not PNG.</summary>
+    [Parameter]
+    public bool AfterIsJpeg { get; set; }
 
     [Parameter]
     public string AfterAlt { get; set; } = "Latest photo";
