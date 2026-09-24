@@ -161,6 +161,13 @@
     --brand-mascot: url('icons/mascot.png');
 }
 
+/* Same technique for the page-background motif below: five abstract ABCDE
+   line-art marks (asymmetry, border, color, diameter, evolving), used as a
+   mask so its colour follows the theme like everything else. */
+:root {
+    --pattern-abcde: url('images/abcde-pattern.svg');
+}
+
 /* The logo is white-and-sage artwork with a white outline, which vanishes on the
    cream light theme, so it comes in two variants and follows the theme like the
    rest of the palette (system preference unless data-theme forces one). */
@@ -551,6 +558,41 @@ a:focus-visible, button:focus-visible {
     min-height: 100vh;
     min-height: 100dvh;
     background: var(--color-bg);
+}
+
+/* A faint, site-wide ABCDE motif (asymmetry, border, color, diameter, evolving)
+   behind every page -- decorative texture, not a diagnostic image, so it uses
+   --color-border-subtle (the token already exempt from text-contrast minimums,
+   same as a divider line). AuthLayout and MainLayout both wrap their content in
+   .app-background, so this one rule covers every page. A ::before paints after
+   .app-background's own flat colour but before its real children (AppMain,
+   NavMenu, etc.), so the texture sits behind content with no z-index needed. */
+.app-background::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.5;
+    background-color: var(--color-border-subtle);
+    -webkit-mask: var(--pattern-abcde) 0 0 / 420px 420px repeat;
+    mask: var(--pattern-abcde) 0 0 / 420px 420px repeat;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .app-background::before {
+        animation: abcde-pattern-drift 140s linear infinite;
+    }
+}
+
+@keyframes abcde-pattern-drift {
+    from {
+        -webkit-mask-position: 0 0;
+        mask-position: 0 0;
+    }
+    to {
+        -webkit-mask-position: 420px 420px;
+        mask-position: 420px 420px;
+    }
 }
 
 h1:focus {
