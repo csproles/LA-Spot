@@ -80,4 +80,9 @@ ENTRYPOINT ["./docker-entrypoint.sh"]
 
 # One worker on purpose: analysis results and rate-limit counters live in this
 # process's memory, so a second worker would each see only half of them.
-CMD ["gunicorn", "--workers", "1", "--threads", "4", "--timeout", "60", "--bind", "0.0.0.0:5002", "main:app"]
+# Bound to [::] (all interfaces, IPv6) rather than 0.0.0.0: Railway's private
+# network is IPv6-only, so an IPv4-only bind resolves fine over
+# *.railway.internal DNS but has nothing actually listening on the address
+# traffic arrives on. [::] still accepts IPv4 connections too (dual-stack on
+# Linux by default), so this doesn't break local `docker compose` usage.
+CMD ["gunicorn", "--workers", "1", "--threads", "4", "--timeout", "60", "--bind", "[::]:5002", "main:app"]
