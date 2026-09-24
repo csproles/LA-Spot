@@ -197,7 +197,7 @@ CONCERN_LABEL = {
 CONCERN_ADVICE = {
     CONCERN_LOWER: (
         "This photo's visual features did not cross this tool's screening threshold. "
-        "This is not a clearance -- keep up with routine skin self-exams, and see a "
+        "This is not a clearance. Keep up with routine skin self-exams, and see a "
         "dermatologist if this spot changes or concerns you."
     ),
     CONCERN_ELEVATED: (

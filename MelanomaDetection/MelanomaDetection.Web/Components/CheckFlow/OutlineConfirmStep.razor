@@ -10,8 +10,8 @@
         <h2 class="panel-title">No spot could be located in this photo</h2>
         <p class="text-muted-small">
             The automated detection could not confidently locate a spot to outline, so no
-            visual-concern analysis was produced for this photo. This does not mean the spot is fine
-            -- it means this photo didn't give the tool enough to go on. Try retaking it with the spot
+            visual-concern analysis was produced for this photo. This doesn't mean the spot is fine.
+            It just means this photo didn't give the tool enough to go on. Try retaking it with the spot
             centered, in focus, and well lit.
         </p>
         <div class="result-actions">
@@ -23,7 +23,7 @@
         <h2 class="panel-title">Does the outline match your spot?</h2>
         <p class="text-muted-small">
             Every score depends on this outline, so it's worth a second. The traced line should hug the
-            edge of the spot — not cut into it, and not wander off into surrounding skin, hair, or the
+            edge of the spot without cutting into it or wandering off into surrounding skin, hair, or the
             edge of the photo.
         </p>
         @if (ImageData.HasImage(BorderVisual))
@@ -32,7 +32,7 @@
         }
         <div class="result-actions">
             <button type="button" class="btn btn-primary" @onclick="OnAccept">Yes, that matches</button>
-            <button type="button" class="btn btn-outline-primary" @onclick="OnReject">No — retake the photo</button>
+            <button type="button" class="btn btn-outline-primary" @onclick="OnReject">No, retake the photo</button>
         </div>
     }
 </div>

@@ -4,16 +4,16 @@ A multimodal melanoma classifier: a fine-tuned CNN backbone (ConvNeXt-Base) supp
 a deep visual embedding, this project's validated ABCD/structured lesion features
 (YOLO segmentation + the frozen V5 feature formulas, consolidated into this package's
 own `abcd/` module) supply an interpretable signal, and a downstream CatBoost
-classifier combines both — with SHAP explainability on top so the structured
+classifier combines both. SHAP explainability sits on top, so the structured
 features stay individually attributable per patient.
 
 **This package is standalone.** It does not import from, or require the presence
-of, any other folder in the wider repository — `abcd/` is this package's own
+of, any other folder in the wider repository: `abcd/` is this package's own
 consolidated copy of the validated YOLO segmentation and ABCD feature-extraction
 code (see `abcd/__init__.py` for exactly what was consolidated from where).
 
 **Status**: fully scaffolded, consolidated, and syntax/import-checked (including
-from a location with no other repository folders present at all — see
+from a location with no other repository folders present at all; see
 "Verification," below). **No training has been run, no dataset has been
 downloaded, and no CNN checkpoints exist yet.**
 
@@ -50,12 +50,12 @@ lesion image
                                        ABCD modality split)
 ```
 
-- **CNN backbone**: `convnext_base.fb_in22k_ft_in1k` (via `timm`) — ConvNeXt-Base,
+- **CNN backbone**: `convnext_base.fb_in22k_ft_in1k` (via `timm`): ConvNeXt-Base,
   ImageNet-22k-pretrained then fine-tuned on ImageNet-1k by its original authors, as
   the starting checkpoint. Confirmed **1024-dim** penultimate pooled feature vector
-  (empirically verified — see "Verification," below — not assumed).
+  (empirically verified, see "Verification" below, not assumed).
 - **Fine-tuning setting**: **full fine-tuning, no layers frozen**
-  (`train_cnn.py::MelanomaCNN` — every backbone parameter is trainable). This was a
+  (`train_cnn.py::MelanomaCNN`: every backbone parameter is trainable). This was a
   deliberate choice given confirmed GPU access and the ~402k-image target dataset
   scale, versus a smaller/CPU-only setting where a staged frozen-first approach would
   have been safer. See `docs/design/02_agreed_architecture.md` for the full
@@ -65,19 +65,19 @@ lesion image
   mean IoU 0.783 / Dice 0.852 against expert ISIC ground truth). Not retrained here.
 - **Structured features**: 17 validated ABCD features (see Section 4).
 - **Fusion**: PCA-reduce the CNN embedding (`config.PCA_N_COMPONENTS`, default 128,
-  clipped to `min(configured, n_train_samples, n_features)` per fold) — fit ONCE PER
+  clipped to `min(configured, n_train_samples, n_features)` per fold), fit ONCE PER
   FOLD on that fold's training embeddings only, then applied (transform-only) to
-  that fold's validation embeddings — then concatenate with the 17 ABCD features.
+  that fold's validation embeddings, then concatenate with the 17 ABCD features.
 - **Classifier**: CatBoost (`CatBoostClassifier`), `scale_pos_weight` computed from
   each fold's own class ratio (handles class imbalance without needing the dataset
   pre-balanced).
-- **Cross-validation**: `GroupKFold(n_splits=5)`, grouped by patient ID — see
+- **Cross-validation**: `GroupKFold(n_splits=5)`, grouped by patient ID; see
   "Patient-separated splits" in Section 3.
 - **Evaluation metric**: pAUC above TPR ≥ 0.80 (`config.MIN_TPR`), the ISIC-2024
-  reference partial-AUC construction — see Section 4.
-- **Explainability**: SHAP (`explain.py`) — per-structured-feature attributions plus
+  reference partial-AUC construction; see Section 4.
+- **Explainability**: SHAP (`explain.py`): per-structured-feature attributions plus
   a CNN-embedding-vs-ABCD-features modality split. (Grad-CAM is documented as a
-  next step, not yet implemented — see `docs/design/02_agreed_architecture.md`.)
+  next step, not yet implemented; see `docs/design/02_agreed_architecture.md`.)
 
 ---
 
@@ -87,8 +87,8 @@ lesion image
 
 This pipeline is designed to run with a GPU (full CNN fine-tuning on a large dataset
 is not practical on CPU alone) but will run on CPU automatically if no GPU is
-detected (`torch.cuda.is_available()` — see `train_cnn.py`/`extract_embeddings.py`).
-Install a CUDA-matched PyTorch build for your device — see
+detected (`torch.cuda.is_available()`; see `train_cnn.py`/`extract_embeddings.py`).
+Install a CUDA-matched PyTorch build for your device. See
 https://pytorch.org/get-started/locally/ for the exact install command for your
 CUDA version; `requirements.txt` intentionally does not pin a specific PyTorch
 build for this reason.
@@ -109,7 +109,7 @@ training).
 ### Configuration (all paths configurable, nothing hardcoded)
 
 Copy `.env.example` to `.env` and edit, or export the same environment variables
-directly, or edit `config.py`'s defaults — all three are equally supported. At
+directly, or edit `config.py`'s defaults. All three are equally supported. At
 minimum:
 
 ```
@@ -144,7 +144,7 @@ If your source uses different column names, rename them to match, or override
 
 **Practical note**: the Kaggle distribution of ISIC 2024 ships images inside a
 single HDF5 archive (`train-image.hdf5`), not individual files. Extract it to
-individual files under `MELANOMA_IMAGE_DIR` first (a short one-off `h5py` script —
+individual files under `MELANOMA_IMAGE_DIR` first (a short one-off `h5py` script,
 not included here, since it's specific to whichever exact archive format you end up
 with).
 
@@ -155,37 +155,37 @@ with).
 Run every command from inside `melanoma_pipeline/`.
 
 ```bash
-# Stage 1 — validated ABCD/structured feature extraction (YOLO segmentation +
+# Stage 1: validated ABCD/structured feature extraction (YOLO segmentation +
 # the consolidated V5 feature formulas in abcd/ -- NOT a placeholder).
 # Writes outputs/abcd_features.npy, outputs/abcd_index.npy, outputs/abcd_feature_names.npy.
 python features.py
 
-# Stage 2 — ConvNeXt-Base fine-tuning under GroupKFold(5), patient-separated.
+# Stage 2: ConvNeXt-Base fine-tuning under GroupKFold(5), patient-separated.
 # Writes outputs/checkpoints/fold_{0..4}_best.pt.
 python train_cnn.py
 
-# Stage 3 — CNN embedding extraction from each fold's best checkpoint.
+# Stage 3: CNN embedding extraction from each fold's best checkpoint.
 # Writes outputs/embeddings/fold_{k}_{train,val}_{embeddings,labels,isic_ids}.npy.
 python extract_embeddings.py
 
-# Stage 4 — per-fold PCA (fit on that fold's training embeddings only) +
+# Stage 4: per-fold PCA (fit on that fold's training embeddings only) +
 # concatenate with the validated ABCD features + train CatBoost.
 # Writes outputs/catboost_fold_{0..4}.cbm and prints per-fold + OOF pAUC.
 python train_catboost.py
 
-# Stage 5 — SHAP explainability (per-feature attributions + CNN-vs-ABCD
+# Stage 5: SHAP explainability (per-feature attributions + CNN-vs-ABCD
 # modality split + population-level feature importance), per fold.
 # Writes outputs/shap_fold_{0..4}_{per_image,modality_split,feature_importance}.csv.
 python explain.py
 ```
 
-Each stage reads only what the previous stage wrote to `outputs/` — re-run any
+Each stage reads only what the previous stage wrote to `outputs/`. Re-run any
 later stage without repeating earlier ones, as long as their outputs are on disk.
 
 ### Patient-separated splits
 
 Every stage's cross-validation uses `GroupKFold(n_splits=5)` grouped by
-`config.GROUP_COL` (`"patient_id"`) — the same patient's images never appear in
+`config.GROUP_COL` (`"patient_id"`), so the same patient's images never appear in
 both the training and validation portion of the same fold, preventing a model from
 "cheating" by recognizing the same patient's skin/lesion across the train/
 validation boundary. PCA (`train_catboost.py`) and the CNN fine-tuning
@@ -197,17 +197,17 @@ validation boundary. PCA (`train_catboost.py`) and the CNN fine-tuning
 
 ### The 17 validated ABCD/structured features (`abcd.feature_config.V5_ALL_FEATURES`)
 
-Feature order/count is **derived from this list at runtime**, not hardcoded — if it
+Feature order/count is **derived from this list at runtime**, not hardcoded. If it
 ever changes, `features.py`'s output shape changes with it automatically.
 
 | # | Feature | What it measures |
 |---|---|---|
 | 1 | `A_value` | Shape asymmetry: PCA-principal-axis-aligned mask, folded against its own horizontal/vertical mirror, `1 − mean(IoU_h, IoU_v)`. |
-| 2 | `B_circularity` | Border irregularity: `1 − 4π·Area/Perimeter²` (despite the name, this is irregularity, not circularity — higher = more irregular). |
+| 2 | `B_circularity` | Border irregularity: `1 − 4π·Area/Perimeter²` (despite the name, this is irregularity, not circularity: higher means more irregular). |
 | 3 | `C_value` | Color variegation: coefficient of variation of per-pixel LAB distance from a sampled peri-lesional skin baseline. |
-| 4 | `D_px` | Diameter of the minimum enclosing circle around the lesion contour, in **raw pixels** — never calibrated to physical mm (no defensible pixel→mm calibration exists for this data source). |
+| 4 | `D_px` | Diameter of the minimum enclosing circle around the lesion contour, in **raw pixels**, never calibrated to physical mm (no defensible pixel→mm calibration exists for this data source). |
 | 5 | `confidence` | YOLO's own detection confidence for the segmented instance (a segmentation-quality signal, not a clinical ABCD criterion). |
-| 6 | `lesion_fraction` | Fraction of the full image frame covered by the lesion mask (potentially framing/zoom-sensitive, not a pure size measurement — see design docs). |
+| 6 | `lesion_fraction` | Fraction of the full image frame covered by the lesion mask (potentially framing/zoom-sensitive, not a pure size measurement; see design docs). |
 | 7 | `color_entropy` | Shannon entropy of a 16×16 2D histogram over the LAB a/b plane, within the lesion mask. |
 | 8 | `lab_a_std` | Std of the LAB "a" (green–red) channel within the lesion mask. |
 | 9 | `lab_b_std` | Std of the LAB "b" (blue–yellow) channel within the lesion mask. |
@@ -215,10 +215,10 @@ ever changes, `features.py`'s output shape changes with it automatically.
 | 11 | `bluegray_fraction` | Fraction of lesion pixels reading blue-gray relative to the sampled skin baseline. |
 | 12 | `dark_fraction` | Fraction of lesion pixels reading very dark/black relative to the sampled skin baseline. |
 | 13 | `skin_contrast` | LAB-space distance between the lesion's mean color and the mean color in a thin ring immediately surrounding it. |
-| 14 | `solidity` | `contour_area / convex_hull_area` — lower = more concave/irregular border. |
-| 15 | `turning_angle_std` | Std of the discrete turning angle along the contour, resampled to 100 equal arc-length points — a local border-roughness measure. |
+| 14 | `solidity` | `contour_area / convex_hull_area`: lower means more concave/irregular border. |
+| 15 | `turning_angle_std` | Std of the discrete turning angle along the contour, resampled to 100 equal arc-length points: a local border-roughness measure. |
 | 16 | `eccentricity` | Elongation of the best-fit ellipse around the lesion outline. |
-| 17 | `D_px_normalized` | `D_px / sqrt(image_height × image_width)` — a scale-normalized diameter proxy, still not a physical measurement. |
+| 17 | `D_px_normalized` | `D_px / sqrt(image_height × image_width)`: a scale-normalized diameter proxy, still not a physical measurement. |
 
 Exact formulas/code: `abcd/legacy_scoring.py` (`B_circularity`, `C_value` and the
 color-fraction features), `abcd/asymmetry.py` (`A_value`), `abcd/diameter.py`
@@ -229,7 +229,7 @@ color-fraction features), `abcd/asymmetry.py` (`A_value`), `abcd/diameter.py`
 
 `PCA components actually used this fold (≤ config.PCA_N_COMPONENTS, default 128)`
 **+** `17` (the validated ABCD features) = the CatBoost model's input dimension for
-that fold. The PCA component count is **not fixed at exactly 128** — it's clipped to
+that fold. The PCA component count is **not fixed at exactly 128**. It's clipped to
 `min(configured, n_train_samples_in_this_fold, 1024)`, so a small fold can use fewer
 components; the exact count actually used is saved per fold to
 `outputs/catboost_fold_{k}_feature_names.npy` (used by `explain.py` so SHAP always
@@ -239,27 +239,27 @@ reads the right column layout, since it isn't guaranteed identical across folds)
 
 `target = 0` → benign, `target = 1` → malignant (`config.TARGET_COL`). CatBoost's
 `predict_proba(X)[:, 1]` is the model's estimated probability of the malignant
-class — a research/screening-prototype score, not a clinical diagnosis.
+class: a research/screening-prototype score, not a clinical diagnosis.
 
 ### Evaluation metric: pAUC above TPR ≥ 0.80
 
 `utils.compute_paauc` implements the ISIC-2024 reference partial-AUC construction:
 flip both labels and scores (`y_flipped = 1 − y_true`, `scores_flipped = 1 − y_score`,
-a lossless re-expression — `AUC(1−y, 1−s) == AUC(y, s)` always), compute `roc_curve`
+a lossless re-expression: `AUC(1−y, 1−s) == AUC(y, s)` always), compute `roc_curve`
 on the flipped problem, truncate at `max_fpr = 1 − MIN_TPR` with linear boundary
 interpolation, integrate via `sklearn.metrics.auc`. Returns the **raw** partial-AUC
 area by default (this is literally what the ISIC-2024 Kaggle leaderboard reports,
-typically ~0.15–0.20 for a competitive model — not rescaled to [0,1]); pass
+typically ~0.15–0.20 for a competitive model, not rescaled to [0,1]); pass
 `normalize=True` for a [0,1]-scaled version. Verified against known reference
 values (perfect classifier: raw 0.1999…/normalized 1.0; random classifier: raw
 ≈0.02/normalized ≈0.10; completely reversed classifier: raw 0.0) plus tied-score and
-exact-boundary edge cases — full correction history (two earlier, wrong iterations)
+exact-boundary edge cases. Full correction history (two earlier, wrong iterations)
 is in `utils.py`'s own docstring. `config.MIN_TPR = 0.80`.
 
 Also reported alongside pAUC in `train_cnn.py`/`train_catboost.py`'s per-fold
 output: standard accuracy-family metrics are NOT separately computed by this
 pipeline's training scripts (pAUC is the sole training/validation metric, matching
-the ISIC-2024 reference task) — if you want accuracy/precision/recall/F1/ROC-AUC as
+the ISIC-2024 reference task). If you want accuracy/precision/recall/F1/ROC-AUC as
 well, compute them from the same saved OOF probabilities (`outputs/
 shap_fold_{k}_per_image.csv` and the raw embeddings/labels under `outputs/
 embeddings/` have everything needed).
@@ -268,28 +268,28 @@ embeddings/` have everything needed).
 
 ## 5. External assets you need before running anything
 
-### 5a. The ISIC 2024 dataset — not included
+### 5a. The ISIC 2024 dataset: not included
 
 See "Expected ISIC 2024 file layout" in Section 2. Known public sources (verify
 current access/registration requirements yourself):
 - ISIC Challenge archive: https://challenge.isic-archive.com/
 - Kaggle competition mirror: https://www.kaggle.com/competitions/isic-2024-challenge
 
-### 5b. The YOLO segmentation checkpoint — NOT included in this branch, obtain separately
+### 5b. The YOLO segmentation checkpoint: NOT included in this branch, obtain separately
 
 Unlike an earlier version of this branch, **this checkpoint is not committed here**
 (this branch was trimmed to a minimal training package and no longer includes the
-web application folder it used to live in). You have three ways to get it — use
+web application folder it used to live in). You have three ways to get it. Use
 whichever you actually have access to:
 
 1. **The original Ultralytics training-run output**, if you have access to the
    machine/environment this project trained on: `runs/segment/
    melanoma_yolo26n_seg/weights/best.pt` (the `weights/` folder Ultralytics writes
-   during training — `best.pt` is the checkpoint with the best validation metric,
+   during training; `best.pt` is the checkpoint with the best validation metric,
    NOT `last.pt`, which is a *different* checkpoint, the final training epoch
    regardless of whether it was the best one). **Verified byte-for-byte identical**
    (SHA-256 `68131680...7882f5b`) to the `yolo_melanoma_seg.pt` this whole pipeline
-   was built and evaluated against — this is the most direct source if you can reach
+   was built and evaluated against. This is the most direct source if you can reach
    it, since it requires no git access at all, just a file copy:
    ```bash
    cp /path/to/runs/segment/melanoma_yolo26n_seg/weights/best.pt \
@@ -306,7 +306,7 @@ whichever you actually have access to:
    git show user:MelanomaDetection/MelanomaDetection.Python/models/yolo_melanoma_seg.pt \
      > melanoma_pipeline/weights/yolo_melanoma_seg.pt
    ```
-3. **Directly from your project team**, if you only have this standalone branch —
+3. **Directly from your project team**, if you only have this standalone branch:
    ask whoever gave you access to this repository for a copy of
    `yolo_melanoma_seg.pt`, and place it at `melanoma_pipeline/weights/
    yolo_melanoma_seg.pt` (or point `YOLO_WEIGHTS_PATH` at wherever you put it).
@@ -316,7 +316,7 @@ whichever you actually have access to:
 `features.py` raises a clear, actionable error (naming this exact section) if the
 checkpoint isn't found where `config.get_yolo_weights_path()` expects it.
 
-### 5c. ConvNeXt-Base pretrained weights — downloaded automatically
+### 5c. ConvNeXt-Base pretrained weights: downloaded automatically
 
 `timm` downloads `convnext_base.fb_in22k_ft_in1k` from its own hub the first time
 `train_cnn.py` runs (needs internet once; cached locally afterward). Pre-download
@@ -342,7 +342,7 @@ python -c "import timm, torch; m = timm.create_model('convnext_base.fb_in22k_ft_
 ```
 
 If you get a different `EMBEDDING_DIM` on your device/timm version, update
-`config.py` — everything downstream derives its array sizing from that constant.
+`config.py`. Everything downstream derives its array sizing from that constant.
 
 ---
 
@@ -378,7 +378,7 @@ melanoma_pipeline/
 └── README.md                        # this file
 ```
 
-`data/`, `outputs/`, and `weights/*` (except `.gitkeep`) are gitignored — see the
+`data/`, `outputs/`, and `weights/*` (except `.gitkeep`) are gitignored; see the
 repo root `.gitignore`.
 
 ---
