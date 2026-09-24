@@ -50,12 +50,11 @@ COPY --from=models /models models
 COPY MelanomaDetection/MelanomaDetection.Python/requirements.txt MelanomaDetection/MelanomaDetection.Python/requirements.txt
 # --extra-index-url pulls CPU-only PyTorch wheels: the default PyPI build drags
 # in several GB of NVIDIA CUDA runtime packages (cublas, cudnn, cufft, ...)
-# that this container -- no GPU, ever -- never uses. The cache mount persists
-# pip's download cache across builds (in Docker's build cache, not the image),
-# so re-running this after an unrelated code change doesn't re-download
-# anything; --no-cache-dir is dropped since we want that cache to stick.
-RUN --mount=type=cache,id=cacheKey=pip-cache,target=/root/.cache/pip \
-    pip install --extra-index-url https://download.pytorch.org/whl/cpu \
+# that this container -- no GPU, ever -- never uses. No cache mount here:
+# Railway's builder requires cache mount ids in its own scoped format
+# (id=s/<service-id>-<path>), which isn't worth hand-wiring for a build-speed
+# optimization; a plain install is slower to rebuild but has no such gotcha.
+RUN pip install --no-cache-dir --extra-index-url https://download.pytorch.org/whl/cpu \
     -r MelanomaDetection/MelanomaDetection.Python/requirements.txt
 
 COPY Code Code
