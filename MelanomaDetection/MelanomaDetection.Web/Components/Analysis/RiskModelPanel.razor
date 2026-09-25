@@ -1,15 +1,15 @@
-@* A separate, experimental screening score from the Kaggle-trained CNN+CatBoost
-   risk model (POST /predict), shown alongside V5's own RiskBandPanel result above --
-   not a replacement for it and not a diagnosis. Null when /predict wasn't called or
-   failed; the rest of the results page still works without this panel. *@
+@* The primary screening result: the Kaggle-trained CNN+CatBoost risk model
+   (POST /predict), shown first, with V5's RiskBandPanel below as a supporting
+   visual-feature check. Not a diagnosis. Null when /predict wasn't called or
+   failed; the results page then falls back to the V5 panel alone. *@
 
 @if (Result is not null)
 {
     <div class="card-panel risk-band risk-band-@Tone risk-model-panel">
-        <p class="risk-band-label">AI risk model: @LevelLabel</p>
+        <p class="risk-band-label">Visual concern: @LevelLabel</p>
         <p class="risk-band-recommendation">
-            An experimental screening score from a separate, image-and-metadata model.
-            This is not a diagnosis and not a substitute for the visual-concern result above --
+            A screening score from an AI model that looks at your photo together with your
+            age, sex and body site. This is not a diagnosis --
             always have a new or changing spot evaluated by a licensed dermatologist.
         </p>
 
@@ -19,6 +19,20 @@
                 Lesion not clearly detected in this photo -- this result is less reliable.
                 Retaking the photo with the spot centered, in focus, and well-lit may help.
             </p>
+        }
+
+        @if (ShowDoctorLink)
+        {
+            <div class="risk-band-actions">
+                @if (Result.RiskLevel == "high")
+                {
+                    <a href="/map" class="btn btn-primary risk-band-action">Find a skin doctor</a>
+                }
+                @if (!string.IsNullOrWhiteSpace(ProcessingId))
+                {
+                    <a href="@($"/book-visit?scan={Uri.EscapeDataString(ProcessingId)}")" class="btn btn-outline-primary risk-band-action">Consult a Dermatologist</a>
+                }
+            </div>
         }
 
         <div class="risk-band-score-block">
@@ -32,6 +46,14 @@
     /// <summary>Null when /predict wasn't called (e.g. the request failed) -- renders nothing.</summary>
     [Parameter]
     public PredictResponse? Result { get; set; }
+
+    /// <summary>Offer "Find a skin doctor" / "Consult a Dermatologist". Off while a check is unsaved.</summary>
+    [Parameter]
+    public bool ShowDoctorLink { get; set; }
+
+    /// <summary>The saved check's processing id, carried into the booking flow. Null hides that button.</summary>
+    [Parameter]
+    public string? ProcessingId { get; set; }
 
     private string LevelLabel => Result?.RiskLevel switch
     {

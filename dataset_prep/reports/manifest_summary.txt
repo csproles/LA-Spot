@@ -1,0 +1,11 @@
+manifest rows: 401059
+inventory rows: 401059
+row count match: True
+duplicate ids in manifest: 0
+inventory ids missing from manifest: 0
+status breakdown: {'OK': 223871, 'NO_DETECTION': 162871, 'MULTI_LESION': 14317}
+rows with a label: 401059/401059
+rows with a crop_path: 238188
+crop_path rows whose file is missing on disk: 0
+crops decode-checked: 238188 (full)
+crops with wrong/unreadable dimensions: 0

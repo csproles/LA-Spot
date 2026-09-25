@@ -2,9 +2,15 @@
    this check under the spot. *@
 
 <div class="results-step">
-    <RiskModelPanel Result="RiskModelResult" />
-
-    <RiskBandPanel Score="Results.RiskScore" OverallVisualConcern="@Results.OverallVisualConcern" ShowDoctorLink="IsSaved" ProcessingId="@ProcessingId" />
+    @if (RiskModelResult is not null)
+    {
+        <RiskModelPanel Result="RiskModelResult" ShowDoctorLink="IsSaved" ProcessingId="@ProcessingId" />
+    }
+    else
+    {
+        @* /predict wasn't called or failed -- fall back to V5's own result. *@
+        <RiskBandPanel Score="Results.RiskScore" OverallVisualConcern="@Results.OverallVisualConcern" ShowDoctorLink="IsSaved" ProcessingId="@ProcessingId" />
+    }
 
     <MultiLesionNotice Results="Results" />
 

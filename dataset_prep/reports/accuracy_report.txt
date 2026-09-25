@@ -1,0 +1,26 @@
+==============================================================================
+NOTE: class_name below is YOLO's own incidental output, NOT this system's
+real classifier. The validated decision model lives in
+pipeline_v5/decision_model.py (locked-test ROC-AUC 0.80, balanced acc 0.72,
+n=615) -- a low score here does not mean the melanoma-detection system is
+inaccurate. See this script's module docstring for the full explanation.
+==============================================================================
+manifest rows: 401059
+rows with both label and class_name (scoreable): 238188
+confusion matrix: TP=161 TN=122414 FP=115478 FN=135
+accuracy=0.5146 (misleading alone given class imbalance -- see below)
+sensitivity/recall-on-malignant=0.5439  <- the number that matters most for a melanoma screen
+specificity=0.5146  precision=0.0014  f1=0.0028  balanced_accuracy=0.5292
+  [multi-lesion] n=14317 accuracy=0.5769
+  [single-lesion] n=223871 accuracy=0.5106
+  [conf 0.0-0.4) n=65513 accuracy=0.4717
+  [conf 0.4-0.6) n=76578 accuracy=0.4515
+  [conf 0.6-0.8) n=70923 accuracy=0.5341
+  [conf 0.8-1.01) n=25174 accuracy=0.7632
+
+rows with a bbox: 238188
+bbox area / image area: mean=0.607 median=0.905 p10=0.025 p90=1.000
+bboxes touching image border: 144606/238188 (60.7%)
+confidence: mean=0.546 median=0.538 p10=0.302 p90=0.804
+
+num_instances distribution: {'0': 162871, '1': 223871, '2': 13326, '3': 892, '4': 87, '5': 11, '6': 1}
