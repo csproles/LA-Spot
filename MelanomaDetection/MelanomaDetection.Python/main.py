@@ -14,6 +14,7 @@ from flask import Flask, g, jsonify, request
 from flask.json.provider import DefaultJSONProvider
 from flask_compress import Compress
 
+import abcd_scores
 import evolution
 import policy
 import report
@@ -24,7 +25,7 @@ from ratelimit import RateLimiter
 from resultstore import ResultStore
 from risk_model import RiskModel
 from textbook_chat import answer_question
-from v5_detector import V5Detector, _scaled_0_10
+from v5_detector import V5Detector
 from validation import ValidationError
 
 ALLOWED_EXTENSIONS = {".png", ".jpg", ".jpeg", ".bmp"}
@@ -255,43 +256,9 @@ def process_image_endpoint():
 
 
 def _abcd_features_to_abcde_scores(abcd: dict) -> dict:
-    """Adapts the risk model's raw 17-value ABCD feature dict into the
-    {"asymmetry": {"score", "details"}, ...} shape llm_explainer.explain_findings
-    and the existing UI panels expect, reusing V5Detector's own display-scaling
-    (_scaled_0_10) and thresholds (0.20/0.50/0.35) since these are the same
-    ABCD features V5 computes, just fed to a different (CatBoost) decision
-    model instead of V5's frozen logistic regression.
-
-    ponytail: "concern" here is approximated as raw_value > threshold, not
-    the fuller per-criterion logic in melanoma_pipeline/abcd/pipeline.py
-    (asymmetry/border/color scoring functions each compute their own concern
-    flag from more than a single threshold comparison). Good enough for the
-    explanation prompt's flagged/unflagged split; call abcd.pipeline.score_instance
-    directly instead if per-letter concern accuracy ever matters for this model.
-    """
-    a, b, c = abcd.get("A_value"), abcd.get("B_circularity"), abcd.get("C_value")
-    return {
-        "asymmetry": {
-            "score": _scaled_0_10(a, 0.20),
-            "details": {"raw_asymmetry_ratio": a, "concern": bool(a is not None and a > 0.20)},
-        },
-        "border": {
-            "score": _scaled_0_10(b, 0.50),
-            "details": {"raw_border_irregularity": b, "concern": bool(b is not None and b > 0.50)},
-        },
-        "color": {
-            "score": _scaled_0_10(c, 0.35),
-            "details": {"color_cv": c, "concern": bool(c is not None and c > 0.35)},
-        },
-        "diameter": {
-            "score": None,
-            "details": {
-                "reason": "no validated physical (mm) calibration is available for this pipeline",
-                "diameter_px": abcd.get("D_px"),
-            },
-        },
-        "evolving": {"score": None, "details": {"reason": "no prior check to compare against"}},
-    }
+    """The risk model's raw ABCD measurements as the per-letter shape the UI and the AI
+    explanation use. The rules live in abcd_scores.py, where they are tested."""
+    return abcd_scores.from_risk_model_features(abcd)
 
 
 @app.route("/predict", methods=["POST"])
@@ -313,6 +280,7 @@ def predict_risk_endpoint():
     age = validation.clean_age(request.form.get("age"))
     sex = validation.clean_sex(request.form.get("sex"))
     body_site = validation.clean_body_site(request.form.get("body_site"))
+    linked_id = validation.clean_processing_id(request.form.get("linked_processing_id"))
 
     fd, tmp_path = tempfile.mkstemp(suffix=ext)
     with os.fdopen(fd, "wb") as tmp_file:
@@ -334,15 +302,27 @@ def predict_risk_endpoint():
     # existing POST /api/image/explain/{id} endpoint (llm_explainer.py) works
     # unchanged for this pipeline's results too -- no new explanation code.
     processing_id = f"pred_{uuid.uuid4().hex[:12]}"
+    scores = _abcd_features_to_abcde_scores(result["abcd_features"])
     _results_store[processing_id] = {
         "user_id": g.user_id,
-        "abcde_scores": _abcd_features_to_abcde_scores(result["abcd_features"]),
+        "abcde_scores": scores,
+        "abcde_source": abcd_scores.RISK_MODEL_SOURCE,
         "risk_score": round(result["risk_score"] * 100, 1),
         "overall_visual_concern": None,
         "symptoms": [],
     }
 
+    # When this photo is already being checked (its V5 result), the risk model's own A, B and C
+    # replace that result's, so the bars, the explanation, the saved check and the booking all
+    # agree with the score shown beside them. Only the caller's own result can be changed.
+    adopted = False
+    linked = _owned_results(linked_id) if linked_id else None
+    if linked is not None:
+        adopted = abcd_scores.adopt(linked, scores)
+
     result["processingId"] = processing_id
+    result["abcde_scores"] = scores
+    result["abcde_adopted"] = adopted
     return jsonify(result)
 
 
@@ -699,9 +679,11 @@ def explain_results(processing_id):
         return jsonify({"explanation": results["explanation"]})
 
     try:
+        # The opening verdict line is V5's own result. Once the letters come from the risk model
+        # that line would describe a different model than the numbers under it, so it is left out.
         explanation = explain_findings(
             results["abcde_scores"],
-            overall_visual_concern=results.get("overall_visual_concern"),
+            overall_visual_concern=None if abcd_scores.is_from_risk_model(results) else results.get("overall_visual_concern"),
             risk_score=results["risk_score"],
             profile=store.get_profile(g.user_id),
             evolving=results["abcde_scores"].get("evolving"),

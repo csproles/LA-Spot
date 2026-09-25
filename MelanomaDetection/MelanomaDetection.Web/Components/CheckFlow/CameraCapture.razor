@@ -40,6 +40,11 @@ else
         }
         else
         {
+            @if (CaptureMessage is not null)
+            {
+                <p class="camera-hint" role="status">@CaptureMessage</p>
+            }
+
             <div class="camera-bottombar">
                 <button type="button" class="camera-icon-button" @onclick="SwitchCamera"
                         disabled="@IsBusy" aria-label="Switch camera">
@@ -76,6 +81,10 @@ else
     private string _facingMode = "environment";
     private string? ErrorMessage;
 
+    /// <summary>A capture that didn't produce a photo but can simply be retried; unlike
+    /// <see cref="ErrorMessage"/> (the camera itself failed) the viewfinder stays open.</summary>
+    private string? CaptureMessage;
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
@@ -98,6 +107,7 @@ else
     private void OpenViewfinder()
     {
         ErrorMessage = null;
+        CaptureMessage = null;
         IsOpen = true;
         _pendingStart = true;
     }
@@ -120,17 +130,53 @@ else
     private async Task Capture()
     {
         IsBusy = true;
+        CaptureMessage = null;
         StateHasChanged();
 
-        var base64 = await JS.InvokeAsync<string?>("skinCheckCamera.capture", VideoElement, CanvasElement, 0.92);
+        byte[]? photo;
+        try
+        {
+            photo = await ReadPhotoAsync();
+        }
+        catch (Exception ex) when (ex is JSException or IOException or InvalidOperationException or FormatException)
+        {
+            photo = null;
+            CaptureMessage = "That photo could not be read. Please try again.";
+        }
+
+        if (photo is null)
+        {
+            // Keep the viewfinder open so it can be retried; the stream is still running.
+            CaptureMessage ??= "The camera has not produced a picture yet. Wait a moment and try again.";
+            IsBusy = false;
+            return;
+        }
+
         await JS.InvokeVoidAsync("skinCheckCamera.stop", VideoElement);
         IsOpen = false;
         IsBusy = false;
+        await OnCaptured.InvokeAsync(photo);
+    }
 
-        if (!string.IsNullOrEmpty(base64))
+    /// <summary>
+    /// The current frame as JPEG bytes, or null when there was no frame to capture. The bytes
+    /// come across as a stream, never as one base64 string: a Blazor Server circuit accepts at
+    /// most 32 KB per message from the browser, and a real photo is far larger, so sending it
+    /// that way makes the server drop the whole connection (see wwwroot/cameraCapture.js).
+    /// </summary>
+    private async Task<byte[]?> ReadPhotoAsync()
+    {
+        await using var reference = await JS.InvokeAsync<IJSStreamReference?>(
+            "skinCheckCamera.capture", VideoElement, CanvasElement, InputLimits.ImageMaxBytes);
+        if (reference is null)
         {
-            await OnCaptured.InvokeAsync(Convert.FromBase64String(base64));
+            return null;
         }
+
+        await using var stream = await reference.OpenReadStreamAsync(InputLimits.ImageMaxBytes);
+        using var buffer = new MemoryStream();
+        await stream.CopyToAsync(buffer);
+        return buffer.ToArray();
     }
 
     private async Task Close()
@@ -138,6 +184,7 @@ else
         await JS.InvokeVoidAsync("skinCheckCamera.stop", VideoElement);
         IsOpen = false;
         ErrorMessage = null;
+        CaptureMessage = null;
     }
 
     public async ValueTask DisposeAsync()

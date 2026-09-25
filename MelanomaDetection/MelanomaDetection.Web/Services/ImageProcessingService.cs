@@ -127,7 +127,7 @@ public class ImageProcessingService
     /// was trained tolerating missing metadata (see risk_model.py).
     /// </summary>
     public async Task<PredictResponse> PredictRiskAsync(
-        byte[] data, string filename, int? age, string? sex, string? bodySite)
+        byte[] data, string filename, int? age, string? sex, string? bodySite, string? linkedProcessingId = null)
     {
         if (data.Length == 0)
         {
@@ -164,6 +164,13 @@ public class ImageProcessingService
         if (!string.IsNullOrWhiteSpace(bodySite))
         {
             content.Add(new StringContent(bodySite), "body_site");
+        }
+
+        // The check this same photo was already processed as, so the service can give it the
+        // risk model's own A, B and C (see PredictResponse.ApplyTo).
+        if (!string.IsNullOrWhiteSpace(linkedProcessingId))
+        {
+            content.Add(new StringContent(linkedProcessingId), "linked_processing_id");
         }
 
         using var response = await SendAsync(() => _httpClient.PostAsync("/predict", content));

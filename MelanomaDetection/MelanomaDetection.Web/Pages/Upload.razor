@@ -228,6 +228,17 @@
 
         var file = e.File;
 
+        try
+        {
+            // iPhone photos are often over the size limit or in HEIC; see PhotoIntake.
+            file = await PhotoIntake.PrepareAsync(file);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            ErrorMessage = "That photo could not be prepared. Please take it again, or choose a JPEG or PNG image.";
+            return;
+        }
+
         if (!AllowedContentTypes.Contains(file.ContentType))
         {
             ErrorMessage = $"Unsupported file type '{file.ContentType}'. Please upload a JPEG, PNG, BMP, or WebP image.";
@@ -340,7 +351,13 @@
             try
             {
                 RiskModelResult = await ImageProcessingService.PredictRiskAsync(
-                    SelectedFileBytes, SelectedFileName, Age, Sex, BodySite);
+                    SelectedFileBytes, SelectedFileName, Age, Sex, BodySite, CurrentProcessingId);
+
+                // Show the bars from the same measurements the score was made from.
+                if (AnalysisResults is not null)
+                {
+                    RiskModelResult.ApplyTo(AnalysisResults);
+                }
             }
             catch (ImageProcessingApiException)
             {

@@ -1,4 +1,3 @@
-using System.Net.Http.Json;
 using MelanomaDetection.Web.Models;
 using MelanomaDetection.Web.Services.Account;
 using MelanomaDetection.Web.Services.Chat;

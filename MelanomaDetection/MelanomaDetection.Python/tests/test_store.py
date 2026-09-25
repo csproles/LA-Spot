@@ -155,7 +155,7 @@ class TestChecks:
         assert db.get_check(USER, "p1")["lab"] is None
 
     def test_resaving_updates_rather_than_duplicating(self, db):
-        spot = db.create_spot(USER, "mole", "Back")
+        db.create_spot(USER, "mole", "Back")
         other = db.create_spot(USER, "other", "Left Arm")
         save(db, "p1", None, 48.0, "2026-01-01T00:00:00+00:00")
         save(db, "p1", other["id"], 48.0, "2026-01-01T00:00:00+00:00", notes="filed later")

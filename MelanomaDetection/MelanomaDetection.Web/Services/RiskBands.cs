@@ -1,7 +1,7 @@
 namespace MelanomaDetection.Web.Services;
 
 /// <summary>
-/// Maps a 0-100 risk score to its band and user-facing copy.
+/// Maps a 0-100 risk score to its band and short label.
 ///
 /// Thresholds are kept in sync by hand with MelanomaDetection.Python/policy.py,
 /// which is the source of truth (it also drives recheck cadence). The client
@@ -21,25 +21,11 @@ public static class RiskBands
         _ => "high",
     };
 
-    public static string Label(string band) => band switch
-    {
-        "low" => "Low risk signs",
-        "moderate" => "Some risk signs",
-        _ => "High risk signs",
-    };
-
     public static string ShortLabel(string band) => band switch
     {
         "low" => "Low",
         "moderate" => "Moderate",
         _ => "High",
-    };
-
-    public static string Recommendation(string band) => band switch
-    {
-        "low" => "You don't need to do anything right now. Keep checking your skin every so often, and see a skin doctor (a dermatologist) once a year.",
-        "moderate" => "Think about seeing a skin doctor (a dermatologist) in the next few months to have this spot looked at.",
-        _ => "Please see a skin doctor (a dermatologist) as soon as you can to have this spot looked at.",
     };
 
     /// <summary>Band for a single 0-10 ABCD sub-score, for the factor bars.</summary>

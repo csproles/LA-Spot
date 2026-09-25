@@ -33,8 +33,11 @@ photo never silently looks like only one spot was found.
 
 ## 1. Original pipeline (pre-YOLO, classical)
 
-Still present on disk (`Code/`) for reference; not invoked by the running
-application.
+Historical description. The prototype's command-line runner and its lesion
+segmentation, asymmetry and diameter scoring have been removed from the tree
+(they remain in git history). What the running application still uses from
+`Code/` is the preprocessing (vignette, denoise, bilateral filter, hair
+removal) and the border and colour scoring, called by the V5 pipeline above.
 
 ```
 image -> preprocessing/hair removal -> LAB/Otsu lesion segmentation
@@ -45,7 +48,7 @@ image -> preprocessing/hair removal -> LAB/Otsu lesion segmentation
   filter, then hair removal (blackhat + inpainting).
 - **Segmentation**: LAB color-space distance from a sampled border-ring skin
   tone, Otsu-thresholded, morphologically cleaned, largest connected
-  component kept (`Code/ComputerVisionStuff/segment_lesion.py`).
+  component kept.
 - **A (asymmetry)**: crop around the lesion's mass centroid, compare the
   crop against its own horizontal and vertical mirror image; higher mismatch
   = more asymmetric.

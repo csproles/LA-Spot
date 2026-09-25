@@ -42,11 +42,37 @@ public class PredictResponse
     [JsonPropertyName("yolo_found_lesion")]
     public bool YoloFoundLesion { get; set; }
 
-    [JsonPropertyName("fold_scores")]
-    public List<double> FoldScores { get; set; } = new();
-
     [JsonPropertyName("processingId")]
     public string ProcessingId { get; set; } = string.Empty;
+
+    /// <summary>The risk model's own A, B and C, built from the same measurements it scored. Null
+    /// from a service that predates the field.</summary>
+    [JsonPropertyName("abcde_scores")]
+    public AbcdeScores? AbcdeScores { get; set; }
+
+    /// <summary>True when the service replaced A, B and C in the check this photo belongs to with
+    /// <see cref="AbcdeScores"/> (see <see cref="ApplyTo"/>). False when it could not measure the
+    /// spot, in which case the check keeps the numbers it already had.</summary>
+    [JsonPropertyName("abcde_adopted")]
+    public bool AbcdeAdopted { get; set; }
+
+    /// <summary>
+    /// Makes an already-loaded check show the risk model's A, B and C, as the service now holds
+    /// them, so the bars and the score beside them come from the same measurements. Diameter and
+    /// evolving are left alone: neither model scores diameter, and evolving is the comparison
+    /// between two checks. Does nothing unless the service says it made the same change.
+    /// </summary>
+    public void ApplyTo(ImageProcessingResults results)
+    {
+        if (!AbcdeAdopted || AbcdeScores is null)
+        {
+            return;
+        }
+
+        results.AbcdeScores.Asymmetry = AbcdeScores.Asymmetry;
+        results.AbcdeScores.Border = AbcdeScores.Border;
+        results.AbcdeScores.Color = AbcdeScores.Color;
+    }
 }
 
 public class ExplainResponse

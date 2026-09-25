@@ -15,7 +15,7 @@
                 <summary>Scan attached -- @Appointment.ScanOverallVisualConcern (score @Appointment.ScanRiskScore?.ToString("F0")/100)</summary>
                 @if (!string.IsNullOrWhiteSpace(Appointment.ScanExplanation))
                 {
-                    <p>@Appointment.ScanExplanation</p>
+                    <p class="scan-explanation">@Appointment.ScanExplanation</p>
                 }
             </details>
         }

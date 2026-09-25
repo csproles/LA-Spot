@@ -63,3 +63,8 @@
 .video-room-reason p {
     margin: 0;
 }
+
+/* The explanation has line breaks that matter (A to E headings, one bullet per line). */
+.scan-explanation {
+    white-space: pre-line;
+}

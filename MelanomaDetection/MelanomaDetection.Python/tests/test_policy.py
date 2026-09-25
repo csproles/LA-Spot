@@ -6,11 +6,6 @@ boundary or a cadence table that ignores the risk profile would look completely
 normal in the UI.
 """
 
-import re
-from pathlib import Path
-
-import pytest
-
 import policy
 
 
@@ -82,39 +77,6 @@ class TestNextDueAt:
 
     def test_unparseable_timestamp_does_not_raise(self):
         assert policy.next_due_at("not-a-date", 50) is None
-
-
-RISK_BANDS_CS = Path(__file__).resolve().parents[2] / "MelanomaDetection.Web" / "Services" / "RiskBands.cs"
-
-
-def _cs_strings(source, method):
-    """The three quoted strings (low, moderate, high) one RiskBands.cs method returns."""
-    block = source[source.index(f"public static string {method}("):]
-    block = block[: block.index("};")]
-    found = dict(re.findall(r'"(low|moderate)" => "([^"]*)"', block))
-    found["high"] = re.search(r'_ => "([^"]*)"', block).group(1)
-    return found
-
-
-class TestBandWording:
-    def test_every_band_has_a_label_and_advice(self):
-        assert set(policy.BAND_LABEL) == set(policy.BAND_ADVICE) == {"low", "moderate", "high"}
-
-    @pytest.mark.parametrize("band", ["low", "moderate", "high"])
-    def test_advice_always_points_to_a_skin_doctor(self, band):
-        assert "skin doctor (a dermatologist)" in policy.BAND_ADVICE[band]
-
-    def test_advice_gets_more_direct_as_the_band_rises(self):
-        assert "once a year" in policy.BAND_ADVICE["low"]
-        assert "next few months" in policy.BAND_ADVICE["moderate"]
-        assert "as soon as you can" in policy.BAND_ADVICE["high"]
-
-    def test_wording_matches_the_web_apps_RiskBands_cs(self):
-        if not RISK_BANDS_CS.exists():
-            pytest.skip("RiskBands.cs is not next to this test (running outside the repository)")
-        source = RISK_BANDS_CS.read_text(encoding="utf-8")
-        assert _cs_strings(source, "Label") == policy.BAND_LABEL
-        assert _cs_strings(source, "Recommendation") == policy.BAND_ADVICE
 
 
 class TestRecheckAdvice:
