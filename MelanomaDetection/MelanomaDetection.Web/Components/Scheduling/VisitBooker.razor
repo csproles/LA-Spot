@@ -52,13 +52,29 @@
             }
             else
             {
+                @if (NearRegion is not null)
+                {
+                    <p class="visit-booker-note">
+                        Doctors closest to @(string.IsNullOrWhiteSpace(NearPlaceName) ? NearRegion.CityLabel : NearPlaceName), LA are listed first.
+                        All visits are by video.
+                    </p>
+                }
+                else if (Embedded)
+                {
+                    <p class="visit-booker-note">Enter your zip code above to see the doctors closest to you. All visits are by video.</p>
+                }
+
                 <div class="choice-grid">
-                    @foreach (var provider in Providers)
+                    @foreach (var provider in OrderedProviders)
                     {
                         <ChoiceCard Layout="column" Selected="@(SelectedProvider?.Id == provider.Id)"
                                     OnSelect="() => SelectProviderAsync(provider)">
                             <strong>@provider.DisplayName</strong>
                             <span>@(string.IsNullOrWhiteSpace(provider.Credentials) ? provider.Specialty : provider.Credentials)</span>
+                            @if (!string.IsNullOrWhiteSpace(provider.HubCity))
+                            {
+                                <span class="provider-card-city">@provider.HubCity@(IsClosest(provider) ? " (closest to you)" : "")</span>
+                            }
                             @if (!string.IsNullOrWhiteSpace(provider.Bio))
                             {
                                 <span class="provider-card-bio">@provider.Bio</span>
@@ -194,6 +210,38 @@
     /// <summary>True inside another card (the map's booking box): no per-step cards, smaller headings.</summary>
     [Parameter]
     public bool Embedded { get; set; }
+
+    /// <summary>The hub city nearest the visitor's zip code (a name from LouisianaRegions), set by the
+    /// Find a doctor page after a zip search. Doctors in or nearest that city are listed first.</summary>
+    [Parameter]
+    public string? NearHubCity { get; set; }
+
+    /// <summary>The zip code's place name, for the note above the doctors. Optional.</summary>
+    [Parameter]
+    public string? NearPlaceName { get; set; }
+
+    private LouisianaRegions.Region? NearRegion => LouisianaRegions.FindHub(NearHubCity);
+
+    /// <summary>Everyone, closest hub city first (then by name). Doctors with no city come last,
+    /// and with no zip code the list stays in the order it was loaded.</summary>
+    private IEnumerable<ProviderSummary> OrderedProviders
+    {
+        get
+        {
+            var near = NearRegion;
+            if (near is null)
+            {
+                return Providers;
+            }
+
+            return Providers
+                .OrderBy(p => LouisianaRegions.FindHub(p.HubCity) is { } hub ? LouisianaRegions.MilesBetween(near, hub) : double.MaxValue)
+                .ThenBy(p => p.DisplayName, StringComparer.Ordinal);
+        }
+    }
+
+    private bool IsClosest(ProviderSummary provider) =>
+        NearRegion is { } near && string.Equals(provider.HubCity, near.CityLabel, StringComparison.OrdinalIgnoreCase);
 
     private string SectionClass => Embedded ? "visit-booker-step" : "card-panel";
 

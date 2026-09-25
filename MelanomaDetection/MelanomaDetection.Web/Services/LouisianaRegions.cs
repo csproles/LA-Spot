@@ -29,6 +29,17 @@ public static class LouisianaRegions
     public static Region NearestHub(double lat, double lng) =>
         Hubs.MinBy(hub => HaversineMiles(lat, lng, hub.Lat, hub.Lng))!;
 
+    public static IReadOnlyList<Region> AllHubs => Hubs;
+
+    /// <summary>A hub by its city name (case-insensitive), or null for an unknown or empty name.</summary>
+    public static Region? FindHub(string? cityLabel) =>
+        string.IsNullOrWhiteSpace(cityLabel)
+            ? null
+            : Hubs.FirstOrDefault(hub => string.Equals(hub.CityLabel, cityLabel.Trim(), StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>Straight-line miles between two hubs, 0 for the same hub.</summary>
+    public static double MilesBetween(Region a, Region b) => HaversineMiles(a.Lat, a.Lng, b.Lat, b.Lng);
+
     private static double HaversineMiles(double lat1, double lng1, double lat2, double lng2)
     {
         const double earthRadiusMiles = 3958.8;

@@ -32,6 +32,12 @@ public class Provider
     /// <summary>URL of a profile photo. No upload/storage pipeline for this demo --
     /// a provider pastes a link (their Google avatar is offered as a default).</summary>
     public string? PhotoUrl { get; set; }
+
+    /// <summary>The Louisiana city this provider practices near, one of the hub names in
+    /// LouisianaRegions (e.g. "Baton Rouge"). The Find a doctor booking box lists the providers
+    /// closest to the visitor's zip code first. Null means no set location, and such a provider
+    /// is listed after the located ones.</summary>
+    public string? HubCity { get; set; }
 }
 
 /// <summary>One recurring weekly open window, e.g. "Mon 09:00-12:00". Local to

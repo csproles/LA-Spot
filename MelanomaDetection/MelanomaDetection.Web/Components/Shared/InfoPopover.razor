@@ -3,8 +3,13 @@
    needs to work on touch (no hover) as well as desktop. *@
 
 <span class="info-popover">
-    <button type="button" class="info-popover-trigger" @onclick="Toggle" aria-label="@($"More info: {Title}")" aria-expanded="@IsOpen">
+    <button type="button" class="info-popover-trigger @(HasLabel ? "has-label" : "")" @onclick="Toggle"
+            aria-label="@($"More info: {Title}")" aria-expanded="@IsOpen" aria-haspopup="dialog">
         <AppIcon Name="info" Size="sm" />
+        @if (HasLabel)
+        {
+            <span>@Label</span>
+        }
     </button>
 
     @if (IsOpen)
@@ -28,10 +33,17 @@
     [Parameter, EditorRequired]
     public string Title { get; set; } = string.Empty;
 
+    /// <summary>Optional visible text beside the icon, for a trigger people need to notice
+    /// (a bare icon is easy to miss). Leave empty for the icon alone.</summary>
+    [Parameter]
+    public string? Label { get; set; }
+
     [Parameter, EditorRequired]
     public RenderFragment? ChildContent { get; set; }
 
     private bool IsOpen;
+
+    private bool HasLabel => !string.IsNullOrWhiteSpace(Label);
 
     private void Toggle() => IsOpen = !IsOpen;
 

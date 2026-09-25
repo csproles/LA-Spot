@@ -43,6 +43,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             provider.Property(p => p.Credentials).HasMaxLength(200);
             provider.Property(p => p.Bio).HasMaxLength(2000);
             provider.Property(p => p.PhotoUrl).HasMaxLength(2048);
+            provider.Property(p => p.HubCity).HasMaxLength(50);
         });
 
         modelBuilder.Entity<AvailabilityRule>(rule =>

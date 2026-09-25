@@ -40,10 +40,14 @@
         <p class="map-book-intro">
             See a dermatologist from home. Pick a provider, choose an open time and book -- no need to leave this page.
         </p>
-        <VisitBooker Embedded="true" />
+        <VisitBooker Embedded="true" NearHubCity="@BookingHubCity" NearPlaceName="@BookingPlaceName" />
     </section>;
 
     private string? ApiKey => Configuration["GoogleMaps:ApiKey"];
+
+    // The zip code last searched, so the booking box lists the closest doctors first.
+    private string? BookingHubCity;
+    private string? BookingPlaceName;
 
     private bool IsLoading;
     private string? LoadError;
@@ -93,6 +97,8 @@
         // the map itself centres on the zip's own coordinates.
         var hub = LouisianaRegions.NearestHub(location.Lat, location.Lng);
         CurrentRegionLabel = location.PlaceName;
+        BookingHubCity = hub.CityLabel;
+        BookingPlaceName = location.PlaceName;
 
         // Each lookup that isn't already cached fans out to the government registries.
         var userId = await CurrentUser.GetUserIdAsync();

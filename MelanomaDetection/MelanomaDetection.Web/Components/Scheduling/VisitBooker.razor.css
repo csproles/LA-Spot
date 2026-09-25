@@ -147,3 +147,15 @@
     flex-wrap: wrap;
     gap: 8px;
 }
+
+.visit-booker-note {
+    margin: 0;
+    font-size: 0.875rem;
+    color: var(--color-text-muted);
+}
+
+.provider-card-city {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--color-accent-ink);
+}
