@@ -107,6 +107,12 @@ _FORBIDDEN = (
     ),
 )
 
+# STYLE_PROMPT S3: no em dash, en dash, or double hyphen written as a dash. Text inside
+# quotation marks is skipped, since a quoted passage keeps its own punctuation (the
+# booklet itself uses dashes, and the passage-only fallback quotes it word for word).
+_DASH = re.compile("[—–]|--")
+_QUOTED = re.compile('"[^"]*"|“[^”]*”')
+
 # A reply may not name a risk band other than the one the app shows beside it. "higher risk"
 # (as in a risk factor) is deliberately not a band name, so it is not matched.
 # V5's two real verdicts, always paired with "visual concern" in policy.py's own
@@ -286,6 +292,9 @@ def _check_statement(where: str, item, payload: dict, provided: dict) -> list:
         if pattern.search(text):
             problems.append(f"{where}: {reason}.")
 
+    if _DASH.search(_QUOTED.sub("", text)):
+        problems.append(f"{where}: uses a dash; use a comma, period, colon, or parentheses, or rewrite the sentence.")
+
     mentionable = _mentionable_when_unflagged(payload)
     for key, pattern in UNFLAGGED_PATTERNS.items():
         entry = payload.get(key)
@@ -345,14 +354,16 @@ def render_explanation(data: dict, source: Source, passages: list, lead=None, op
         {by_id[i].page for section in ("noticed", "next_steps") for item in data[section] for i in item["source_ids"] if i in by_id}
     )
 
+    # Every point is its own bullet. The bullets are added here, not asked of the model
+    # (its prompt forbids markdown); the page shows line breaks as written.
     lines = []
     if lead:
-        lines.extend(["In short:", lead, ""])
+        lines.extend(["In short:", _bullet(lead), ""])
     lines.append("What the analysis noticed:")
-    lines.extend(item["text"].strip() for item in data["noticed"])
+    lines.extend(_bullet(item["text"]) for item in data["noticed"])
     lines.extend(["", "Suggested next steps:"])
-    lines.extend(step for step in (opening_steps or ()) if step)
-    lines.extend(item["text"].strip() for item in data["next_steps"])
+    lines.extend(_bullet(step) for step in (opening_steps or ()) if step)
+    lines.extend(_bullet(item["text"]) for item in data["next_steps"])
 
     if pages:
         label = "page" if len(pages) == 1 else "pages"
@@ -365,6 +376,10 @@ def render_explanation(data: dict, source: Source, passages: list, lead=None, op
             ]
         )
     return "\n".join(lines)
+
+
+def _bullet(text: str) -> str:
+    return "• " + text.strip()
 
 
 def _statement(text: str, basis: str = "analysis", passage_ids=(), quote=None) -> dict:

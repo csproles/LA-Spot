@@ -17,7 +17,10 @@ must cite passage ids and quote them exactly; the reply is checked in code, and
 if it can't pass that check after one retry, an explanation is built straight
 from the passages instead (knowledge.fallback_data). SYSTEM_PROMPT itself is
 left untouched; GROUNDING_PROMPT is added after it and only narrows what the
-model may say.
+model may say. STYLE_PROMPT follows it and only changes how the model writes
+(plain, direct sentences, no dashes; see also the dash check in
+knowledge.parse_and_validate). Each sentence is shown as a bullet point, added
+by knowledge.render_explanation rather than asked of the model.
 
 Coherence with the rest of the app: explain_findings can also be given V5's
 own overall_visual_concern verdict, the change-since-last-photo comparison,
@@ -227,6 +230,48 @@ plain sentence with no markdown. At least one next step must recommend seeing
 a licensed dermatologist or healthcare provider.
 """
 
+STYLE_PROMPT = """STYLE RULES -- these change how you write, never what you may say. They are
+added to the STRICT RULES and GROUNDING RULES above and never relax any of them.
+
+S1. Every "text" is shown as its own bullet point. Make it one short sentence
+    that makes sense on its own. Do not write bullet characters, numbers,
+    labels, or bold text yourself.
+
+S2. State each point directly. Do not use "not X but Y" or "not just X, but Y"
+    contrasts, and do not answer an objection nobody raised ("this does not
+    mean...", "to be clear", "you might think...").
+
+S3. Never use an em dash, an en dash, or a double hyphen. Use a comma, a
+    period, a colon, or parentheses, or rewrite the sentence. A word for word
+    quotation from a passage keeps its own punctuation.
+
+S4. Do not group things in threes for rhythm. List only the items the analysis
+    data actually contains.
+
+S5. No stagecraft or filler: no "let's dive in", "here's what you need to
+    know", "honestly", no rhetorical questions, no closing line that repeats a
+    point, and no sayings that sound deep ("at its core", "the real question").
+
+S6. Use plain words. Avoid: additionally, crucial, pivotal, key (as an
+    adjective), robust, delve, highlight, underscore, showcase, landscape,
+    tapestry, testament, vibrant, valuable, enhance, foster, meticulous. Write
+    "is", "are", and "has" instead of "serves as", "stands as", "features", or
+    "boasts". Do not call anything important, significant, or a turning point
+    unless the analysis data or a cited passage says so.
+
+S7. No praise, sales language, greeting, sign-off, or offer of more help. Do
+    not write "I hope this helps" or "let me know".
+
+S8. Prefer active voice and name who acts: "The analysis flagged...", "A
+    dermatologist can...".
+
+S9. Do not stack qualifiers ("could potentially perhaps"). Use at most one
+    hedge in a sentence, and only when the data is genuinely uncertain.
+
+S10. Vary sentence length, and do not begin consecutive sentences with the
+     same words.
+"""
+
 USER_PROMPT_TEMPLATE = """ANALYSIS DATA from the image pipeline (may include "overall_result",
 "change_since_last_photo" and "symptoms_reported" -- see rule 4c):
 
@@ -398,6 +443,7 @@ def explain_findings(
     base_messages = [
         {"role": "system", "content": SYSTEM_PROMPT},
         {"role": "system", "content": GROUNDING_PROMPT},
+        {"role": "system", "content": STYLE_PROMPT},
         {
             "role": "user",
             "content": USER_PROMPT_TEMPLATE.format(

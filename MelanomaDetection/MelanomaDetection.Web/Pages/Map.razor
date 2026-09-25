@@ -17,12 +17,15 @@
     @if (string.IsNullOrWhiteSpace(ApiKey))
     {
         <MapConfigNotice />
+        @BookingBox
     }
     else
     {
         <ZipCodePicker IsLoading="IsLoading" ZipSubmitted="OnZipSubmitted" />
 
         <MapCanvas ApiKey="@ApiKey" />
+
+        @BookingBox
 
         <ProviderDirectory Providers="Providers" IsLoading="IsLoading"
                            LoadError="@LoadError" RegionLabel="@CurrentRegionLabel"
@@ -31,6 +34,15 @@
 </div>
 
 @code {
+    /// <summary>Booking with our own dermatologists doesn't depend on the map, so it shows even when the map key is missing.</summary>
+    private RenderFragment BookingBox => @<section class="card-panel map-book-box" aria-labelledby="map-book-title">
+        <h2 id="map-book-title" class="panel-title">Book a video visit with us</h2>
+        <p class="map-book-intro">
+            See a dermatologist from home. Pick a provider, choose an open time and book -- no need to leave this page.
+        </p>
+        <VisitBooker Embedded="true" />
+    </section>;
+
     private string? ApiKey => Configuration["GoogleMaps:ApiKey"];
 
     private bool IsLoading;

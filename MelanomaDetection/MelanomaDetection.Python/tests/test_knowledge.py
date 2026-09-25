@@ -233,7 +233,47 @@ class TestFallback:
         assert any("could not be measured" in item["text"] for item in data["noticed"])
 
 
+class TestDashes:
+    @pytest.mark.parametrize("text", [
+        "The analysis flagged asymmetry — the shape is uneven.",
+        "The analysis flagged asymmetry – the shape is uneven.",
+        "The analysis flagged asymmetry -- the shape is uneven.",
+    ])
+    def test_a_dash_is_rejected(self, text):
+        reply = valid_reply()
+        reply["noticed"][0] = statement(text)
+        _, problems = knowledge.parse_and_validate(json.dumps(reply), ASYM_BORDER, knowledge.select_passages(ASYM_BORDER))
+        assert any("dash" in problem for problem in problems)
+
+    def test_a_hyphen_is_fine(self):
+        reply = valid_reply()
+        reply["noticed"][0] = statement("The analysis flagged asymmetry in this well-defined spot.")
+        data, problems = knowledge.parse_and_validate(json.dumps(reply), ASYM_BORDER, knowledge.select_passages(ASYM_BORDER))
+        assert problems == []
+
+    def test_a_dash_inside_a_quotation_is_left_alone(self):
+        reply = valid_reply()
+        reply["noticed"][0] = statement('The booklet says "one half — the other half" of the shape.')
+        _, problems = knowledge.parse_and_validate(json.dumps(reply), ASYM_BORDER, knowledge.select_passages(ASYM_BORDER))
+        assert not any("dash" in problem for problem in problems)
+
+
 class TestRender:
+    def test_every_point_is_a_bullet(self):
+        source, _ = knowledge.load()
+        passages = knowledge.select_passages(ASYM_BORDER)
+        text = knowledge.render_explanation(
+            valid_reply(), source, passages, lead="Lower visual concern. See a doctor.", opening_steps=("Recheck in a month.",)
+        )
+        head = text.split("\n\nSources:")[0]
+        headings = {"In short:", "What the analysis noticed:", "Suggested next steps:"}
+        points = [line for line in head.splitlines() if line and line not in headings]
+        # the lead, 2 noticed, the opening step, 2 next steps
+        assert len(points) == 6
+        assert all(line.startswith("• ") for line in points)
+        assert "• Lower visual concern. See a doctor." in text
+        assert "• Recheck in a month." in text
+
     def test_has_both_sections_and_cites_pages(self):
         source, _ = knowledge.load()
         passages = knowledge.select_passages(ASYM_BORDER)

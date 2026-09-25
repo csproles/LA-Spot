@@ -66,19 +66,14 @@
     private bool IsLoading = true;
     private string? LoadError;
 
-    private static string Today => DateTime.Now.ToString("dddd, MMMM d").ToUpperInvariant();
+    private static string Today => AppClock.Now.ToString("dddd, MMMM d").ToUpperInvariant();
 
     private List<Spot> DueSpots => Spots
         .Where(spot => spot.IsDue)
         .OrderByDescending(spot => spot.LastRiskScore ?? 0)
         .ToList();
 
-    private static string Greeting => DateTime.Now.Hour switch
-    {
-        < 12 => "Good morning",
-        < 18 => "Good afternoon",
-        _ => "Good evening",
-    };
+    private static string Greeting => AppClock.Greeting;
 
     private string Summary
     {

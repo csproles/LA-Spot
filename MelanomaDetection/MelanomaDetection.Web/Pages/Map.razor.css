@@ -5,3 +5,14 @@
     flex-direction: column;
     gap: 20px;
 }
+
+.map-book-box {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.map-book-intro {
+    margin: 0;
+    color: var(--color-text-muted);
+}

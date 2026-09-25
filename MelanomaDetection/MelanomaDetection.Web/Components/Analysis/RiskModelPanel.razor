@@ -5,7 +5,7 @@
 
 @if (Result is not null)
 {
-    <div class="card-panel risk-band risk-band-@Tone risk-model-panel">
+    <div class="card-panel risk-band risk-model-panel" style="@PanelStyle">
         <p class="risk-band-label">Visual concern: @LevelLabel</p>
         <p class="risk-band-recommendation">
             A screening score from an AI model that looks at your photo together with your
@@ -36,7 +36,7 @@
         }
 
         <div class="risk-band-score-block">
-            <p class="risk-band-score">@((Result.RiskScore * 100).ToString("F0")) <span class="risk-band-score-total">/100</span></p>
+            <p class="risk-band-score">@((Result.RiskScore * 100).ToString("F0")) <span class="risk-band-score-total">/100</span> <span class="risk-model-panel-level">@LevelLabel</span></p>
             <p class="risk-band-score-caption">Model score -- not a calibrated probability of melanoma.</p>
         </div>
     </div>
@@ -57,17 +57,30 @@
 
     private string LevelLabel => Result?.RiskLevel switch
     {
-        "high" => "Higher",
+        "high" => "High",
         "medium" => "Medium",
-        "low" => "Lower",
+        "low" => "Low",
         _ => "Not available",
     };
 
-    private string Tone => Result?.RiskLevel switch
+    /// <summary>
+    /// Card colour scaled continuously by the 0-100 score: light green at 0 through
+    /// yellow and orange to deep red at 100. Text flips to white once the background
+    /// is dark enough (from 75) to keep it readable. The score is a model score, not
+    /// a probability -- the colour only shows where it falls on the scale.
+    /// </summary>
+    private string PanelStyle
     {
-        "high" => "high",
-        "medium" => "moderate",
-        "low" => "low",
-        _ => "muted",
-    };
+        get
+        {
+            var t = Math.Clamp((Result?.RiskScore ?? 0) , 0, 1);
+            var hue = 110 - 110 * t;
+            var sat = 60 + 15 * t;
+            var light = 82 - 52 * t;
+            var fg = t >= 0.75 ? "#ffffff" : "#1f2a1f";
+            var bg = FormattableString.Invariant($"hsl({hue:F0}, {sat:F0}%, {light:F0}%)");
+            var border = FormattableString.Invariant($"hsl({hue:F0}, {sat:F0}%, {Math.Max(light - 12, 20):F0}%)");
+            return $"background: {bg}; border-color: {border}; color: {fg}; --panel-bg: {bg}; --panel-fg: {fg};";
+        }
+    }
 }

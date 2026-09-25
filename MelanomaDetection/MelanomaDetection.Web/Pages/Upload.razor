@@ -69,7 +69,7 @@
         "image/jpeg", "image/jpg", "image/png", "image/bmp", "image/webp"
     };
 
-    private static string Today => DateTime.Now.ToString("dddd, MMMM d, yyyy").ToUpperInvariant();
+    private static string Today => AppClock.Now.ToString("dddd, MMMM d, yyyy").ToUpperInvariant();
 
     private CheckStep CurrentStep = CheckStep.Spot;
     private string? ErrorMessage;

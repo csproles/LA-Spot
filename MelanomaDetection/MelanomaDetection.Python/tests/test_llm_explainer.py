@@ -62,6 +62,31 @@ def user_message(call):
     return next(m["content"] for m in call["messages"] if m["role"] == "user" and "ANALYSIS DATA" in m["content"])
 
 
+def test_style_rules_are_sent_and_every_point_is_a_bullet():
+    client = FakeClient([VALID_REPLY])
+    text = llm_explainer.explain_findings(ABCDE, client=client)
+
+    system = [m["content"] for m in client.calls[0]["messages"] if m["role"] == "system"]
+    assert system == [llm_explainer.SYSTEM_PROMPT, llm_explainer.GROUNDING_PROMPT, llm_explainer.STYLE_PROMPT]
+
+    body = text.split("\n\nSources:")[0]
+    points = [line for line in body.splitlines() if line and not line.endswith(":")]
+    assert points
+    assert all(line.startswith("• ") for line in points)
+
+
+def test_a_reply_with_a_dash_is_rejected_and_retried():
+    dashed = json.loads(VALID_REPLY)
+    dashed["noticed"][0]["text"] = "The analysis flagged asymmetry — the shape is uneven."
+    client = FakeClient([json.dumps(dashed), VALID_REPLY])
+
+    text = llm_explainer.explain_findings(ABCDE, client=client)
+
+    assert len(client.calls) == 2
+    assert "dash" in client.calls[1]["messages"][-1]["content"]
+    assert "—" not in text
+
+
 def test_valid_reply_is_rendered_with_sources():
     client = FakeClient([VALID_REPLY])
     text = llm_explainer.explain_findings(ABCDE, client=client)
@@ -172,7 +197,7 @@ class TestOverallResult:
             ABCDE, overall_visual_concern=policy.CONCERN_LOWER, risk_score=20.0, client=client
         )
 
-        assert text.startswith("In short:\nLower visual concern. This photo's visual features did not cross")
+        assert text.startswith("In short:\n• Lower visual concern. This photo's visual features did not cross")
         assert "Take a new photo of this spot in about 90 days" in text
         assert "Keep notes on this spot" in text
 
@@ -209,7 +234,7 @@ class TestOverallResult:
 
         assert len(client.calls) == 2
         assert "rejected" in client.calls[1]["messages"][-1]["content"]
-        assert text.startswith("In short:\nLower visual concern.")
+        assert text.startswith("In short:\n• Lower visual concern.")
 
     def test_no_detection_gets_no_app_authored_lead(self):
         # A photo where no lesion could be located isn't a verdict to open an

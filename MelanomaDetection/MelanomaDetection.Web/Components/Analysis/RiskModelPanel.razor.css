@@ -1,5 +1,52 @@
+.risk-model-panel {
+    border: 1.5px solid transparent;
+}
+
 .risk-model-panel-caveat {
     margin: 0 0 14px;
     font-size: 0.8125rem;
     font-weight: 600;
+}
+
+/* Colours come from the score (inline --panel-bg / --panel-fg), so everything
+   inside follows the card's text colour instead of the theme's greys. */
+.risk-model-panel .risk-band-score-block {
+    border-top-color: color-mix(in srgb, var(--panel-fg) 25%, transparent);
+}
+
+.risk-model-panel .risk-band-score-caption {
+    color: var(--panel-fg);
+    opacity: 0.8;
+}
+
+.risk-model-panel .risk-band-action.btn-primary {
+    --bs-btn-color: var(--panel-bg);
+    --bs-btn-bg: var(--panel-fg);
+    --bs-btn-border-color: var(--panel-fg);
+    --bs-btn-hover-color: var(--panel-bg);
+    --bs-btn-hover-bg: var(--panel-fg);
+    --bs-btn-hover-border-color: var(--panel-fg);
+    --bs-btn-active-color: var(--panel-bg);
+    --bs-btn-active-bg: var(--panel-fg);
+    --bs-btn-active-border-color: var(--panel-fg);
+}
+
+.risk-model-panel .risk-band-action.btn-outline-primary {
+    --bs-btn-color: var(--panel-fg);
+    --bs-btn-border-color: var(--panel-fg);
+    --bs-btn-hover-color: var(--panel-bg);
+    --bs-btn-hover-bg: var(--panel-fg);
+    --bs-btn-hover-border-color: var(--panel-fg);
+}
+
+.risk-model-panel-level {
+    margin-left: 6px;
+    padding: 2px 10px;
+    border: 1.5px solid currentColor;
+    border-radius: 999px;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    vertical-align: middle;
 }
