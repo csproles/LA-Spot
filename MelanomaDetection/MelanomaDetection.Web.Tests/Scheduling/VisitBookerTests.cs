@@ -44,7 +44,7 @@ public sealed class VisitBookerTests : BunitContext, IDisposable
             {
                 var id = Guid.NewGuid();
                 _providerIds.Add(id);
-                db.Users.Add(new AppUser { Id = id, GoogleSubject = $"provider-{i}", Email = $"dr{i}@example.com", DisplayName = $"Dr. Number {i}" });
+                db.Users.Add(new AppUser { Id = id, GoogleSubject = $"provider-{i}", Email = $"dr{i}@example.com", DisplayName = $"Dr. Number {i}", IsProvider = true });
                 db.Providers.Add(new Provider { Id = id, TimeZoneId = "UTC", AppointmentLengthMinutes = 30, BufferMinutes = 0, HubCity = hubCities?[i] });
 
                 // Open every day so there are always slots inside the next 7 days.

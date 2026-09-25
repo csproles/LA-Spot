@@ -135,7 +135,7 @@ app.Use(async (context, next) =>
 });
 
 await app.MigrateAccountsDatabaseAsync();
-await app.SeedDemoDermatologistsAsync();
+await app.RemoveDemoDermatologistsAsync();
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())

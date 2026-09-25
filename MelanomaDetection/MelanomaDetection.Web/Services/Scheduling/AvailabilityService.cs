@@ -16,8 +16,10 @@ public sealed class AvailabilityService(IDbContextFactory<AppDbContext> dbFactor
     public async Task<IReadOnlyList<ProviderSummary>> ListProvidersAsync(CancellationToken cancellationToken = default)
     {
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+        // Only real provider accounts: IsProvider is re-derived from Provider:AllowedEmails at each
+        // sign-in, and an account with no email was never a Google sign-in at all.
         var providers = await db.Providers.AsNoTracking()
-            .Join(db.Users.AsNoTracking(), p => p.Id, u => u.Id, (p, u) =>
+            .Join(db.Users.AsNoTracking().Where(u => u.IsProvider && u.Email != ""), p => p.Id, u => u.Id, (p, u) =>
                 new ProviderSummary(p.Id, u.DisplayName, p.Specialty, p.Credentials, p.Bio, p.PhotoUrl, p.HubCity))
             .ToListAsync(cancellationToken);
         return [.. providers.OrderBy(p => p.DisplayName, StringComparer.OrdinalIgnoreCase)];
