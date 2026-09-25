@@ -31,7 +31,7 @@ public sealed class VisitBookerTests : BunitContext, IDisposable
         _options = new DbContextOptionsBuilder<AppDbContext>().UseSqlite($"Data Source={_dbPath}").Options;
     }
 
-    private async Task SeedAsync(int providerCount)
+    private async Task SeedAsync(int providerCount, string?[]? hubCities = null)
     {
         await using (var db = new AppDbContext(_options))
         {
@@ -43,7 +43,7 @@ public sealed class VisitBookerTests : BunitContext, IDisposable
                 var id = Guid.NewGuid();
                 _providerIds.Add(id);
                 db.Users.Add(new AppUser { Id = id, GoogleSubject = $"provider-{i}", Email = $"dr{i}@example.com", DisplayName = $"Dr. Number {i}" });
-                db.Providers.Add(new Provider { Id = id, TimeZoneId = "UTC", AppointmentLengthMinutes = 30, BufferMinutes = 0 });
+                db.Providers.Add(new Provider { Id = id, TimeZoneId = "UTC", AppointmentLengthMinutes = 30, BufferMinutes = 0, HubCity = hubCities?[i] });
 
                 // Open every day so there are always slots inside the next 7 days.
                 foreach (var weekday in Enum.GetValues<DayOfWeek>())
@@ -121,6 +121,54 @@ public sealed class VisitBookerTests : BunitContext, IDisposable
 
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll("button.week-slot-btn")));
         Assert.Contains("2. Choose a time", cut.Markup);
+    }
+
+    [Fact]
+    public async Task WithAZipCodeTheClosestDoctorIsListedFirstAndLabelled()
+    {
+        // Doctor 0 is in New Orleans, doctor 1 in Shreveport.
+        await SeedAsync(2, ["New Orleans", "Shreveport"]);
+
+        var shreveport = Render<VisitBooker>(p => p
+            .Add(x => x.Embedded, true).Add(x => x.NearHubCity, "Shreveport").Add(x => x.NearPlaceName, "Bossier City"));
+        shreveport.WaitForAssertion(() => Assert.Equal(2, shreveport.FindAll(".choice-card").Count));
+        var cards = shreveport.FindAll(".choice-card");
+        Assert.Contains("Dr. Number 1", cards[0].TextContent);
+        Assert.Contains("Shreveport (closest to you)", cards[0].TextContent);
+        Assert.Contains("New Orleans", cards[1].TextContent);
+        Assert.DoesNotContain("closest to you", cards[1].TextContent);
+        Assert.Contains("Doctors closest to Bossier City, LA are listed first", shreveport.Markup);
+
+        // Baton Rouge is much nearer New Orleans than Shreveport, so that order flips.
+        var batonRouge = Render<VisitBooker>(p => p.Add(x => x.Embedded, true).Add(x => x.NearHubCity, "Baton Rouge"));
+        batonRouge.WaitForAssertion(() => Assert.Equal(2, batonRouge.FindAll(".choice-card").Count));
+        Assert.Contains("Dr. Number 0", batonRouge.FindAll(".choice-card")[0].TextContent);
+        Assert.DoesNotContain("closest to you", batonRouge.Markup.Replace("Doctors closest to", ""));
+    }
+
+    [Fact]
+    public async Task WithoutAZipCodeTheListKeepsItsOrderAndAsksForOne()
+    {
+        await SeedAsync(2, ["New Orleans", "Shreveport"]);
+
+        var cut = Render<VisitBooker>(p => p.Add(x => x.Embedded, true));
+
+        cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll(".choice-card").Count));
+        Assert.Contains("Enter your zip code above", cut.Markup);
+        Assert.DoesNotContain("(closest to you)", cut.Markup);
+        Assert.Contains("Dr. Number 0", cut.FindAll(".choice-card")[0].TextContent);
+    }
+
+    [Fact]
+    public async Task ADoctorWithNoCityIsListedAfterTheLocatedOnes()
+    {
+        await SeedAsync(2, [null, "Shreveport"]);
+
+        var cut = Render<VisitBooker>(p => p.Add(x => x.Embedded, true).Add(x => x.NearHubCity, "Monroe"));
+
+        cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll(".choice-card").Count));
+        Assert.Contains("Dr. Number 1", cut.FindAll(".choice-card")[0].TextContent);
+        Assert.Contains("Dr. Number 0", cut.FindAll(".choice-card")[1].TextContent);
     }
 
     [Fact]

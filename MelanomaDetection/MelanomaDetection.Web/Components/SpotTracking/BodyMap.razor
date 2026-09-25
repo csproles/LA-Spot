@@ -41,10 +41,11 @@
             <button type="button" class="btn btn-outline-primary btn-sm body-toggle" @onclick="() => IsBackView = !IsBackView">
                 @(IsBackView ? "Back view" : "Front view")
             </button>
-            <InfoPopover Title="Front view vs. back view">
-                <p><strong>Front view</strong> covers the front of your body -- face, chest, abdomen, and the front of your arms and legs.</p>
-                <p><strong>Back view</strong> covers the back -- the back of your head/neck, upper and lower back, and the back of your arms and legs.</p>
-                <p>Tap the button to flip between them when picking or browsing a spot's location.</p>
+            <InfoPopover Title="What front view and back view mean" Label="What is this?">
+                <p><strong>Front view</strong> is your body as you see it facing a mirror: your face, chest, belly, and the front of your arms and legs.</p>
+                <p><strong>Back view</strong> is your body as someone standing behind you sees it: the back of your head and neck, your upper and lower back, and the back of your arms and legs.</p>
+                <p>Press the <strong>Front view</strong> or <strong>Back view</strong> button to switch sides. The dots mark the same seven regions on both sides, so "Chest/Upper Back" is your chest on the front view and your upper back on the back view. "Abdomen/Lower Back" works the same way.</p>
+                <p>Pick the side where the spot is easiest to place, then tap the dot on that part of the body.</p>
             </InfoPopover>
         </div>
     </div>

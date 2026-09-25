@@ -1,8 +1,8 @@
 .body-map {
     display: flex;
-    flex-wrap: wrap;
+    flex-direction: column;
     gap: 20px;
-    align-items: flex-start;
+    align-items: center;
 }
 
 .body-diagram-wrap {
@@ -151,8 +151,10 @@
 
 .body-toggle-row {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 4px;
+    justify-content: center;
+    gap: 6px;
 }
 
 .body-toggle {
@@ -161,12 +163,11 @@
 }
 
 .body-location-list {
-    flex: 1;
-    min-width: 180px;
+    width: 100%;
     display: flex;
     flex-wrap: wrap;
+    justify-content: center;
     gap: 8px;
-    align-content: flex-start;
 }
 
 .region-button {

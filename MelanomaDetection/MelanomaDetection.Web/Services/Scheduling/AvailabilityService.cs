@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 namespace MelanomaDetection.Web.Services.Scheduling;
 
 public sealed record ProviderSummary(
-    Guid Id, string DisplayName, string Specialty, string? Credentials, string? Bio, string? PhotoUrl);
+    Guid Id, string DisplayName, string Specialty, string? Credentials, string? Bio, string? PhotoUrl, string? HubCity = null);
 
 /// <summary>
 /// DB-backed wrapper around <see cref="SlotGenerator"/>: loads one provider's
@@ -18,7 +18,7 @@ public sealed class AvailabilityService(IDbContextFactory<AppDbContext> dbFactor
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
         return await db.Providers.AsNoTracking()
             .Join(db.Users.AsNoTracking(), p => p.Id, u => u.Id, (p, u) =>
-                new ProviderSummary(p.Id, u.DisplayName, p.Specialty, p.Credentials, p.Bio, p.PhotoUrl))
+                new ProviderSummary(p.Id, u.DisplayName, p.Specialty, p.Credentials, p.Bio, p.PhotoUrl, p.HubCity))
             .ToListAsync(cancellationToken);
     }
 
