@@ -149,15 +149,6 @@
     color: var(--color-warn-ink);
 }
 
-.body-view-label {
-    font-size: 0.8125rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--color-text-faint);
-    margin: 0 0 2px;
-}
-
 .body-toggle-row {
     display: flex;
     align-items: center;

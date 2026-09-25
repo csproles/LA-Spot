@@ -95,6 +95,34 @@ public class NpiAddress
     public string? TelephoneNumber { get; set; }
 }
 
+/// <summary>A zip code resolved to a place name and coordinates via Zippopotam.us.</summary>
+public record ZipLocation(string PlaceName, string StateAbbreviation, double Lat, double Lng);
+
+/// <summary>Shape of https://api.zippopotam.us/us/{zip} responses. Free, keyless, no rate limit
+/// published -- a US zip's centroid never changes, so results are cached long-term (see
+/// NpiProviderService.GeocodeZipAsync) rather than re-fetched on every lookup.</summary>
+public class ZippopotamResponse
+{
+    [JsonPropertyName("places")]
+    public List<ZippopotamPlace> Places { get; set; } = [];
+}
+
+public class ZippopotamPlace
+{
+    [JsonPropertyName("place name")]
+    public string PlaceName { get; set; } = string.Empty;
+
+    [JsonPropertyName("state abbreviation")]
+    public string StateAbbreviation { get; set; } = string.Empty;
+
+    // Zippopotam returns these as JSON strings ("30.4438"), not numbers.
+    [JsonPropertyName("latitude")]
+    public string Latitude { get; set; } = string.Empty;
+
+    [JsonPropertyName("longitude")]
+    public string Longitude { get; set; } = string.Empty;
+}
+
 /// <summary>Shape of https://geocoding.geo.census.gov/geocoder/locations/onelineaddress responses.</summary>
 public class CensusGeocodeResponse
 {

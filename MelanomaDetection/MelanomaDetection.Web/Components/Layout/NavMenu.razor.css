@@ -191,4 +191,9 @@
     ::deep .app-nav-link-primary.active .app-nav-primary-mark {
         box-shadow: none;
     }
+
+    /* Profile lives in the account card at the foot of the sidebar instead. */
+    ::deep .app-nav-link-hide-on-sidebar {
+        display: none;
+    }
 }

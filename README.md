@@ -339,7 +339,7 @@ screens) has five places:
    Results show the risk score, the four ABCD factor bars and, from a spot's
    second photo on, how it changed since last time. Nothing is kept until you
    choose **Save**.
-4. **Find care** (`/map`) lets you pick a Louisiana parish to see nearby
+4. **Find care** (`/map`) lets you enter a Louisiana zip code to see nearby
    dermatology providers from the NPI Registry on a Google map (needs
    `GoogleMaps__ApiKey`).
 5. **Profile** (`/profile`) shows who you're signed in as (with sign-out), the

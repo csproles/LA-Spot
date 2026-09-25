@@ -36,9 +36,10 @@
                 <p class="text-muted-small">
                     Pick the region on the body map, then give the spot a name you'll recognise later.
                 </p>
+                <p class="field-label">Select a location on the body <span class="required-mark" aria-hidden="true">*</span></p>
                 <BodyMap @bind-SelectedRegion="NewSpotRegion" />
 
-                <label class="field-label" for="spot-label">Name this spot</label>
+                <label class="field-label" for="spot-label">Name this spot <span class="required-mark" aria-hidden="true">*</span></label>
                 <input id="spot-label" class="form-control spot-label-input"
                        placeholder='e.g. "dark mole near elbow"'
                        @bind="NewSpotLabel" @bind:event="oninput" maxlength="@InputLimits.SpotLabelMax" />

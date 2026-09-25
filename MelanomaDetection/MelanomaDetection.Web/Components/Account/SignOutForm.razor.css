@@ -12,25 +12,3 @@
     display: inline-flex;
     font-size: 1.0625rem;
 }
-
-/* The compact variant the sidebar uses: text-only, inherits the nav's ink. */
-.signout-form .signout-compact {
-    background: none;
-    border: none;
-    padding: 6px 8px;
-    border-radius: var(--radius-control);
-    color: inherit;
-    font-family: var(--font-body);
-    font-size: 0.88rem;
-    font-weight: 600;
-    cursor: pointer;
-}
-
-.signout-form .signout-compact:hover {
-    background-color: var(--color-nav-hover-bg);
-}
-
-.signout-form .signout-compact:focus-visible {
-    outline: none;
-    box-shadow: var(--focus-ring);
-}

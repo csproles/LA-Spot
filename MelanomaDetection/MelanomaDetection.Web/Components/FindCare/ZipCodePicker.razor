@@ -1,0 +1,53 @@
+@* Zip code entry for the "Find a doctor" map. Submitting geocodes the zip
+   and searches the nearest Louisiana metro hub's dermatology providers --
+   see LouisianaRegions.NearestHub and NpiProviderService.GeocodeZipAsync. *@
+
+<div class="zip-picker">
+    <label class="zip-label" for="zip-input">Your zip code</label>
+    <div class="zip-picker-row">
+        <input id="zip-input" class="zip-input" type="text" inputmode="numeric" maxlength="5"
+               placeholder="e.g. 70802" value="@ZipValue"
+               @oninput="e => ZipValue = e.Value?.ToString() ?? string.Empty"
+               @onkeydown="HandleKeyDown" />
+        <button type="button" class="btn btn-primary" disabled="@IsLoading" @onclick="Submit">
+            @(IsLoading ? "Searching…" : "Find providers")
+        </button>
+    </div>
+    @if (ValidationMessage is not null)
+    {
+        <p class="zip-error">@ValidationMessage</p>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public bool IsLoading { get; set; }
+
+    /// <summary>Raised with a validated 5-digit zip code.</summary>
+    [Parameter]
+    public EventCallback<string> ZipSubmitted { get; set; }
+
+    private string ZipValue = string.Empty;
+    private string? ValidationMessage;
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await Submit();
+        }
+    }
+
+    private async Task Submit()
+    {
+        var trimmed = ZipValue.Trim();
+        if (trimmed.Length != 5 || !trimmed.All(char.IsDigit))
+        {
+            ValidationMessage = "Enter a 5-digit zip code.";
+            return;
+        }
+
+        ValidationMessage = null;
+        await ZipSubmitted.InvokeAsync(trimmed);
+    }
+}

@@ -24,6 +24,10 @@
     margin: 18px 0 8px;
 }
 
+.required-mark {
+    color: var(--color-alert);
+}
+
 .spot-label-input {
     max-width: 380px;
 }

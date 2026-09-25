@@ -54,19 +54,29 @@
 </nav>
 
 @code {
-    private record Destination(string Href, string Icon, string Label, bool IsPrimary = false, bool ProviderOnly = false);
+    private record Destination(string Href, string Icon, string Label, bool IsPrimary = false, bool ProviderOnly = false, bool HideOnSidebar = false);
 
     private static readonly Destination[] Destinations =
     {
-        new("", "home", "Home"),
+        // On the desktop sidebar the logo at the top already links home, so
+        // this tab would be a duplicate there. It stays in the phone bottom
+        // bar, where the logo is hidden and this is the only way home.
+        new("", "home", "Home", HideOnSidebar: true),
         new("spots", "spots", "My spots"),
         new("check", "camera", "Check", IsPrimary: true),
         new("map", "map", "Find a doctor"),
         new("visits", "clock", "Visits"),
         new("provider", "shield", "Dashboard", ProviderOnly: true),
-        new("profile", "person", "Profile"),
+        // On the desktop sidebar the account card at the bottom (name + avatar)
+        // already leads here, so this tab would be a duplicate there. It stays
+        // in the phone bottom bar, where the account card is hidden and this
+        // is the only way to reach Profile.
+        new("profile", "person", "Profile", HideOnSidebar: true),
     };
 
-    private static string LinkClass(Destination destination) =>
-        destination.IsPrimary ? "app-nav-link app-nav-link-primary" : "app-nav-link";
+    private static string LinkClass(Destination destination)
+    {
+        var classes = destination.IsPrimary ? "app-nav-link app-nav-link-primary" : "app-nav-link";
+        return destination.HideOnSidebar ? $"{classes} app-nav-link-hide-on-sidebar" : classes;
+    }
 }

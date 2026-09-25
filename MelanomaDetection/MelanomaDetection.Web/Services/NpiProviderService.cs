@@ -1,3 +1,4 @@
+using System.Globalization;
 using MelanomaDetection.Web.Models;
 using Microsoft.Extensions.Caching.Memory;
 
@@ -11,7 +12,7 @@ namespace MelanomaDetection.Web.Services;
 /// </summary>
 public class NpiProviderService
 {
-    // A parish pick fans out to up to 8 providers, each needing a geocode call plus one or two
+    // A zip search fans out to up to 8 providers, each needing a geocode call plus one or two
     // Google Places calls -- up to ~24 simultaneous outbound HTTPS requests. Census and Google
     // both started resetting connections under that burst (visible in prod logs as "Connection
     // reset by peer" and near-timeout latencies), which silently drops the pin for whichever
@@ -51,6 +52,43 @@ public class NpiProviderService
         var providers = await FetchProvidersAsync(city, state, limit, cancellationToken);
         _cache.Set(cacheKey, providers, TimeSpan.FromHours(12));
         return providers;
+    }
+
+    /// <summary>
+    /// Resolves a 5-digit US zip code to a place name, state and coordinates via
+    /// Zippopotam.us (free, keyless). Returns null for a malformed or unrecognized
+    /// zip -- never throws. A zip's location is effectively permanent, so a
+    /// successful lookup is cached for 30 days; a miss is cached briefly (an hour)
+    /// in case it was a transient upstream hiccup rather than a truly bad zip.
+    /// </summary>
+    public async Task<ZipLocation?> GeocodeZipAsync(string zip, CancellationToken cancellationToken = default)
+    {
+        var cacheKey = $"zip-geocode:{zip}";
+        if (_cache.TryGetValue(cacheKey, out ZipLocation? cached))
+        {
+            return cached;
+        }
+
+        ZipLocation? location = null;
+        try
+        {
+            var url = $"https://api.zippopotam.us/us/{Uri.EscapeDataString(zip)}";
+            var response = await _httpClient.GetFromJsonAsync<ZippopotamResponse>(url, cancellationToken);
+            var place = response?.Places.FirstOrDefault();
+            if (place is not null
+                && double.TryParse(place.Latitude, NumberStyles.Float, CultureInfo.InvariantCulture, out var lat)
+                && double.TryParse(place.Longitude, NumberStyles.Float, CultureInfo.InvariantCulture, out var lng))
+            {
+                location = new ZipLocation(place.PlaceName, place.StateAbbreviation, lat, lng);
+            }
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException)
+        {
+            _logger.LogWarning(ex, "Zip geocoding failed for {Zip}", zip);
+        }
+
+        _cache.Set(cacheKey, location, location is null ? TimeSpan.FromHours(1) : TimeSpan.FromDays(30));
+        return location;
     }
 
     private async Task<IReadOnlyList<DermatologyProvider>> FetchProvidersAsync(

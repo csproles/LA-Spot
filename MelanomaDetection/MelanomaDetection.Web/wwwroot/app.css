@@ -115,6 +115,9 @@
        instead of one shadow -- reads as a quiet physical lift rather than a
        drawn box. */
     --shadow-card: 0 0 0.5px light-dark(rgba(31, 41, 55, 0.14), rgba(0, 0, 0, 0.3)), 0 1px 1px light-dark(rgba(31, 41, 55, 0.14), rgba(0, 0, 0, 0.35));
+    /* Barely-there lift for ordinary buttons on hover -- present enough to feel
+       tactile, faint enough that no one consciously notices it. */
+    --shadow-hover-faint: 0 2px 5px light-dark(rgba(31, 41, 55, 0.07), rgba(0, 0, 0, 0.22));
     --shadow-raised: 0 4px 12px light-dark(rgba(31, 41, 55, 0.18), rgba(0, 0, 0, 0.5));
     --shadow-lifted: 0 6px 16px light-dark(rgba(31, 41, 55, 0.22), rgba(0, 0, 0, 0.55));
     --shadow-tint-strong: light-dark(rgba(31, 41, 55, 0.35), rgba(0, 0, 0, 0.6));
@@ -354,7 +357,26 @@ a:focus-visible, button:focus-visible {
     }
 
     .skeleton-block {
-        animation: skeleton-sweep 1.5s ease-in-out infinite;
+        animation: skeleton-sweep 2.75s ease-in-out infinite;
+    }
+
+    /* A near-imperceptible lift on every button, so hovering anything
+       clickable feels a little tactile. Kept to a bare element selector so it
+       stays weaker than the primary/outline-primary/outline-danger rules
+       below, which keep their own stronger lift. Disabled buttons don't fire
+       :hover in any browser, so no :disabled guard is needed here. */
+    button {
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    button:hover {
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-hover-faint);
+    }
+
+    button:active {
+        transform: translateY(0);
+        box-shadow: none;
     }
 }
 
@@ -544,7 +566,8 @@ a:focus-visible, button:focus-visible {
     min-height: 2.75rem;
 }
 
-.parish-select {
+.zip-input,
+.zip-picker-row button {
     min-height: 3rem;
 }
 

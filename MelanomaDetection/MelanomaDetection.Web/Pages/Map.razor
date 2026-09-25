@@ -12,7 +12,7 @@
 <PageTitle>Find a doctor - LA Spot</PageTitle>
 
 <div class="map-page">
-    <PageHeader Title="Find a doctor" Subtitle="Skin doctors (dermatologists) near you. Pick your parish to begin." />
+    <PageHeader Title="Find a doctor" Subtitle="Skin doctors (dermatologists) near you. Enter your zip code to begin." />
 
     @if (string.IsNullOrWhiteSpace(ApiKey))
     {
@@ -20,8 +20,7 @@
     }
     else
     {
-        <ParishPicker Parishes="LouisianaRegions.Parishes" Parish="@SelectedParish"
-                      ParishChanged="OnParishChanged" />
+        <ZipCodePicker IsLoading="IsLoading" ZipSubmitted="OnZipSubmitted" />
 
         <MapCanvas ApiKey="@ApiKey" />
 
@@ -34,7 +33,6 @@
 @code {
     private string? ApiKey => Configuration["GoogleMaps:ApiKey"];
 
-    private string SelectedParish = string.Empty;
     private bool IsLoading;
     private string? LoadError;
     private string? CurrentRegionLabel;
@@ -52,49 +50,62 @@
         await JS.InvokeVoidAsync("skinCheckMap.focusProvider", index);
     }
 
-    private async Task OnParishChanged(string parish)
+    private async Task OnZipSubmitted(string zip)
     {
-        SelectedParish = parish;
         LoadError = null;
         Providers = [];
         SelectedIndex = null;
+        CurrentRegionLabel = null;
+        IsLoading = true;
+        StateHasChanged();
 
-        var region = LouisianaRegions.ForParish(string.IsNullOrEmpty(parish) ? null : parish);
-        if (region is null)
+        var location = await NpiService.GeocodeZipAsync(zip);
+        if (location is null)
         {
-            CurrentRegionLabel = null;
+            IsLoading = false;
+            LoadError = $"Couldn't find zip code {zip}. Double-check it and try again.";
             await JS.InvokeVoidAsync("skinCheckMap.reset");
             return;
         }
 
-        CurrentRegionLabel = region.CityLabel;
+        if (!string.Equals(location.StateAbbreviation, "LA", StringComparison.OrdinalIgnoreCase))
+        {
+            IsLoading = false;
+            LoadError = "This tool currently only covers Louisiana zip codes.";
+            await JS.InvokeVoidAsync("skinCheckMap.reset");
+            return;
+        }
+
+        // Most zip codes have no dermatologist of their own, so results come
+        // from the nearest metro hub -- see LouisianaRegions.NearestHub -- while
+        // the map itself centres on the zip's own coordinates.
+        var hub = LouisianaRegions.NearestHub(location.Lat, location.Lng);
+        CurrentRegionLabel = location.PlaceName;
 
         // Each lookup that isn't already cached fans out to the government registries.
         var userId = await CurrentUser.GetUserIdAsync();
         if (userId is not null && RateLimiter.TryAcquire(LimitedOperation.FindProviders, userId.Value) is { } retryAfter)
         {
+            IsLoading = false;
             LoadError = OperationRateLimiter.WaitMessage(retryAfter);
             await JS.InvokeVoidAsync("skinCheckMap.reset");
             return;
         }
 
-        IsLoading = true;
-        StateHasChanged();
-
-        var found = await NpiService.GetProvidersAsync(region.NpiCityQuery);
+        var found = await NpiService.GetProvidersAsync(hub.NpiCityQuery);
 
         IsLoading = false;
         Providers = found.ToList();
         if (Providers.Count == 0)
         {
-            LoadError = $"No dermatology providers found in the NPI Registry for {region.CityLabel}, LA.";
+            LoadError = $"No dermatology providers found in the NPI Registry near {location.PlaceName}, LA.";
         }
         SetChatContext();
 
         await JS.InvokeVoidAsync("skinCheckMap.showResults", new
         {
-            center = new { lat = region.Lat, lng = region.Lng },
-            zoom = region.Zoom,
+            center = new { lat = location.Lat, lng = location.Lng },
+            zoom = hub.Zoom,
             // id is the provider's index in Providers, which is how a card click
             // finds its pin again (see skinCheckMap.focusProvider).
             providers = Providers

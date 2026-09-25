@@ -129,7 +129,7 @@ let mapReady;
 // pre-interactive DOM node, which Blazor's circuit attach then discards (the map
 // keeps building silently onto an orphaned element).
 //
-// Region/parish data and the NPI Registry + Census geocoder lookups all live
+// Region/zip-geocoding data and the NPI Registry + Census geocoder lookups all live
 // server-side (see NpiProviderService.cs); this module only ever renders
 // whatever center/zoom/providers Blazor hands it.
 window.skinCheckMap = {

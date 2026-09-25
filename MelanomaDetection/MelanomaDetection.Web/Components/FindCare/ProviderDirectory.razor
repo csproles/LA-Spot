@@ -1,6 +1,6 @@
-@* Providers near the chosen parish, pulled live from the NPI Registry. The
-   lookup is a network round trip on every parish change, so it shows
-   placeholder cards rather than swapping the panel for a line of text. *@
+@* Providers near the entered zip code, pulled live from the NPI Registry. The
+   lookup is a network round trip on every search, so it shows placeholder
+   cards rather than swapping the panel for a line of text. *@
 
 <div class="provider-panel">
     @if (IsLoading)
@@ -24,7 +24,7 @@
     else if (Providers.Count == 0)
     {
         <p class="provider-status">
-            Select your parish to see nearby dermatology providers, pulled live from the NPI Registry.
+            Enter your zip code to see nearby dermatology providers, pulled live from the NPI Registry.
         </p>
     }
     else
