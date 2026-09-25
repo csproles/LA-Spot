@@ -17,3 +17,25 @@
     color: var(--color-warn-ink);
     font-size: 0.88rem;
 }
+
+.about-you-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+}
+
+.about-you-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-text-muted);
+}
+
+.about-you-problem {
+    margin: 8px 0 0;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--color-alert-ink);
+}

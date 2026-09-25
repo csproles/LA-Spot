@@ -39,11 +39,42 @@
             </div>
 
             <SpotTimeline Checks="Spot.Checks" OnOpenCheck="OpenCheck" />
+        }
 
-            <div class="spot-archive">
+        <div class="spot-archive">
+            @if (Spot.Checks.Count > 0)
+            {
                 <button type="button" class="link-button spot-archive-button" @onclick="ArchiveSpot" disabled="@IsSaving">
                     @(ConfirmArchive ? "Tap again to confirm: this hides the spot and its history" : "Archive this spot")
                 </button>
+            }
+            @if (!ConfirmDelete)
+            {
+                <button type="button" class="link-button spot-delete-button" @onclick="() => ConfirmDelete = true" disabled="@IsSaving">
+                    Delete this spot
+                </button>
+            }
+        </div>
+
+        @if (ConfirmDelete)
+        {
+            <div class="spot-delete-confirm" role="alertdialog" aria-labelledby="spot-delete-title" aria-describedby="spot-delete-text">
+                <p id="spot-delete-title" class="spot-delete-title">Delete &ldquo;@Spot.Label&rdquo;?</p>
+                <p id="spot-delete-text" class="spot-delete-text">
+                    @(Spot.Checks.Count == 0
+                        ? "This permanently removes the spot. It has no photos yet. It can't be undone."
+                        : $"This permanently removes the spot and its {Spot.Checks.Count} saved check{(Spot.Checks.Count == 1 ? "" : "s")}, including the photos and breakdown images. It can't be undone. To keep the history but hide the spot, archive it instead.")
+                </p>
+                <div class="spot-delete-actions">
+                    <button type="button" class="btn spot-delete-confirm-button" @onclick="DeleteSpot" disabled="@IsSaving">
+                        @if (IsSaving)
+                        {
+                            <span class="btn-spinner" aria-hidden="true"></span>
+                        }
+                        @(IsSaving ? "Deleting…" : "Delete spot")
+                    </button>
+                    <button type="button" class="btn btn-outline-primary" @onclick="() => ConfirmDelete = false" disabled="@IsSaving">Cancel</button>
+                </div>
             </div>
         }
     }
@@ -58,6 +89,7 @@
     private FormFeedback.Feedback? SaveFeedback;
     private bool IsSaving;
     private bool ConfirmArchive;
+    private bool ConfirmDelete;
 
     protected override async Task OnParametersSetAsync()
     {
@@ -137,6 +169,26 @@
         {
             SaveFeedback = FormFeedback.Feedback.Error($"The spot wasn't archived: {ex.Message}");
             ConfirmArchive = false;
+        }
+        finally
+        {
+            IsSaving = false;
+        }
+    }
+
+    private async Task DeleteSpot()
+    {
+        IsSaving = true;
+        SaveFeedback = null;
+        try
+        {
+            await ImageProcessingService.DeleteSpotAsync(SpotId);
+            NavigationManager.NavigateTo($"/spots?deleted={Uri.EscapeDataString(Spot!.Label)}");
+        }
+        catch (ImageProcessingApiException ex)
+        {
+            SaveFeedback = FormFeedback.Feedback.Error($"The spot wasn't deleted: {ex.Message}");
+            ConfirmDelete = false;
         }
         finally
         {

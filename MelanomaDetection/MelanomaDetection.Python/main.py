@@ -543,8 +543,11 @@ def create_spot_endpoint():
     body_region = validation.clean_text(
         body.get("bodyRegion"), "bodyRegion", validation.BODY_REGION_MAX, required=True
     )
+    body_side = body.get("bodySide")
+    if body_side not in (None, "front", "back"):
+        raise ValidationError("bodySide must be \"front\", \"back\" or null.")
 
-    spot = store.create_spot(g.user_id, label, body_region)
+    spot = store.create_spot(g.user_id, label, body_region, body_side)
     return jsonify(_with_due_date({**spot, **store.aggregate_checks([])}, store.get_profile(g.user_id))), 201
 
 
@@ -594,6 +597,15 @@ def update_spot_endpoint(spot_id):
         raise ValidationError("archived must be true or false.")
     spot = store.update_spot(g.user_id, spot_id, label=label or None, archived=archived)
     return jsonify(spot)
+
+
+@app.route("/api/spots/<spot_id>", methods=["DELETE"])
+def delete_spot_endpoint(spot_id):
+    """Permanently remove a spot, its saved checks and their images."""
+    removed = store.delete_spot(g.user_id, spot_id)
+    if removed is None:
+        return jsonify({"error": f"No spot found for id '{spot_id}'"}), 404
+    return jsonify({"deleted": True, "checks": removed})
 
 
 def _as_rows(checks: list) -> list:
@@ -648,6 +660,13 @@ def save_profile_endpoint():
     except ValidationError:
         return jsonify({"error": "fitzpatrick must be 1-6 (Fitzpatrick I-VI) or null."}), 400
 
+    birth_year = validation.optional_int_in_range(
+        body.get("birthYear"), "birthYear", 1900, datetime.date.today().year
+    )
+    sex = validation.clean_text(body.get("sex"), "sex", 10)
+    if sex not in ("", "female", "male"):
+        raise ValidationError("sex must be \"female\", \"male\" or empty.")
+
     sun_exposure = validation.clean_text(body.get("sunExposure"), "sunExposure", 20)
     if sun_exposure and sun_exposure not in policy.SUN_EXPOSURE_LEVELS:
         return jsonify({"error": "sunExposure must be one of: " + ", ".join(policy.SUN_EXPOSURE_LEVELS)}), 400
@@ -665,6 +684,8 @@ def save_profile_endpoint():
         high_risk_alerts=validation.optional_bool(body, "highRiskAlerts", True),
         share_with_dermatologist=validation.optional_bool(body, "shareWithDermatologist", True),
         anonymous_analytics=validation.optional_bool(body, "anonymousAnalytics", False),
+        birth_year=birth_year,
+        sex=sex,
     )
     return jsonify({**profile, "configured": True})
 

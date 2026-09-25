@@ -102,6 +102,10 @@
     [Parameter]
     public bool ShowRegionList { get; set; } = true;
 
+    /// <summary>"front" or "back": the view showing when a region was picked.</summary>
+    [Parameter]
+    public EventCallback<string> SelectedSideChanged { get; set; }
+
     private bool IsBackView;
 
     private bool IsSelected(string region) => SelectedRegion == region;
@@ -130,6 +134,7 @@
     private async Task Select(string region)
     {
         SelectedRegion = region;
+        await SelectedSideChanged.InvokeAsync(IsBackView ? "back" : "front");
         await SelectedRegionChanged.InvokeAsync(region);
     }
 }

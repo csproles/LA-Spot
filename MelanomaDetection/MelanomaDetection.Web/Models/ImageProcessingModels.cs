@@ -267,6 +267,10 @@ public class Spot
     [JsonPropertyName("bodyRegion")]
     public string BodyRegion { get; set; } = string.Empty;
 
+    /// <summary>"front" / "back": the body map side the region was picked on; null for older spots.</summary>
+    [JsonPropertyName("bodySide")]
+    public string? BodySide { get; set; }
+
     [JsonPropertyName("createdAt")]
     public DateTimeOffset? CreatedAt { get; set; }
 
@@ -397,6 +401,14 @@ public class RiskProfile
 
     [JsonPropertyName("anonymousAnalytics")]
     public bool AnonymousAnalytics { get; set; }
+
+    /// <summary>For the AI risk model: year of birth (so the age it gets never goes stale), or null.</summary>
+    [JsonPropertyName("birthYear")]
+    public int? BirthYear { get; set; }
+
+    /// <summary>For the AI risk model: "female", "male", or "" when not given.</summary>
+    [JsonPropertyName("sex")]
+    public string Sex { get; set; } = string.Empty;
 
     public bool HasElevatedRiskFactors =>
         Fitzpatrick is <= 2 || FamilyHistory || BlisteringSunburns || ManyMoles || SunExposure == "high";

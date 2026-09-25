@@ -24,34 +24,11 @@
                   @oninput="e => NotesChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty)"></textarea>
     </div>
 
-    <div class="card-panel">
-        <h2 class="panel-title">A few details for the AI risk model</h2>
+    <div class="details-continue">
         <p class="text-muted-small">
-            Optional, but age, sex, and body site help the risk model read the photo more
-            accurately. This feeds a separate, experimental screening score -- not a diagnosis.
+            The AI risk model also uses your age and sex from your risk profile (set them on the
+            Profile page) and this spot's body location.
         </p>
-
-        <label class="field-label" for="check-age">Age</label>
-        <input id="check-age" type="number" class="form-control" min="0" max="120"
-               value="@Age" @oninput="e => AgeChanged.InvokeAsync(ParseAge(e.Value?.ToString()))" />
-
-        <label class="field-label" for="check-sex">Sex</label>
-        <select id="check-sex" class="form-select" value="@Sex" @onchange="e => SexChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty)">
-            <option value="">Prefer not to say</option>
-            <option value="female">Female</option>
-            <option value="male">Male</option>
-        </select>
-
-        <label class="field-label" for="check-body-site">Body site</label>
-        <select id="check-body-site" class="form-select" value="@BodySite" @onchange="e => BodySiteChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty)">
-            <option value="">Prefer not to say</option>
-            <option value="head/neck">Head / neck</option>
-            <option value="upper extremity">Upper extremity (arm/hand)</option>
-            <option value="lower extremity">Lower extremity (leg/foot)</option>
-            <option value="anterior torso">Anterior torso (chest/abdomen)</option>
-            <option value="posterior torso">Posterior torso (back)</option>
-        </select>
-
         <button type="button" class="btn btn-primary details-submit" @onclick="OnContinue">
             See results
         </button>
@@ -80,31 +57,9 @@
     [Parameter]
     public EventCallback<string> NotesChanged { get; set; }
 
-    /// <summary>Optional metadata for the separate AI risk model (POST /predict) -- not used
-    /// by V5's own /api/image/process pipeline above.</summary>
-    [Parameter]
-    public int? Age { get; set; }
-
-    [Parameter]
-    public EventCallback<int?> AgeChanged { get; set; }
-
-    [Parameter]
-    public string Sex { get; set; } = string.Empty;
-
-    [Parameter]
-    public EventCallback<string> SexChanged { get; set; }
-
-    [Parameter]
-    public string BodySite { get; set; } = string.Empty;
-
-    [Parameter]
-    public EventCallback<string> BodySiteChanged { get; set; }
-
     [Parameter, EditorRequired]
     public EventCallback OnRetake { get; set; }
 
     [Parameter, EditorRequired]
     public EventCallback OnContinue { get; set; }
-
-    private static int? ParseAge(string? value) => int.TryParse(value, out var age) ? age : null;
 }

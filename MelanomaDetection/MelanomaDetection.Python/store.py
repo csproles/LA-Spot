@@ -41,7 +41,11 @@ CREATE TABLE IF NOT EXISTS spots (
     label        TEXT NOT NULL,
     body_region  TEXT NOT NULL,
     created_at   TEXT NOT NULL,
-    archived     INTEGER NOT NULL DEFAULT 0
+    archived     INTEGER NOT NULL DEFAULT 0,
+    -- "front" / "back": which side of the body map the region was picked on. Only
+    -- the torso regions need it (it tells the AI risk model chest from back); NULL
+    -- for spots created before it was recorded.
+    body_side    TEXT
 );
 
 -- spot_id stays nullable: the HTTP API can still be called without a spot (the
@@ -110,6 +114,10 @@ CREATE TABLE IF NOT EXISTS profile (
     high_risk_alerts          INTEGER NOT NULL DEFAULT 1,
     share_with_dermatologist  INTEGER NOT NULL DEFAULT 1,
     anonymous_analytics       INTEGER NOT NULL DEFAULT 0,
+    -- For the AI risk model (POST /predict): year of birth rather than age, so it
+    -- never goes stale, and sex ("female" / "male", "" = not given).
+    birth_year                INTEGER,
+    sex                       TEXT NOT NULL DEFAULT '',
     updated_at                TEXT NOT NULL
 );
 """
@@ -142,6 +150,17 @@ _CHECKS_COLUMNS_ADDED_IN_V5 = {
 }
 
 
+# Added in v7 for the AI risk model: age/sex on the profile, body side on spots.
+_PROFILE_COLUMNS_ADDED_IN_V7 = {
+    "birth_year": "INTEGER",
+    "sex": "TEXT NOT NULL DEFAULT ''",
+}
+
+_SPOTS_COLUMNS_ADDED_IN_V7 = {
+    "body_side": "TEXT",
+}
+
+
 @contextlib.contextmanager
 def _connect():
     """Open a fresh connection for one unit of work, committing and closing it after.
@@ -171,7 +190,7 @@ def _connect():
 # (spots, checks, a filled-in risk profile) and init_db must never drop them;
 # a version bump from here on has to ship with an additive migration instead
 # (see _migrate_profile_columns for the 2 -> 3 example).
-SCHEMA_VERSION = 6
+SCHEMA_VERSION = 7
 
 
 def init_db():
@@ -198,6 +217,7 @@ def init_db():
         connection.executescript(_SCHEMA)
         _migrate_profile_columns(connection)
         _migrate_checks_columns(connection)
+        _migrate_spots_columns(connection)
         connection.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
 
 
@@ -212,7 +232,7 @@ def _migrate_profile_columns(connection):
     _SCHEMA just created fresh (which already has every column).
     """
     existing = {row["name"] for row in connection.execute("PRAGMA table_info(profile)")}
-    for column, ddl in _PROFILE_COLUMNS_ADDED_IN_V3.items():
+    for column, ddl in {**_PROFILE_COLUMNS_ADDED_IN_V3, **_PROFILE_COLUMNS_ADDED_IN_V7}.items():
         if column not in existing:
             connection.execute(f"ALTER TABLE profile ADD COLUMN {column} {ddl}")
 
@@ -223,6 +243,14 @@ def _migrate_checks_columns(connection):
     for column, ddl in {**_CHECKS_COLUMNS_ADDED_IN_V4, **_CHECKS_COLUMNS_ADDED_IN_V5}.items():
         if column not in existing:
             connection.execute(f"ALTER TABLE checks ADD COLUMN {column} {ddl}")
+
+
+def _migrate_spots_columns(connection):
+    """Add columns introduced after v6 to an existing spots table in place. See _migrate_profile_columns."""
+    existing = {row["name"] for row in connection.execute("PRAGMA table_info(spots)")}
+    for column, ddl in _SPOTS_COLUMNS_ADDED_IN_V7.items():
+        if column not in existing:
+            connection.execute(f"ALTER TABLE spots ADD COLUMN {column} {ddl}")
 
 
 def reset_db():
@@ -254,19 +282,20 @@ def _utc_now_iso():
 # --- spots ---------------------------------------------------------------
 
 
-def create_spot(user_id: str, label: str, body_region: str) -> dict:
-    """Register a new tracked spot for a user and return it."""
+def create_spot(user_id: str, label: str, body_region: str, body_side=None) -> dict:
+    """Register a new tracked spot for a user and return it. body_side is "front", "back" or None."""
     spot_id = f"spot_{uuid.uuid4().hex[:12]}"
     created_at = _utc_now_iso()
     with _connect() as connection:
         connection.execute(
-            "INSERT INTO spots (id, user_id, label, body_region, created_at) VALUES (?, ?, ?, ?, ?)",
-            (spot_id, user_id, label, body_region, created_at),
+            "INSERT INTO spots (id, user_id, label, body_region, created_at, body_side) VALUES (?, ?, ?, ?, ?, ?)",
+            (spot_id, user_id, label, body_region, created_at, body_side),
         )
     return {
         "id": spot_id,
         "label": label,
         "bodyRegion": body_region,
+        "bodySide": body_side,
         "createdAt": created_at,
         "archived": False,
     }
@@ -299,6 +328,28 @@ def update_spot(user_id: str, spot_id: str, label=None, archived=None):
                 f"UPDATE spots SET {', '.join(assignments)} WHERE id = ? AND user_id = ?", values
             )
     return get_spot(user_id, spot_id)
+
+
+def delete_spot(user_id: str, spot_id: str):
+    """Erase one of the user's spots with every check filed under it and their stored images.
+
+    Returns the number of checks removed, or None if the user has no such spot.
+    """
+    with _connect() as connection:
+        if connection.execute(
+            "SELECT 1 FROM spots WHERE id = ? AND user_id = ?", (spot_id, user_id)
+        ).fetchone() is None:
+            return None
+        connection.execute(
+            "DELETE FROM check_visuals WHERE user_id = ? AND processing_id IN "
+            "(SELECT processing_id FROM checks WHERE user_id = ? AND spot_id = ?)",
+            (user_id, user_id, spot_id),
+        )
+        checks = connection.execute(
+            "DELETE FROM checks WHERE user_id = ? AND spot_id = ?", (user_id, spot_id)
+        ).rowcount
+        connection.execute("DELETE FROM spots WHERE id = ? AND user_id = ?", (spot_id, user_id))
+    return checks
 
 
 def list_spots(user_id: str, include_archived: bool = False) -> list:
@@ -386,6 +437,7 @@ def _spot_row_to_dict(row) -> dict:
         "id": row["id"],
         "label": row["label"],
         "bodyRegion": row["body_region"],
+        "bodySide": row["body_side"],
         "createdAt": row["created_at"],
         "archived": bool(row["archived"]),
     }
@@ -615,6 +667,8 @@ def get_profile(user_id: str):
         "highRiskAlerts": bool(row["high_risk_alerts"]),
         "shareWithDermatologist": bool(row["share_with_dermatologist"]),
         "anonymousAnalytics": bool(row["anonymous_analytics"]),
+        "birthYear": row["birth_year"],
+        "sex": row["sex"],
         "updatedAt": row["updated_at"],
     }
 
@@ -632,6 +686,8 @@ def save_profile(
     high_risk_alerts: bool = True,
     share_with_dermatologist: bool = True,
     anonymous_analytics: bool = False,
+    birth_year=None,
+    sex: str = "",
 ) -> dict:
     """Insert or replace the user's risk profile, and return it."""
     with _connect() as connection:
@@ -640,8 +696,8 @@ def save_profile(
             INSERT INTO profile (user_id, full_name, location, sun_exposure, fitzpatrick,
                                  family_history, blistering_sunburns, many_moles,
                                  recheck_reminders, high_risk_alerts,
-                                 share_with_dermatologist, anonymous_analytics, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                 share_with_dermatologist, anonymous_analytics, birth_year, sex, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(user_id) DO UPDATE SET
                 full_name = excluded.full_name,
                 location = excluded.location,
@@ -654,6 +710,8 @@ def save_profile(
                 high_risk_alerts = excluded.high_risk_alerts,
                 share_with_dermatologist = excluded.share_with_dermatologist,
                 anonymous_analytics = excluded.anonymous_analytics,
+                birth_year = excluded.birth_year,
+                sex = excluded.sex,
                 updated_at = excluded.updated_at
             """,
             (
@@ -669,6 +727,8 @@ def save_profile(
                 1 if high_risk_alerts else 0,
                 1 if share_with_dermatologist else 0,
                 1 if anonymous_analytics else 0,
+                birth_year,
+                sex or "",
                 _utc_now_iso(),
             ),
         )

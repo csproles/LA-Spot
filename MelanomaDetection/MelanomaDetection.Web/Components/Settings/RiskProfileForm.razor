@@ -11,6 +11,35 @@
     }
     else
     {
+        <section class="card-panel">
+            <h2 class="panel-title">About you</h2>
+            <p class="text-muted-small">
+                Optional. The AI risk model takes age and sex into account when it reads a photo.
+                We store your year of birth, not your birthday.
+            </p>
+            <div class="about-you-grid">
+                <label class="about-you-field">
+                    Year of birth
+                    <input type="number" class="form-control" min="1900" max="@DateTime.Today.Year" step="1"
+                           placeholder="e.g. 1990" inputmode="numeric" value="@Profile.BirthYear"
+                           @onchange="e => OnBirthYearChanged(e.Value?.ToString())" />
+                </label>
+                <label class="about-you-field">
+                    Sex
+                    <select class="form-select" value="@Profile.Sex"
+                            @onchange="e => Set(profile => profile.Sex = e.Value?.ToString() ?? string.Empty)">
+                        <option value="">Prefer not to say</option>
+                        <option value="female">Female</option>
+                        <option value="male">Male</option>
+                    </select>
+                </label>
+            </div>
+            @if (BirthYearProblem is not null)
+            {
+                <p class="about-you-problem" role="alert">@BirthYearProblem</p>
+            }
+        </section>
+
         <FitzpatrickPicker Value="Profile.Fitzpatrick"
                            ValueChanged="value => Set(profile => profile.Fitzpatrick = value)" />
 
@@ -46,6 +75,32 @@
 
     [Parameter]
     public bool IsLoading { get; set; }
+
+    private string? BirthYearProblem;
+
+    /// <summary>
+    /// Blank clears the year; a plausible year replaces it. Anything else leaves the last good
+    /// value in place (so a typo can never erase a saved year) and says so.
+    /// </summary>
+    private async Task OnBirthYearChanged(string? value)
+    {
+        BirthYearProblem = null;
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            await Set(profile => profile.BirthYear = null);
+            return;
+        }
+
+        if (int.TryParse(value, out var year) && year >= 1900 && year <= DateTime.Today.Year)
+        {
+            await Set(profile => profile.BirthYear = year);
+            return;
+        }
+
+        BirthYearProblem = Profile.BirthYear is { } kept
+            ? $"Enter a year between 1900 and {DateTime.Today.Year}. Your saved year ({kept}) is kept until you do."
+            : $"Enter a year between 1900 and {DateTime.Today.Year}, or leave it blank. That year won't be saved.";
+    }
 
     private async Task Set(Action<RiskProfile> mutate)
     {

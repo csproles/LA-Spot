@@ -24,6 +24,11 @@
         </Actions>
     </PageHeader>
 
+    @if (!string.IsNullOrWhiteSpace(Deleted))
+    {
+        <FormFeedback Value="@(new FormFeedback.Feedback($"“{Deleted}” and its saved checks were deleted."))" />
+    }
+
     @if (!string.IsNullOrWhiteSpace(Archived))
     {
         <FormFeedback Value="@(new FormFeedback.Feedback($"\u201c{Archived}\u201d was archived. It no longer appears here or in rechecks."))" />
@@ -74,6 +79,9 @@
 @code {
     [SupplyParameterFromQuery]
     public string? Archived { get; set; }
+
+    [SupplyParameterFromQuery]
+    public string? Deleted { get; set; }
 
     [SupplyParameterFromQuery(Name = "region")]
     public string? RegionQuery { get; set; }

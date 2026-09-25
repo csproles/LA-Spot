@@ -20,10 +20,60 @@
 
 .spot-archive {
     display: flex;
+    flex-wrap: wrap;
     justify-content: flex-end;
+    gap: 16px;
 }
 
 .spot-archive-button {
     color: var(--color-text-muted);
     font-size: 0.88rem;
+}
+
+.spot-delete-button {
+    color: var(--color-alert-ink);
+    font-size: 0.88rem;
+}
+
+.spot-delete-confirm {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 14px 16px;
+    border: 1.5px solid var(--color-alert);
+    border-radius: var(--radius-control);
+    background: var(--color-alert-soft);
+}
+
+.spot-delete-title {
+    margin: 0;
+    font-weight: 700;
+    color: var(--color-alert-ink);
+}
+
+.spot-delete-text {
+    margin: 0;
+    font-size: 0.88rem;
+    color: var(--color-alert-ink);
+}
+
+.spot-delete-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.spot-delete-confirm-button {
+    background: var(--color-alert);
+    border-color: var(--color-alert);
+    color: var(--color-on-alert);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.spot-delete-confirm-button:hover:not(:disabled) {
+    background: var(--color-alert-ink);
+    border-color: var(--color-alert-ink);
+    color: var(--color-on-alert);
 }

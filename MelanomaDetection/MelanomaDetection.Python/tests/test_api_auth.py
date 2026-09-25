@@ -83,6 +83,18 @@ class TestScoping:
             main._results_store.pop("proc_test", None)
 
 
+class TestDeleteSpot:
+    def test_only_the_owner_can_delete_a_spot(self, client):
+        spot = client.post("/api/spots", json={"label": "mole", "bodyRegion": "Back"}, headers=ALICE).get_json()
+
+        assert client.delete(f"/api/spots/{spot['id']}", headers=BOB).status_code == 404
+        assert client.get(f"/api/spots/{spot['id']}", headers=ALICE).status_code == 200
+
+        deleted = client.delete(f"/api/spots/{spot['id']}", headers=ALICE)
+        assert deleted.status_code == 200 and deleted.get_json()["deleted"] is True
+        assert client.get(f"/api/spots/{spot['id']}", headers=ALICE).status_code == 404
+
+
 class TestAccount:
     def test_export_and_delete(self, client):
         client.post("/api/spots", json={"label": "mole", "bodyRegion": "Back"}, headers=ALICE)

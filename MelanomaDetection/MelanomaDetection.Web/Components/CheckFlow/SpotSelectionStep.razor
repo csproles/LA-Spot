@@ -37,7 +37,13 @@
                     Pick the region on the body map, then give the spot a name you'll recognise later.
                 </p>
                 <p class="field-label">Select a location on the body <span class="required-mark" aria-hidden="true">*</span></p>
-                <BodyMap @bind-SelectedRegion="NewSpotRegion" />
+                <BodyMap @bind-SelectedRegion="NewSpotRegion" SelectedSideChanged="side => NewSpotSide = side" />
+
+                @if (NeedsSide)
+                {
+                    <p class="field-label" id="spot-side-label">Front or back?</p>
+                    <SegmentedControl Options="SideOptions" @bind-Value="NewSpotSide" AriaLabel="Which side of the body" />
+                }
 
                 <label class="field-label" for="spot-label">Name this spot <span class="required-mark" aria-hidden="true">*</span></label>
                 <input id="spot-label" class="form-control spot-label-input"
@@ -76,9 +82,15 @@
     [Parameter]
     public bool IsSaving { get; set; }
 
-    /// <summary>Creates the spot and returns it, or null if the save failed.</summary>
+    /// <summary>Creates the spot (label, region, side) and returns it, or null if the save failed.</summary>
     [Parameter, EditorRequired]
-    public Func<string, string, Task<Spot?>> CreateSpot { get; set; } = null!;
+    public Func<string, string, string?, Task<Spot?>> CreateSpot { get; set; } = null!;
+
+    private static readonly SegmentedControl.Option[] SideOptions =
+    [
+        new("front", "Front (chest / belly)"),
+        new("back", "Back"),
+    ];
 
     [Parameter, EditorRequired]
     public EventCallback<Spot> OnSpotChosen { get; set; }
@@ -86,6 +98,11 @@
     private Spot? SelectedSpot;
     private bool IsCreatingSpot;
     private string? NewSpotRegion;
+    private string NewSpotSide = "front";
+
+    /// <summary>The torso regions cover chest and back alike; the AI risk model tells them apart.</summary>
+    private bool NeedsSide => RiskModelInputs.BodySite(NewSpotRegion, null) is null
+        && RiskModelInputs.BodySite(NewSpotRegion, "front") is not null;
     private string NewSpotLabel = string.Empty;
 
     private bool IsCreatingMode => IsCreatingSpot || Spots.Count == 0;
@@ -112,7 +129,7 @@
             return;
         }
 
-        var created = await CreateSpot(NewSpotLabel.Trim(), NewSpotRegion!);
+        var created = await CreateSpot(NewSpotLabel.Trim(), NewSpotRegion!, NeedsSide ? NewSpotSide : null);
         if (created is null)
         {
             return;

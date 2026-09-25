@@ -304,3 +304,84 @@ class TestAccountOperations:
         assert db.get_spot(OTHER, theirs["id"]) is not None
         assert db.get_check(OTHER, "p2") is not None
         assert db.get_profile(OTHER)["fullName"] == "B"
+
+
+class TestDeleteSpot:
+    def test_removes_the_spot_its_checks_and_their_images_only(self, db):
+        doomed = db.create_spot(USER, "doomed", "Arm")
+        kept = db.create_spot(USER, "kept", "Leg")
+        theirs = db.create_spot(OTHER, "theirs", "Arm")
+        save(db, "d1", doomed["id"], 30.0, "2026-09-01T00:00:00+00:00")
+        save(db, "d2", doomed["id"], 40.0, "2026-09-02T00:00:00+00:00")
+        save(db, "k1", kept["id"], 20.0, "2026-09-03T00:00:00+00:00")
+        save(db, "t1", theirs["id"], 20.0, "2026-09-03T00:00:00+00:00", user_id=OTHER)
+        db.save_check_visuals(USER, "d1", {"asymmetry": b"A"})
+        db.save_check_visuals(USER, "k1", {"asymmetry": b"A"})
+
+        assert db.delete_spot(USER, doomed["id"]) == 2
+
+        assert db.get_spot(USER, doomed["id"]) is None
+        assert db.get_check(USER, "d1") is None and db.get_check_visuals(USER, "d1") is None
+        assert db.get_check(USER, "k1") is not None and db.get_check_visuals(USER, "k1") is not None
+        assert db.get_spot(OTHER, theirs["id"]) is not None
+
+    def test_another_users_spot_cant_be_deleted(self, db):
+        theirs = db.create_spot(OTHER, "theirs", "Arm")
+
+        assert db.delete_spot(USER, theirs["id"]) is None
+        assert db.get_spot(OTHER, theirs["id"]) is not None
+
+
+class TestRiskModelInputs:
+    def test_profile_keeps_birth_year_and_sex(self, db):
+        db.save_profile(USER, full_name="Pat", birth_year=1990, sex="female")
+
+        profile = db.get_profile(USER)
+        assert profile["birthYear"] == 1990 and profile["sex"] == "female"
+
+    def test_profile_defaults_leave_them_unset(self, db):
+        db.save_profile(USER, full_name="Pat")
+
+        profile = db.get_profile(USER)
+        assert profile["birthYear"] is None and profile["sex"] == ""
+
+    def test_spot_keeps_the_body_map_side(self, db):
+        spot = db.create_spot(USER, "back mole", "Chest/Upper Back", "back")
+
+        assert spot["bodySide"] == "back"
+        assert db.get_spot(USER, spot["id"])["bodySide"] == "back"
+        assert db.list_spots(USER)[0]["bodySide"] == "back"
+        assert db.create_spot(USER, "old style", "Left Arm")["bodySide"] is None
+
+    def test_a_v6_database_gains_the_new_columns_without_losing_rows(self, tmp_path, monkeypatch):
+        import sqlite3
+
+        path = tmp_path / "v6.db"
+        monkeypatch.setattr(store, "DB_PATH", str(path))
+        store.init_db()
+        with sqlite3.connect(path) as connection:
+            connection.execute("DROP TABLE profile")
+            connection.execute("DROP TABLE spots")
+            connection.execute(
+                "CREATE TABLE spots (id TEXT PRIMARY KEY, user_id TEXT NOT NULL, label TEXT NOT NULL, "
+                "body_region TEXT NOT NULL, created_at TEXT NOT NULL, archived INTEGER NOT NULL DEFAULT 0)"
+            )
+            connection.execute(
+                "INSERT INTO spots VALUES ('spot_old', 'user-a', 'old', 'Left Arm', '2026-01-01T00:00:00+00:00', 0)"
+            )
+            connection.execute(
+                "CREATE TABLE profile (user_id TEXT PRIMARY KEY, full_name TEXT NOT NULL DEFAULT '', "
+                "location TEXT NOT NULL DEFAULT '', sun_exposure TEXT NOT NULL DEFAULT '', fitzpatrick INTEGER, "
+                "family_history INTEGER NOT NULL DEFAULT 0, blistering_sunburns INTEGER NOT NULL DEFAULT 0, "
+                "many_moles INTEGER NOT NULL DEFAULT 0, recheck_reminders INTEGER NOT NULL DEFAULT 1, "
+                "high_risk_alerts INTEGER NOT NULL DEFAULT 1, share_with_dermatologist INTEGER NOT NULL DEFAULT 1, "
+                "anonymous_analytics INTEGER NOT NULL DEFAULT 0, updated_at TEXT NOT NULL)"
+            )
+            connection.execute("INSERT INTO profile (user_id, full_name, updated_at) VALUES ('user-a', 'Old', 'x')")
+            connection.execute("PRAGMA user_version = 6")
+
+        store.init_db()
+
+        assert store.get_spot(USER, "spot_old")["bodySide"] is None
+        profile = store.get_profile(USER)
+        assert profile["fullName"] == "Old" and profile["birthYear"] is None and profile["sex"] == ""

@@ -153,8 +153,22 @@ class TestJsonValidation:
             {"fitzpatrick": 7},
             {"sunExposure": "extreme"},
             {"familyHistory": "false"},
+            {"birthYear": 1850},
+            {"birthYear": "1990"},
+            {"sex": "other"},
         ):
             assert client.put("/api/profile", json=body, headers=ALICE).status_code == 400, body
+
+    def test_spot_body_side_must_be_front_or_back(self, client):
+        bad = client.post("/api/spots", json={"label": "m", "bodyRegion": "Chest/Upper Back", "bodySide": "left"}, headers=ALICE)
+        good = client.post("/api/spots", json={"label": "m", "bodyRegion": "Chest/Upper Back", "bodySide": "back"}, headers=ALICE)
+        assert bad.status_code == 400
+        assert good.status_code == 201 and good.get_json()["bodySide"] == "back"
+
+    def test_profile_keeps_the_risk_model_fields(self, client):
+        response = client.put("/api/profile", json={"birthYear": 1990, "sex": "female"}, headers=ALICE)
+        assert response.status_code == 200
+        assert response.get_json()["birthYear"] == 1990 and response.get_json()["sex"] == "female"
 
     def test_profile_accepts_good_input(self, client):
         body = {"fullName": "Alice", "location": "Austin, TX", "fitzpatrick": 3, "sunExposure": "high", "familyHistory": True}

@@ -268,13 +268,13 @@ public class ImageProcessingService
     }
 
     /// <summary>Maps to POST /api/spots.</summary>
-    public async Task<Spot> CreateSpotAsync(string label, string bodyRegion)
+    public async Task<Spot> CreateSpotAsync(string label, string bodyRegion, string? bodySide = null)
     {
         label = RequireText(label, "Label", InputLimits.SpotLabelMax, required: true)!;
         bodyRegion = RequireText(bodyRegion, "Body region", InputLimits.BodyRegionMax, required: true)!;
 
         using var response = await SendAsync(() =>
-            _httpClient.PostAsJsonAsync("/api/spots", new { label, bodyRegion }));
+            _httpClient.PostAsJsonAsync("/api/spots", new { label, bodyRegion, bodySide }));
 
         var result = await response.Content.ReadFromJsonAsync<Spot>();
         return result ?? throw new ImageProcessingApiException("The analysis service returned an empty response.");
@@ -290,6 +290,12 @@ public class ImageProcessingService
 
         var result = await response.Content.ReadFromJsonAsync<Spot>();
         return result ?? throw new ImageProcessingApiException("The analysis service returned an empty response.");
+    }
+
+    /// <summary>Maps to DELETE /api/spots/{id} -- the spot, every check filed under it and their images, permanently.</summary>
+    public async Task DeleteSpotAsync(string spotId)
+    {
+        using var response = await SendAsync(() => _httpClient.DeleteAsync($"/api/spots/{Uri.EscapeDataString(spotId)}"));
     }
 
     /// <summary>
@@ -339,6 +345,8 @@ public class ImageProcessingService
                 highRiskAlerts = profile.HighRiskAlerts,
                 shareWithDermatologist = profile.ShareWithDermatologist,
                 anonymousAnalytics = profile.AnonymousAnalytics,
+                birthYear = profile.BirthYear,
+                sex = profile.Sex,
             }));
 
         var result = await response.Content.ReadFromJsonAsync<RiskProfile>();

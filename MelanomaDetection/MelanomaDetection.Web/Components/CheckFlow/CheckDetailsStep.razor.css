@@ -66,3 +66,7 @@
         width: auto;
     }
 }
+
+.details-continue .text-muted-small {
+    margin: 0;
+}

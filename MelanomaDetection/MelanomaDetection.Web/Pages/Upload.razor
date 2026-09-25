@@ -43,7 +43,6 @@
         case CheckStep.Details:
             <CheckDetailsStep PreviewDataUrl="@PreviewDataUrl" Spot="SelectedSpot" FileName="@SelectedFileName"
                               Symptoms="SelectedSymptoms" @bind-Notes="Notes"
-                              @bind-Age="Age" @bind-Sex="Sex" @bind-BodySite="BodySite"
                               OnRetake="RetakePhoto"
                               OnContinue="ContinueToResults" />
             break;
@@ -95,10 +94,6 @@
     private HashSet<string> SelectedSymptoms = new();
     private string Notes = string.Empty;
 
-    // Optional metadata for the separate AI risk model (POST /predict).
-    private int? Age;
-    private string Sex = string.Empty;
-    private string BodySite = string.Empty;
     private PredictResponse? RiskModelResult;
 
     private bool IsAnalyzing;
@@ -158,14 +153,14 @@
     }
 
     // Called through a plain Func, not an EventCallback, so re-render explicitly for the spinner.
-    private async Task<Spot?> CreateSpot(string label, string region)
+    private async Task<Spot?> CreateSpot(string label, string region, string? side)
     {
         ErrorMessage = null;
         IsSaving = true;
         StateHasChanged();
         try
         {
-            var created = await ImageProcessingService.CreateSpotAsync(label, region);
+            var created = await ImageProcessingService.CreateSpotAsync(label, region, side);
             Spots.Insert(0, created);
             StepFeedback = new($"Spot \u201c{created.Label}\u201d created.");
             JustCreatedSpotId = created.Id;
@@ -340,18 +335,33 @@
     }
 
     /// <summary>
-    /// Runs the separate AI risk model (POST /predict) once age/sex/body site are known,
-    /// then shows results regardless of whether that call succeeds -- it's an additional,
-    /// experimental score alongside V5's own analysis above, not a required step.
+    /// Runs the separate AI risk model (POST /predict), then shows results regardless of whether
+    /// that call succeeds -- it's an additional, experimental score alongside V5's own analysis
+    /// above, not a required step. Age and sex come from the risk profile and the body site from
+    /// the spot's body-map region (RiskModelInputs); any that are unknown are simply left out.
     /// </summary>
     private async Task ContinueToResults()
     {
         if (SelectedFileBytes is not null && SelectedFileName is not null)
         {
+            RiskProfile? profile = null;
+            try
+            {
+                profile = await ImageProcessingService.GetProfileAsync();
+            }
+            catch (ImageProcessingApiException)
+            {
+                // Without the profile the model still runs, just without age and sex.
+            }
+
             try
             {
                 RiskModelResult = await ImageProcessingService.PredictRiskAsync(
-                    SelectedFileBytes, SelectedFileName, Age, Sex, BodySite, CurrentProcessingId);
+                    SelectedFileBytes, SelectedFileName,
+                    RiskModelInputs.Age(profile, DateOnly.FromDateTime(AppClock.Now)),
+                    RiskModelInputs.Sex(profile),
+                    RiskModelInputs.BodySite(SelectedSpot?.BodyRegion, SelectedSpot?.BodySide),
+                    CurrentProcessingId);
 
                 // Show the bars from the same measurements the score was made from.
                 if (AnalysisResults is not null)
@@ -406,9 +416,6 @@
         SelectedSpot = null;
         SelectedSymptoms = new HashSet<string>();
         Notes = string.Empty;
-        Age = null;
-        Sex = string.Empty;
-        BodySite = string.Empty;
         AnalysisResults = null;
         RiskModelResult = null;
         CurrentProcessingId = string.Empty;
