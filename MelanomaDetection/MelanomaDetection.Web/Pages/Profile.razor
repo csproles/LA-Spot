@@ -43,10 +43,13 @@
 
     <AppPreferencesPanel />
 
-    <DataAccountPanel />
+    <DataAccountPanel ReportFailed="@(Report == "failed")" />
 </div>
 
 @code {
+    [SupplyParameterFromQuery]
+    public string? Report { get; set; }
+
     private RiskProfile Model = new();
     private bool IsLoading = true;
     private bool IsDirty;

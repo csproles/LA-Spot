@@ -90,3 +90,13 @@
     color: var(--color-accent-ink);
     font-weight: 600;
 }
+
+.data-report-error {
+    margin: 12px 0 0;
+    padding: 10px 12px;
+    border-radius: var(--radius-control);
+    background: var(--color-alert-soft);
+    color: var(--color-alert-ink);
+    font-size: 0.875rem;
+    font-weight: 600;
+}

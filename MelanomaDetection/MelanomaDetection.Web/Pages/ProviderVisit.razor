@@ -54,6 +54,11 @@ else
             </section>
         }
 
+        @if (Report == "failed")
+        {
+            <ErrorAlert Message="The PDF report couldn't be created just now. The report service may still be starting up after an update -- try again in a minute." />
+        }
+
         @if (Appointment.ShareHealthData && Appointment.Status == AppointmentStatus.Booked)
         {
             @if (SharedData is not null)
@@ -102,6 +107,9 @@ else
 @code {
     [Parameter]
     public Guid AppointmentId { get; set; }
+
+    [SupplyParameterFromQuery]
+    public string? Report { get; set; }
 
     private bool IsInitialized;
     private string? ErrorMessage;

@@ -24,6 +24,9 @@ public static class AccountEndpoints
 
     public const string ReportFileName = "skin-check-report.pdf";
 
+    /// <summary>Where a failed report download sends the person; the Profile page shows why.</summary>
+    public const string ReportFailedRedirect = "/profile?report=failed";
+
     public static IEndpointRouteBuilder MapAccountEndpoints(this IEndpointRouteBuilder endpoints)
     {
         var auth = endpoints.MapGroup("/auth");
@@ -125,11 +128,16 @@ public static class AccountEndpoints
     /// the account row here plus the spots, checks and risk profile from the
     /// analysis service. This is the "right of access / portability" path.
     /// </summary>
-    /// <summary>The same data as the export, as a readable PDF: a cover page, then a page per spot.</summary>
-    private static async Task<Results<FileContentHttpResult, ProblemHttpResult>> ReportAsync(
+    /// <summary>
+    /// The same data as the export, as a readable PDF: a cover page, then a page per spot.
+    /// A failure redirects back to the Profile page with a message -- the link is a plain
+    /// download, so an error body would otherwise surface as Chrome's vague "Site wasn't available".
+    /// </summary>
+    private static async Task<Results<FileContentHttpResult, RedirectHttpResult, ProblemHttpResult>> ReportAsync(
         ClaimsPrincipal principal,
         UserAccountService accounts,
         ImageProcessingService imageProcessing,
+        ILoggerFactory loggerFactory,
         CancellationToken cancellationToken)
     {
         var userId = CurrentUser.ReadUserId(principal)!.Value;
@@ -146,7 +154,9 @@ public static class AccountEndpoints
         }
         catch (ImageProcessingApiException ex)
         {
-            return TypedResults.Problem(ex.Message, statusCode: StatusCodes.Status502BadGateway);
+            loggerFactory.CreateLogger(typeof(AccountEndpoints)).LogWarning(
+                "PDF report for account {UserId} failed: {Reason}", userId, ex.Message);
+            return TypedResults.Redirect(ReportFailedRedirect);
         }
     }
 
