@@ -39,3 +39,7 @@
     font-weight: 600;
     color: var(--color-alert-ink);
 }
+
+.about-you-info {
+    margin: -4px 0 12px;
+}

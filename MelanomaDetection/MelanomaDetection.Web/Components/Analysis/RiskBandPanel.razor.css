@@ -60,9 +60,11 @@
 }
 
 .risk-band-label {
-    font-weight: 700;
-    font-size: 1.25rem;
-    margin: 0 0 6px;
+    font-family: var(--font-heading);
+    font-weight: 800;
+    font-size: 1.75rem;
+    line-height: 1.15;
+    margin: 0 0 8px;
 }
 
 .risk-band-recommendation {

@@ -5,6 +5,8 @@ namespace MelanomaDetection.Web.Tests;
 
 public sealed class BodyMapTests : BunitContext
 {
+    public BodyMapTests() => JSInterop.Mode = JSRuntimeMode.Loose;
+
     [Fact]
     public void TheFrontAndBackExplainerHasAVisibleLabelAndOpensAPopUp()
     {
@@ -26,6 +28,25 @@ public sealed class BodyMapTests : BunitContext
 
         cut.Find("button.info-popover-close").Click();
         Assert.Empty(cut.FindAll("[role=dialog]"));
+    }
+
+    [Fact]
+    public void TheExplainerIsANativeDialogThatClosesOnEscapeOrABackdropClick()
+    {
+        var cut = Render<BodyMap>();
+
+        cut.Find("button.info-popover-trigger").Click();
+        var dialog = cut.Find("dialog.info-popover-dialog");
+        JSInterop.VerifyInvoke("import");
+
+        // A click on the backdrop lands on the dialog itself and closes it (a click inside the
+        // card is stopped before it gets there -- checked in a real browser, bUnit can't dispatch it).
+        dialog.Click();
+        Assert.Empty(cut.FindAll("dialog.info-popover-dialog"));
+
+        cut.Find("button.info-popover-trigger").Click();
+        cut.Find("dialog.info-popover-dialog").KeyDown("Escape");
+        Assert.Empty(cut.FindAll("dialog.info-popover-dialog"));
     }
 
     [Fact]

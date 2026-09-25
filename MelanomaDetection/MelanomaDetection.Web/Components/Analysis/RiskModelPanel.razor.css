@@ -2,6 +2,26 @@
     border: 1.5px solid transparent;
 }
 
+.risk-model-panel-heading {
+    margin: 0 0 8px;
+    font-family: var(--font-heading);
+    font-size: 1.75rem;
+    font-weight: 800;
+    line-height: 1.15;
+    color: inherit;
+}
+
+.risk-model-panel-info {
+    margin: -6px 0 14px;
+}
+
+/* The popover trigger follows the card's score colour rather than the theme's. */
+.risk-model-panel-info ::deep .info-popover-trigger {
+    color: var(--panel-fg);
+    border-color: color-mix(in srgb, var(--panel-fg) 45%, transparent);
+    background: color-mix(in srgb, var(--panel-fg) 10%, transparent);
+}
+
 .risk-model-panel-caveat {
     margin: 0 0 14px;
     font-size: 0.8125rem;

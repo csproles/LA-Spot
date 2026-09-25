@@ -6,12 +6,15 @@
 @if (Result is not null)
 {
     <div class="card-panel risk-band risk-model-panel" style="@PanelStyle">
-        <p class="risk-band-label">Visual concern: @LevelLabel</p>
+        <h2 class="risk-model-panel-heading">Visual concern: @LevelLabel</h2>
         <p class="risk-band-recommendation">
-            A screening score from an AI model that looks at your photo together with your
+            A screening score from a CNN that looks at your photo together with your
             age, sex and body site. This is not a diagnosis --
             always have a new or changing spot evaluated by a licensed dermatologist.
         </p>
+        <div class="risk-model-panel-info">
+            <CnnInfoButton />
+        </div>
 
         @if (!Result.YoloFoundLesion)
         {

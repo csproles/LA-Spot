@@ -22,26 +22,25 @@
     color: var(--color-accent-ink);
 }
 
-.info-popover-backdrop {
-    position: fixed;
-    inset: 0;
-    z-index: 900;
+.info-popover-dialog {
+    width: min(360px, calc(100vw - 32px));
+    max-height: calc(100dvh - 64px);
+    padding: 0;
+    border: none;
+    border-radius: var(--radius-card);
+    background: var(--color-surface);
+    color: var(--color-text);
+    box-shadow: var(--shadow-lifted);
+    overflow-y: auto;
+}
+
+.info-popover-dialog::backdrop {
     background: rgba(0, 0, 0, 0.35);
 }
 
 .info-popover-card {
-    position: fixed;
-    z-index: 901;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: min(360px, calc(100vw - 32px));
-    max-height: calc(100dvh - 64px);
-    overflow-y: auto;
-    background: var(--color-surface);
-    border-radius: var(--radius-card);
-    box-shadow: var(--shadow-lifted);
     padding: 16px;
+    text-align: left;
 }
 
 .info-popover-header {
@@ -92,7 +91,7 @@
 }
 
 @media (prefers-reduced-motion: no-preference) {
-    .info-popover-card {
+    .info-popover-dialog[open] {
         animation: pop-in 0.18s cubic-bezier(0.16, 1, 0.3, 1) both;
     }
 }

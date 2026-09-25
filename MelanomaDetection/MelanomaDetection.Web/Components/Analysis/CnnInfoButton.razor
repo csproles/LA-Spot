@@ -1,0 +1,34 @@
+@* "What is a CNN?" -- a plain-language explainer for the risk model (risk_model.py:
+   5-fold ConvNeXt-Base CNN embeddings + ABCD features + age/sex/body site into CatBoost,
+   fold scores averaged). Keep this in step with that file if the model changes. *@
+
+<InfoPopover Title="What is a CNN?" Label="@Label">
+    <p>
+        A <strong>CNN</strong> (convolutional neural network) is a kind of AI built for pictures.
+        It looks at a photo in small overlapping patches. The first layers pick up simple things
+        like edges and changes in colour; later layers combine those into bigger patterns, such
+        as the shape of a border, texture, and how colours mix.
+    </p>
+    <p>
+        It isn't given rules like "irregular border means concern". It learns which patterns matter
+        from examples. The CNN here (ConvNeXt) was trained on dermatology photos from the ISIC skin
+        image archive, each labelled as melanoma or not.
+    </p>
+    <p>
+        <strong>How LA Spot uses it:</strong> the CNN turns your photo into a summary of the patterns
+        it sees. A second model then combines that summary with the ABCD measurements and, if you've
+        given them, your age, sex and the spot's body location. Five versions of the model, each
+        trained on a different slice of the data, score the photo, and you see their average.
+    </p>
+    <p>
+        <strong>Its limits:</strong> it can only recognise patterns like the ones in its training photos.
+        Blur, poor lighting, and skin tones that were less common in that data can make it less
+        reliable. The score is a screening aid, not a diagnosis.
+    </p>
+</InfoPopover>
+
+@code {
+    /// <summary>Text beside the "i"; null shows the icon alone.</summary>
+    [Parameter]
+    public string? Label { get; set; } = "What is a CNN?";
+}
