@@ -1,0 +1,34 @@
+@* Starter questions for an empty chat. Each one is covered by the textbook sources (or the
+   app's own ABCDE help), so tapping it gets a grounded answer rather than a refusal. *@
+
+<div class="chat-suggestions">
+    <p class="chat-suggestions-title">Try asking</p>
+    <ul class="chat-suggestions-list">
+        @foreach (var question in Questions)
+        {
+            <li>
+                <button type="button" class="chat-suggestion" @onclick="() => OnPick.InvokeAsync(question)">
+                    @question
+                </button>
+            </li>
+        }
+    </ul>
+</div>
+
+@code {
+    public static readonly string[] Questions =
+    [
+        "What is melanoma?",
+        "What does the asymmetry score mean for melanoma?",
+        "What type of doctor should I see about a mole?",
+        "What are the ABCDE warning signs of melanoma?",
+        "Who is more likely to get melanoma?",
+        "How can I lower my risk of melanoma?",
+        "How do I check my skin for melanoma?",
+        "What happens during a skin biopsy?",
+        "Can melanoma be cured if it's found early?",
+    ];
+
+    [Parameter, EditorRequired]
+    public EventCallback<string> OnPick { get; set; }
+}

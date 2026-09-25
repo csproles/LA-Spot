@@ -5,9 +5,15 @@
 <div class="chat-message-list" role="log" aria-live="polite">
     @if (Messages.Count == 0 && !IsSending)
     {
-        <p class="chat-message-empty">
-            Ask a question about the textbook. Answers are limited to what it covers.
-        </p>
+        <div class="chat-message-empty">
+            <p class="chat-message-empty-text">
+                Ask a question about the textbook. Answers are limited to what it covers.
+            </p>
+            @if (OnSuggestion.HasDelegate)
+            {
+                <ChatSuggestions OnPick="OnSuggestion" />
+            }
+        </div>
     }
 
     @foreach (var message in Messages)
@@ -40,6 +46,10 @@
 
     [Parameter]
     public bool IsSending { get; set; }
+
+    /// <summary>Sends a starter question; the suggestions only show when this is set.</summary>
+    [Parameter]
+    public EventCallback<string> OnSuggestion { get; set; }
 
     private static string RoleClass(ChatMessage message) => message.Role == ChatRole.User ? "user" : "assistant";
 }
