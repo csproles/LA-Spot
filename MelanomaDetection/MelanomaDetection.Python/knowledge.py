@@ -1,7 +1,7 @@
 """Grounding for the AI explanation: which reference text it may cite, and a
 checker for what it says.
 
-The risk score never comes from here. It is computed by image_processor.py; the
+The risk score never comes from here. It is computed by the detectors (v5_detector.py, risk_model.py); the
 language model only *explains* it (llm_explainer.py). This module limits what
 that explanation may claim to two things: what the analysis data shows, and
 what a small, curated set of National Cancer Institute passages says.
@@ -138,6 +138,26 @@ _MIN_QUOTE_CHARS = 12
 _MAX_STATEMENT_CHARS = 500
 _STATEMENT_KEYS = {"text", "basis", "source_ids", "quote"}
 
+# The ABCDE sections of an explanation. A lettered item in "noticed" is one sentence, "We noticed
+# ..., which means ...", and render_explanation groups it under its letter's heading. Which
+# letters a reply may and must use is fixed by the analysis data (see _expected_letters).
+LETTER_TITLES = {
+    "A": "Asymmetry (shape)",
+    "B": "Border (edges)",
+    "C": "Color",
+    "D": "Diameter (size)",
+    "E": "Evolving (change over time)",
+}
+_MAX_LETTERED_CHARS = 230
+
+# Words that carry no content when comparing the two halves of a lettered item.
+_FILLER_WORDS = frozenset(
+    "a an the this that these those it its is are was were be been being of in on at to for with as by from "
+    "and or but so which what who we you your our can could may might will would should does do did has have had "
+    "there here more most some any one".split()
+)
+_WORD = re.compile(r"[a-z']+")
+
 
 @dataclass(frozen=True)
 class Passage:
@@ -254,9 +274,16 @@ def _check_coherence(where: str, text: str, payload: dict) -> list:
     return problems
 
 
-def _check_statement(where: str, item, payload: dict, provided: dict) -> list:
-    if not isinstance(item, dict) or set(item) != _STATEMENT_KEYS:
-        return [f'{where}: must be an object with exactly the keys "text", "basis", "source_ids", "quote".']
+def _check_statement(where: str, item, payload: dict, provided: dict, lettered: bool = False) -> list:
+    if not isinstance(item, dict):
+        keys = None
+    elif lettered:
+        keys = set(item) - {"letter"}
+    else:
+        keys = set(item)
+    if keys != _STATEMENT_KEYS:
+        extra = ' (plus "letter" for a lettered item)' if lettered else ""
+        return [f'{where}: must be an object with exactly the keys "text", "basis", "source_ids", "quote"{extra}.']
 
     text, basis, source_ids, quote = item["text"], item["basis"], item["source_ids"], item["quote"]
     if not isinstance(text, str) or not text.strip() or len(text) > _MAX_STATEMENT_CHARS:
@@ -305,6 +332,106 @@ def _check_statement(where: str, item, payload: dict, provided: dict) -> list:
     return problems
 
 
+def _expected_letters(payload: dict) -> list:
+    """The ABCDE letters a reply must give a section to, and the only ones it may.
+
+    A, B and C only when that feature was flagged (an unflagged feature is never mentioned).
+    D when diameter was flagged, or when it can't be measured at all, which the reply has to
+    say plainly. E when there is a comparison with an earlier photo to describe.
+    """
+    letters = [
+        letter
+        for letter, key in (("A", "asymmetry"), ("B", "border"), ("C", "color"))
+        if payload.get(key, {}).get("flagged")
+    ]
+    diameter = payload.get("diameter_mm")
+    if diameter is None or diameter.get("flagged"):
+        letters.append("D")
+    if payload.get("change_since_last_photo") is not None:
+        letters.append("E")
+    return letters
+
+
+def _content_words(text: str) -> set:
+    """The meaningful words of a phrase, lightly normalised (plural s dropped)."""
+    words = set()
+    for word in _WORD.findall(text.lower()):
+        if word in _FILLER_WORDS:
+            continue
+        words.add(word[:-1] if len(word) > 3 and word.endswith("s") and not word.endswith("ss") else word)
+    return words
+
+
+def _repeats_the_observation(text: str) -> bool:
+    """True when what follows "which means" says nothing the part before it did not.
+
+    "We noticed uneven color, which means the color is uneven." adds no information, so a
+    reader learns nothing from it. It is only flagged when every meaningful word after
+    "which means" already appears before it; one new word (a shade, a shape, a consequence)
+    is enough to pass.
+    """
+    lowered = text.lower()
+    split = lowered.find("which means")
+    if split < 0:
+        return False
+    noticed = _content_words(lowered[len("we noticed"):split])
+    means = _content_words(lowered[split + len("which means"):])
+    return bool(means) and means <= noticed
+
+
+def _check_letters(items: list, payload: dict) -> list:
+    """Checks the lettered items of "noticed": right letters, in order, each in the plain form."""
+    expected = _expected_letters(payload)
+    problems = []
+    seen = []
+    for index, item in enumerate(items, start=1):
+        if not isinstance(item, dict) or item.get("letter") is None:
+            continue
+        where = f"noticed[{index}]"
+        letter = item["letter"]
+        if letter not in LETTER_TITLES:
+            problems.append(f'{where}: "letter" must be A, B, C, D, E, or null for a point that belongs to no letter.')
+            continue
+        if letter not in expected:
+            problems.append(
+                f"{where}: letter {letter} ({LETTER_TITLES[letter]}) does not apply to this analysis, "
+                "so leave it out and say nothing about it."
+            )
+            continue
+        if letter in seen:
+            problems.append(f"{where}: letter {letter} appears more than once; give each letter one item.")
+            continue
+        seen.append(letter)
+
+        text = item.get("text")
+        if not isinstance(text, str):
+            continue
+        if not text.startswith("We noticed") or "which means" not in text.lower():
+            problems.append(f'{where}: a lettered item must be one sentence in the form "We noticed ..., which means ...".')
+        elif _repeats_the_observation(text):
+            problems.append(
+                f'{where}: the part after "which means" only repeats what was noticed; use it to say what the feature '
+                "is or what it tells a dermatologist, in words the first part did not use."
+            )
+        if len(text) > _MAX_LETTERED_CHARS:
+            problems.append(f"{where}: keep a lettered item under {_MAX_LETTERED_CHARS} characters.")
+        # What a feature means comes from the booklet, quoted exactly. D "not measurable" and E
+        # (comparison with the last photo) are about this analysis, so they can rest on the data.
+        needs_booklet = letter in ("A", "B", "C") or (letter == "D" and "diameter_mm" in payload)
+        if needs_booklet and item.get("basis") != "booklet":
+            problems.append(
+                f'{where}: the meaning of {LETTER_TITLES[letter]} must come from a reference passage '
+                '("basis": "booklet" with an exact quote).'
+            )
+
+    missing = [letter for letter in expected if letter not in seen]
+    if missing:
+        problems.append("noticed: missing a lettered item for " + ", ".join(f"{l} ({LETTER_TITLES[l]})" for l in missing) + ".")
+    if seen != sorted(seen):
+        problems.append("noticed: put the lettered items in order, A then B then C then D then E.")
+    return problems
+
+
 def parse_and_validate(content, payload: dict, passages: list):
     """Check a model reply. Returns (data, problems); data is None unless problems is empty."""
     try:
@@ -322,13 +449,17 @@ def parse_and_validate(content, payload: dict, passages: list):
     # (see llm_explainer._map_to_llm_schema), so check its value, not just its presence.
     has_lead_step = payload.get("overall_result") in ("elevated", "lower")
     step_range = (1, 3) if has_lead_step else (2, 4)
-    for section, low, high in (("noticed", 1, 6), ("next_steps", *step_range)):
+    for section, low, high in (("noticed", 1, 9), ("next_steps", *step_range)):
         items = data[section]
         if not isinstance(items, list) or not low <= len(items) <= high:
             problems.append(f'"{section}" must be a list of {low} to {high} items.')
             continue
         for index, item in enumerate(items, start=1):
-            problems.extend(_check_statement(f"{section}[{index}]", item, payload, provided))
+            problems.extend(
+                _check_statement(f"{section}[{index}]", item, payload, provided, lettered=section == "noticed")
+            )
+    if isinstance(data["noticed"], list):
+        problems.extend(_check_letters(data["noticed"], payload))
 
     # When the app supplies a known overall result, its own CONCERN_ADVICE line (see
     # llm_explainer's "lead") always recommends seeing a professional, so the model's
@@ -360,7 +491,12 @@ def render_explanation(data: dict, source: Source, passages: list, lead=None, op
     if lead:
         lines.extend(["In short:", _bullet(lead), ""])
     lines.append("What the analysis noticed:")
-    lines.extend(_bullet(item["text"]) for item in data["noticed"])
+    lines.extend(_bullet(item["text"]) for item in data["noticed"] if not item.get("letter"))
+    # One heading per letter, A to E, each with its one "We noticed ..., which means ..." line.
+    for letter in LETTER_TITLES:
+        for item in data["noticed"]:
+            if item.get("letter") == letter:
+                lines.extend(["", f"{letter}: {LETTER_TITLES[letter]}", _bullet(item["text"])])
     lines.extend(["", "Suggested next steps:"])
     lines.extend(_bullet(step) for step in (opening_steps or ()) if step)
     lines.extend(_bullet(item["text"]) for item in data["next_steps"])
@@ -382,8 +518,11 @@ def _bullet(text: str) -> str:
     return "• " + text.strip()
 
 
-def _statement(text: str, basis: str = "analysis", passage_ids=(), quote=None) -> dict:
-    return {"text": text, "basis": basis, "source_ids": list(passage_ids), "quote": quote}
+def _statement(text: str, basis: str = "analysis", passage_ids=(), quote=None, letter=None) -> dict:
+    item = {"text": text, "basis": basis, "source_ids": list(passage_ids), "quote": quote}
+    if letter is not None:
+        item["letter"] = letter
+    return item
 
 
 def _join(items) -> str:
@@ -391,67 +530,80 @@ def _join(items) -> str:
     return items[0] if len(items) == 1 else ", ".join(items[:-1]) + " and " + items[-1]
 
 
-def _change_sentence(change: dict) -> str:
-    found = change.get("changes_noticed", [])
-    if not found:
-        return "Compared with the last photo of this spot, the analysis did not find a notable change."
-
-    sentence = f"Compared with the last photo of this spot, the analysis found a change in {_join(found)}."
-    percent = change.get("area_change_percent")
-    if "size" in found and percent is not None:
-        sentence += f" The spot's area is about {abs(percent)}% {'larger' if percent > 0 else 'smaller'}."
-    return sentence
+def _definition(passage: Passage) -> str:
+    """A criterion passage without its leading heading word ("Border" and a dash), which
+    is still a contiguous excerpt of the passage and so a valid exact quote."""
+    return re.sub(r"^\w+\s*[\u2010-\u2015\u2212-]\s*", "", passage.text)
 
 
 def fallback_data(payload: dict, passages: list) -> dict:
     """An explanation built from the passages with no model involved.
 
-    Used when the model can't produce a reply that passes parse_and_validate.
-    Plainer than a model's, but it reads in the same order (what was found, what
-    changed, what the person reported, what the booklet says) and every sentence
-    is either fixed wording or a verbatim excerpt.
+    Used when the model can't produce a reply that passes parse_and_validate. Plainer than a
+    model's, but it has the same shape: one "We noticed ..., which means ..." line for each
+    letter that applies (see _expected_letters), then any other points. Every sentence is
+    fixed wording or a verbatim excerpt.
     """
     by_id = {p.id: p for p in passages}
-    flagged = [key for key in CRITERION_PASSAGE if payload.get(key, {}).get("flagged")]
+    letters = _expected_letters(payload)
     change = payload.get("change_since_last_photo")
     symptoms = payload.get("symptoms_reported")
 
     noticed = []
-    if flagged:
-        measured = payload.get("diameter_mm", {}).get("value") if "diameter_mm" in flagged else None
-        detail = f" The spot measures about {measured} mm across." if measured is not None else ""
-        noticed.append(_statement(f"The analysis flagged {_join(CRITERION_LABEL[k] for k in flagged)} in this spot.{detail}"))
-    else:
+    if not any(letter in letters for letter in ("A", "B", "C")):
         noticed.append(_statement("The analysis did not flag any of the features it checks in this photo. That does not rule anything out."))
-
-    if change and change.get("available"):
-        noticed.append(_statement(_change_sentence(change)))
-    elif change:
-        noticed.append(_statement("There was no earlier photo of this spot that could be compared, so change over time was not checked."))
-
     if symptoms:
         noticed.append(_statement(f"You reported these about the spot: {', '.join(symptoms)}."))
-    if "diameter_mm" not in payload:
-        noticed.append(_statement("Size could not be measured for this image."))
 
-    for key in flagged:
-        passage = by_id[CRITERION_PASSAGE[key]]
-        noticed.append(
-            _statement(
-                f'The National Cancer Institute booklet describes {CRITERION_LABEL[key]}: "{passage.text}"',
-                "booklet",
-                [passage.id],
-                passage.text,
+    for letter, key in (("A", "asymmetry"), ("B", "border"), ("C", "color")):
+        if letter in letters:
+            passage = by_id[CRITERION_PASSAGE[key]]
+            definition = _definition(passage)
+            noticed.append(
+                _statement(
+                    f'We noticed {CRITERION_LABEL[key]} in this spot, which means the booklet says: "{definition}"',
+                    "booklet", [passage.id], definition, letter,
+                )
             )
-        )
+
+    if "D" in letters:
+        diameter = payload.get("diameter_mm")
+        if diameter is None:
+            noticed.append(
+                _statement(
+                    "We noticed this photo has no ruler or scale, which means we cannot measure the size of the spot in millimeters.",
+                    letter="D",
+                )
+            )
+        else:
+            passage = by_id[CRITERION_PASSAGE["diameter_mm"]]
+            definition = _definition(passage)
+            noticed.append(
+                _statement(
+                    f'We noticed the spot measures about {diameter.get("value")} mm across, which means the booklet says: "{definition}"',
+                    "booklet", [passage.id], definition, "D",
+                )
+            )
+
+    if "E" in letters:
+        found = change.get("changes_noticed", []) if change.get("available") else None
+        if found:
+            text = f"We noticed a change in {_join(found)} compared with the last photo, which means it is worth showing to a dermatologist."
+        elif found is not None:
+            text = "We noticed no notable change compared with the last photo, which means the two photos look alike to the analysis."
+        else:
+            text = "We noticed there is no earlier photo of this spot, which means we cannot check for changes over time."
+        noticed.append(_statement(text, letter="E"))
 
     def with_quote(lead: str, passage_id: str) -> dict:
         passage = by_id[passage_id]
-        return _statement(f'{lead} The booklet says: "{passage.text}"', "booklet", [passage.id], passage.text)
+        # The quote stays attached, and its page is listed under Sources, but is not repeated in
+        # the sentence itself: the explanation is meant to be short.
+        return _statement(lead, "booklet", [passage.id], passage.text)
 
     next_steps = [
         with_quote("See a licensed dermatologist or healthcare provider for an actual evaluation.", "nci-report-changes"),
         with_quote("Check your skin regularly and keep notes on this spot so you can notice changes.", "nci-self-exam-record"),
         with_quote("Protect your skin from the sun.", "nci-uv-midday"),
     ]
-    return {"noticed": noticed[:6], "next_steps": next_steps}
+    return {"noticed": noticed, "next_steps": next_steps}

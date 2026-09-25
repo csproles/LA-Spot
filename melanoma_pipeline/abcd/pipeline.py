@@ -17,7 +17,6 @@ Per the original module's own documented decisions (all UNCHANGED here):
     (each gets its own call, its own row).
 """
 import cv2
-import numpy as np
 
 from .preprocessing import remove_vignette, remove_salt_pepper_noise, apply_bilateral_filter, remove_hair
 from .legacy_scoring import score_border, score_color

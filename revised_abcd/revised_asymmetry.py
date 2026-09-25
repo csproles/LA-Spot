@@ -1,9 +1,8 @@
 """Revised A (asymmetry): principal-axis alignment before the existing
 flip/IoU calculation.
 
-Does NOT modify Code/MelanomaDeterminingStuff/asymmetry.py. The crop+flip+IoU
-math below (_fold_asymmetry) is an exact line-for-line reuse of that file's
-algorithm — the ONLY change is that the mask is first rotated so its own
+The crop+flip+IoU math below (_fold_asymmetry) is an exact line-for-line reuse of the
+original Code/MelanomaDeterminingStuff/asymmetry.py algorithm (since removed) — the ONLY change is that the mask is first rotated so its own
 principal axis (via image moments / PCA of foreground-pixel coordinates) is
 horizontal, instead of folding along fixed image x/y axes.
 
@@ -19,7 +18,7 @@ The concern threshold (0.20) is UNCHANGED, per instruction.
 import cv2
 import numpy as np
 
-CONCERN_THRESHOLD = 0.20  # unchanged from Code/MelanomaDeterminingStuff/asymmetry.py
+CONCERN_THRESHOLD = 0.20  # unchanged from the original asymmetry scoring
 MIN_PIXELS_FOR_ALIGNMENT = 5  # below this, PCA is degenerate; skip rotation (angle=0)
 
 
@@ -39,8 +38,8 @@ def _principal_axis_angle_deg(mask):
 
 
 def _fold_asymmetry(mask):
-    """Identical crop+flip+IoU math to Code/MelanomaDeterminingStuff/
-    asymmetry.py::score_asymmetry, applied to whichever mask (aligned or
+    """Identical crop+flip+IoU math to the original score_asymmetry (since
+    removed), applied to whichever mask (aligned or
     not) is passed in. Reproduced here, not imported, because it must run
     twice per image (once on the raw mask for A_original, once on the
     rotated mask for A_revised) inside the same diagnostic pass."""

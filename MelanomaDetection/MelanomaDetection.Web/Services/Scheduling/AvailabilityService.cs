@@ -16,10 +16,14 @@ public sealed class AvailabilityService(IDbContextFactory<AppDbContext> dbFactor
     public async Task<IReadOnlyList<ProviderSummary>> ListProvidersAsync(CancellationToken cancellationToken = default)
     {
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
-        return await db.Providers.AsNoTracking()
+        var providers = await db.Providers.AsNoTracking()
             .Join(db.Users.AsNoTracking(), p => p.Id, u => u.Id, (p, u) =>
                 new ProviderSummary(p.Id, u.DisplayName, p.Specialty, p.Credentials, p.Bio, p.PhotoUrl, p.HubCity))
             .ToListAsync(cancellationToken);
+
+        // By name, so the list reads the same on every visit; without an ORDER BY the database
+        // returns providers in whatever order suits it (their ids are random GUIDs).
+        return providers.OrderBy(p => p.DisplayName, StringComparer.Ordinal).ToList();
     }
 
     /// <summary>Open, bookable slot start times (UTC) for a provider between two dates, inclusive.</summary>

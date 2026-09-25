@@ -151,34 +151,6 @@ def next_due_at(last_checked_at: str, risk_score, profile=None, overall_visual_c
     return (last + datetime.timedelta(days=days)).isoformat()
 
 
-# What a person is told about each *legacy* band (a pre-V5 check with no
-# recorded overall_visual_concern). The web app shows the same words
-# (MelanomaDetection.Web/Services/RiskBands.cs) beside the score, and the AI
-# explanation opens with them for a check this old, so all three read as one
-# voice. They live in two languages, so tests/test_policy.py compares the two
-# files and fails if they drift. Never used for a check that has a recorded
-# overall_visual_concern -- see CONCERN_LABEL/CONCERN_ADVICE below.
-BAND_LABEL = {
-    "low": "Low risk signs",
-    "moderate": "Some risk signs",
-    "high": "High risk signs",
-}
-
-BAND_ADVICE = {
-    "low": (
-        "You don't need to do anything right now. Keep checking your skin every so often, "
-        "and see a skin doctor (a dermatologist) once a year."
-    ),
-    "moderate": (
-        "Think about seeing a skin doctor (a dermatologist) in the next few months "
-        "to have this spot looked at."
-    ),
-    "high": (
-        "Please see a skin doctor (a dermatologist) as soon as you can "
-        "to have this spot looked at."
-    ),
-}
-
 # What a person is told about V5's own overall_visual_concern -- the
 # authoritative path for any check V5 produced (see cadence_days). Word-for-
 # word the same as MelanomaDetection.Web/Services/VisualConcern.cs's

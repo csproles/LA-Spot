@@ -18,9 +18,6 @@ public static class VisualConcern
 {
     public const string Lower = "LOWER VISUAL CONCERN";
     public const string Elevated = "ELEVATED VISUAL CONCERN";
-    /// <summary>Matches Python's policy.CONCERN_NO_DETECTION. A photo where no
-    /// lesion could be located -- not a "clean"/low result.</summary>
-    public const string NoDetection = "NO_DETECTION";
 
     public static string Label(string? concern) => concern switch
     {

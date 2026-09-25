@@ -59,3 +59,8 @@
     margin: 4px 0 0;
     color: var(--color-text-muted);
 }
+
+/* The explanation has line breaks that matter (A to E headings, one bullet per line). */
+.scan-explanation {
+    white-space: pre-line;
+}

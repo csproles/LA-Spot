@@ -16,8 +16,6 @@ Every detected instance is kept and returned separately (no np.max union
 across instances) with its own confidence score.
 """
 
-from pathlib import Path
-
 import cv2
 import numpy as np
 

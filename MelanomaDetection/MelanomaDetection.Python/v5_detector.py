@@ -17,11 +17,10 @@ frozen_model.pkl, or the 0.25 threshold. Never computes a hair-width mm
 calibration: diameter is always reported as pixels only (mm_per_px is
 always None), per policy.
 
-image_processor.MelanomaDetector (the old classical pipeline) is kept
-UNMODIFIED and UNREMOVED -- this module reuses several of its *utility*
-methods (resize/preprocessing/visualization) by composition, exactly as
-V4Detector did, since those are generic image-processing steps unrelated
-to which segmentation/decision model produced the result.
+image_processor.MelanomaDetector only supplies the generic preprocessing and
+visualization helpers this module reuses by composition (its old classical
+scoring pipeline has been removed), since those steps are unrelated to which
+segmentation/decision model produced the result.
 
 One deliberate redundancy versus V4Detector: this module calls
 revised_abcd.pipeline_v2.preprocess_image() a SECOND time (in addition to
@@ -42,6 +41,7 @@ import numpy as np
 from ultralytics import YOLO
 
 import policy
+from abcd_scores import scaled_0_10 as _scaled_0_10  # display-only 0-10 rescaling, shared with the risk model
 from image_processor import MelanomaDetector
 from yolo_config import get_yolo_weights_path
 
@@ -79,7 +79,7 @@ def _build_multi_instance_overlay(original, rows):
 
 
 def _empty_abcde_scores(reason: str) -> dict:
-    """Mirrors MelanomaDetector._compute_abcde_scores's own no-lesion shape,
+    """The no-lesion shape of the abcde_scores dict,
     so downstream code (evolution, storage, the LLM schema mapper) sees the
     same "nothing detected" contract it already handles."""
     return {
@@ -89,17 +89,6 @@ def _empty_abcde_scores(reason: str) -> dict:
         "diameter": {"score": None, "details": {"reason": reason}},
         "evolving": {"score": None, "details": {"reason": "no prior check to compare against"}},
     }
-
-
-def _scaled_0_10(raw_value, threshold):
-    """Display-only rescaling so the UI's existing 0-10 sliders/labels still
-    work: raw_value == threshold maps to 5.0. This number is NEVER used to
-    make the elevated/lower decision -- that comes from the frozen logistic
-    regression on the RAW 17-feature vector, completely independently of
-    this rescaling."""
-    if raw_value is None or threshold in (None, 0):
-        return 0.0
-    return round(min(max(raw_value / threshold * 5.0, 0.0), 10.0), 2)
 
 
 def _relative_lesion_size_pct(d_px, image_width_px):
@@ -119,9 +108,8 @@ class V5Detector:
 
     def __init__(self):
         # Reused purely for its generic preprocessing/visualization utility
-        # methods (resize/preprocessing/visualization) -- never for its
-        # _segment_lesion or scoring methods, which V5 (like V4 before it)
-        # replaces entirely.
+        # methods (resize/preprocessing/visualization). The old segmentation and
+        # scoring methods it once had were replaced entirely by V5 and removed.
         self._legacy = MelanomaDetector()
         self._yolo_model = YOLO(get_yolo_weights_path())
         self._decision_pipeline = load_frozen_pipeline()
@@ -142,7 +130,7 @@ class V5Detector:
         hair_removed = self._legacy._remove_hair_and_artifacts(bilateral_filtered)
 
         # --- the actual CV pipeline: YOLO segmentation + existing ABCD, unchanged ---
-        rows, orig_shape = v5_process_image(self._yolo_model, image_path, conf=CONF)
+        rows, _ = v5_process_image(self._yolo_model, image_path, conf=CONF)
 
         num_instances = len(rows)
         multi_lesion_detected = num_instances > 1

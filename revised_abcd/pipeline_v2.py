@@ -15,8 +15,8 @@ Per instruction:
        investigation via local CSVs, the live ISIC Archive API, and image
        EXIF); D never contributes a concern flag; no pixel->mm conversion
        of any kind is attempted (not hair-based, not field-of-view-based)
-  - LOW/HIGH combination logic and all thresholds are UNCHANGED from
-    Code/MelanomaDeterminingStuff/score.py
+  - LOW/HIGH combination logic and all thresholds are UNCHANGED from the
+    original Code/MelanomaDeterminingStuff/score.py (since removed)
   - No np.max union across instances: this module scores ONE instance mask
     at a time. Multiple instances in one image are the caller's concern
     (each gets its own call, its own row).
@@ -26,7 +26,6 @@ import sys
 from pathlib import Path
 
 import cv2
-import numpy as np
 
 ROOT = Path(__file__).resolve().parent.parent
 CODE_DIR = ROOT / "Code"
@@ -44,14 +43,14 @@ from revised_abcd.revised_border import score_border_experimental   # noqa: E402
 from revised_abcd.revised_diameter import score_diameter_revised    # noqa: E402
 from revised_abcd.segmentation_quality_v2 import segmentation_quality_flags_v2  # noqa: E402
 
-CRITICAL_COLOR_OVERRIDE = 0.50  # UNCHANGED, from Code/MelanomaDeterminingStuff/score.py
+CRITICAL_COLOR_OVERRIDE = 0.50  # UNCHANGED, from the original score.py (since removed)
 CONCERNS_HIGH_THRESHOLD = 2     # UNCHANGED
 
 
 def preprocess_image(image_bgr):
     """Reproduces the existing preprocessing chain UNCHANGED (vignette
     removal, denoise, bilateral filter, hair removal) up to the image that
-    score_color consumes as "original", exactly as Code/main.py does."""
+    score_color consumes as "original", exactly as the original Code/ prototype did."""
     no_vignette, circle_info = remove_vignette(image_bgr)
     denoised = remove_salt_pepper_noise(no_vignette, kernel_size=3)
     bilateral = apply_bilateral_filter(denoised, diameter=9, sigma_color=75, sigma_space=75)

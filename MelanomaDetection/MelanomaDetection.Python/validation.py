@@ -162,6 +162,18 @@ def clean_spot_id(value):
     return value
 
 
+PROCESSING_ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
+
+
+def clean_processing_id(value):
+    """A result id in the shape this service issues (proc_..., pred_...), or None when absent."""
+    if value is None or value == "":
+        return None
+    if not isinstance(value, str) or not PROCESSING_ID_PATTERN.match(value):
+        raise ValidationError("processing id is not valid.")
+    return value
+
+
 def optional_bool(body: dict, key: str, default: bool) -> bool:
     """A boolean field. Absent -> default; anything but true/false is rejected, not coerced."""
     if key not in body or body[key] is None:

@@ -20,7 +20,11 @@ left untouched; GROUNDING_PROMPT is added after it and only narrows what the
 model may say. STYLE_PROMPT follows it and only changes how the model writes
 (plain, direct sentences, no dashes; see also the dash check in
 knowledge.parse_and_validate). Each sentence is shown as a bullet point, added
-by knowledge.render_explanation rather than asked of the model.
+by knowledge.render_explanation rather than asked of the model, and the app groups
+the explanation under A to E headings (Asymmetry, Border, Color, Diameter, Evolving):
+each lettered item reads "We noticed ..., which means ...", and which letters must
+appear is fixed by the analysis data (knowledge._expected_letters), so a feature that
+was not flagged is still never mentioned.
 
 Coherence with the rest of the app: explain_findings can also be given V5's
 own overall_visual_concern verdict, the change-since-last-photo comparison,
@@ -219,15 +223,44 @@ Return only a JSON object, with no markdown and no other keys:
 
 {
   "noticed": [
-    {"text": "one plain sentence", "basis": "analysis", "source_ids": [], "quote": null},
-    {"text": "one plain sentence", "basis": "booklet", "source_ids": ["<id>"], "quote": "<exact excerpt>"}
+    {"letter": "A", "text": "We noticed ..., which means ...", "basis": "booklet", "source_ids": ["<id>"], "quote": "<exact excerpt>"},
+    {"letter": null, "text": "one plain sentence", "basis": "analysis", "source_ids": [], "quote": null}
   ],
-  "next_steps": [ ...same item shape... ]
+  "next_steps": [
+    {"text": "one plain sentence", "basis": "booklet", "source_ids": ["<id>"], "quote": "<exact excerpt>"}
+  ]
 }
 
-"noticed" holds 1 to 6 items and "next_steps" holds 2 to 4. Each "text" is one
-plain sentence with no markdown. At least one next step must recommend seeing
-a licensed dermatologist or healthcare provider.
+"noticed" holds the lettered items described below, plus at most two more items
+with "letter": null. "next_steps" holds 2 to 4 items. Each "text" is one plain
+sentence with no markdown. At least one next step must recommend seeing a
+licensed dermatologist or healthcare provider.
+
+THE ABCDE SECTIONS. The explanation is shown as sections headed A, B, C, D and
+E. Write one lettered item for each letter below that applies, in order A to E,
+and none for a letter that does not apply. Never mention a letter that does not
+apply, not even to say it was fine.
+
+  A (Asymmetry): only when "asymmetry" is flagged.
+  B (Border): only when "border" is flagged.
+  C (Color): only when "color" is flagged.
+  D (Diameter, meaning size): when the data has no "diameter_mm" entry, always,
+     and say the size could not be measured because the photo has no ruler or
+     scale. When it has one, only if it is flagged.
+  E (Evolving, meaning change over time): only when the data has
+     "change_since_last_photo". Say only what it says. When "available" is
+     false, say there is no earlier photo to compare.
+
+Every lettered item is ONE sentence in the form "We noticed <what the analysis
+found>, which means <what that tells us>." Keep it under 30 words. For A, B, C
+(and D when diameter is flagged) the "which means" part must come from that
+feature's reference passage: use "basis": "booklet", cite the passage id, and
+copy an exact quote. D when size could not be measured, and E, are about this
+analysis itself, so use "basis": "analysis", "source_ids": [] and "quote": null.
+
+Anything else you are allowed to say (the one sentence rule 4c allows when the
+overall result is "elevated" but nothing is flagged, or what the person reported
+in SYMPTOMS REPORTED) goes in an item with "letter": null.
 """
 
 STYLE_PROMPT = """STYLE RULES -- these change how you write, never what you may say. They are
@@ -235,7 +268,8 @@ added to the STRICT RULES and GROUNDING RULES above and never relax any of them.
 
 S1. Every "text" is shown as its own bullet point. Make it one short sentence
     that makes sense on its own. Do not write bullet characters, numbers,
-    labels, or bold text yourself.
+    labels, letters, or bold text yourself: the app adds the A to E headings
+    and the bullets.
 
 S2. State each point directly. Do not use "not X but Y" or "not just X, but Y"
     contrasts, and do not answer an objection nobody raised ("this does not
@@ -270,6 +304,21 @@ S9. Do not stack qualifiers ("could potentially perhaps"). Use at most one
 
 S10. Vary sentence length, and do not begin consecutive sentences with the
      same words.
+
+S11. Write for someone with no medical training, at about a sixth grade reading
+     level. Use short, everyday words and keep every sentence under 25 words.
+     Say "uneven edges", not "border irregularity". If a medical word cannot be
+     avoided, explain it in the same sentence. Be brief: say each thing once.
+
+S12. Begin each next step with an action word ("Book", "Take", "Check", "Write"),
+     and keep it to 15 words or fewer.
+
+S13. In a lettered item, the part after "which means" must add something the part
+     before it does not say. Never repeat the observation in other words. Use the
+     reference passage to say what the feature is, or what it tells a dermatologist.
+       Wrong: "We noticed uneven color, which means the color is uneven."
+       Right: "We noticed the color varies across the spot, which means shades of
+              black, brown, or tan may be present."
 """
 
 USER_PROMPT_TEMPLATE = """ANALYSIS DATA from the image pipeline (may include "overall_result",
@@ -317,7 +366,7 @@ def _map_to_llm_schema(abcde_scores: dict, overall_visual_concern=None) -> dict:
             "flagged": border.get("concern", False),
         },
         "color": {
-            "spread_high": color.get("color_cv", 0.0) > 0.35,
+            "spread_high": (color.get("color_cv") or 0.0) > 0.35,
             "dangerous_color_detected": None,
             "dangerous_color_coverage_pct": 0,
             "flagged": color.get("concern", False),
@@ -460,7 +509,7 @@ def explain_findings(
         # object, so there's nothing to gain from paying for hidden reasoning tokens.
         response = client.chat.completions.create(
             model=MODEL,
-            max_completion_tokens=900,
+            max_completion_tokens=1600,
             reasoning_effort="none",
             temperature=0,
             response_format={"type": "json_object"},

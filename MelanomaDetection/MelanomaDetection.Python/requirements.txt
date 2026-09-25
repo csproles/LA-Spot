@@ -16,11 +16,9 @@ Jinja2==3.1.6
 jiter==0.16.0
 MarkupSafe==3.0.3
 packaging==26.3
-iniconfig==2.3.0
 numpy==2.5.2
 openai==3.1.0
 opencv-python==5.0.0.93
-pluggy==1.6.0
 pydantic==2.13.4
 pydantic_core==2.46.4
 python-dotenv==1.2.2

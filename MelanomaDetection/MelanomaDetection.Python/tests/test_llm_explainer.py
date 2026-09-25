@@ -1,4 +1,5 @@
 import json
+import re
 from types import SimpleNamespace
 
 import pytest
@@ -16,12 +17,19 @@ ABCDE = {
 VALID_REPLY = json.dumps(
     {
         "noticed": [
-            {"text": "The analysis flagged asymmetry in this spot.", "basis": "analysis", "source_ids": [], "quote": None},
             {
-                "text": "The booklet describes asymmetry as one half of the shape not matching the other.",
+                "text": "We noticed the two halves of this spot look different, which means the shape of one half does not match the other.",
+                "letter": "A",
                 "basis": "booklet",
                 "source_ids": ["nci-abcd-asymmetry"],
                 "quote": "The shape of one half does not match the other.",
+            },
+            {
+                "text": "We noticed the edge of this spot looks uneven, which means the edges are often ragged, notched, blurred, or irregular.",
+                "letter": "B",
+                "basis": "booklet",
+                "source_ids": ["nci-abcd-border"],
+                "quote": "The edges are often ragged, notched, blurred, or irregular in outline",
             },
         ],
         "next_steps": [
@@ -42,6 +50,17 @@ VALID_REPLY = json.dumps(
 )
 
 INVALID_REPLY = json.dumps({"noticed": [], "next_steps": []})
+
+
+def reply_with_e(text):
+    """VALID_REPLY plus the E (change over time) section that a comparison with an earlier photo requires."""
+    reply = json.loads(VALID_REPLY)
+    reply["noticed"].append({"text": text, "letter": "E", "basis": "analysis", "source_ids": [], "quote": None})
+    return json.dumps(reply)
+
+
+E_GROWTH_REPLY = reply_with_e("We noticed the spot looks larger compared with the last photo, which means it is worth showing to a dermatologist.")
+E_NO_PRIOR_REPLY = reply_with_e("We noticed there is no earlier photo of this spot, which means we cannot check for changes over time.")
 
 
 class FakeClient:
@@ -70,14 +89,32 @@ def test_style_rules_are_sent_and_every_point_is_a_bullet():
     assert system == [llm_explainer.SYSTEM_PROMPT, llm_explainer.GROUNDING_PROMPT, llm_explainer.STYLE_PROMPT]
 
     body = text.split("\n\nSources:")[0]
-    points = [line for line in body.splitlines() if line and not line.endswith(":")]
+    points = [line for line in body.splitlines() if line and not line.endswith(":") and not re.match(r"^[A-E]: ", line)]
     assert points
     assert all(line.startswith("• ") for line in points)
 
 
+def test_the_model_is_told_not_to_repeat_the_observation_in_the_meaning():
+    assert "Never repeat the observation" in llm_explainer.STYLE_PROMPT
+    # ...with the example of what not to write, so it is unmistakable
+    assert "We noticed uneven color, which means the color is uneven." in llm_explainer.STYLE_PROMPT
+
+
+def test_a_reply_that_repeats_itself_is_rejected_and_retried():
+    repeated = json.loads(VALID_REPLY)
+    repeated["noticed"][0]["text"] = "We noticed uneven halves, which means the halves are uneven."
+    client = FakeClient([json.dumps(repeated), VALID_REPLY])
+
+    text = llm_explainer.explain_findings(ABCDE, client=client)
+
+    assert len(client.calls) == 2
+    assert "only repeats" in client.calls[1]["messages"][-1]["content"]
+    assert "the halves are uneven" not in text
+
+
 def test_a_reply_with_a_dash_is_rejected_and_retried():
     dashed = json.loads(VALID_REPLY)
-    dashed["noticed"][0]["text"] = "The analysis flagged asymmetry — the shape is uneven."
+    dashed["noticed"][0]["text"] = "We noticed asymmetry — the shape is uneven, which means one half does not match."
     client = FakeClient([json.dumps(dashed), VALID_REPLY])
 
     text = llm_explainer.explain_findings(ABCDE, client=client)
@@ -104,7 +141,7 @@ def test_request_is_deterministic_json_and_carries_the_grounding_rules():
 
     assert call["temperature"] == 0
     assert call["reasoning_effort"] == "none"
-    assert call["max_completion_tokens"] == 900
+    assert call["max_completion_tokens"] == 1600
     assert "max_tokens" not in call
     assert call["response_format"] == {"type": "json_object"}
     system_text = " ".join(m["content"] for m in call["messages"] if m["role"] == "system")
@@ -152,7 +189,20 @@ def test_api_failures_are_not_swallowed():
 ONE_STEP_REPLY = json.dumps(
     {
         "noticed": [
-            {"text": "The analysis flagged asymmetry in this spot.", "basis": "analysis", "source_ids": [], "quote": None},
+            {
+                "text": "We noticed the two halves of this spot look different, which means the shape of one half does not match the other.",
+                "letter": "A",
+                "basis": "booklet",
+                "source_ids": ["nci-abcd-asymmetry"],
+                "quote": "The shape of one half does not match the other.",
+            },
+            {
+                "text": "We noticed the edge of this spot looks uneven, which means the edges are often ragged, notched, blurred, or irregular.",
+                "letter": "B",
+                "basis": "booklet",
+                "source_ids": ["nci-abcd-border"],
+                "quote": "The edges are often ragged, notched, blurred, or irregular in outline",
+            },
         ],
         "next_steps": [
             {
@@ -256,7 +306,7 @@ class TestOverallResult:
 
 class TestChangeAndSymptoms:
     def test_change_data_reaches_the_model_when_supplied(self):
-        client = FakeClient([VALID_REPLY])
+        client = FakeClient([E_GROWTH_REPLY])
         evolving = {"score": 6.0, "details": {"signals": ["growth"], "area_growth_ratio": 0.22}}
         llm_explainer.explain_findings(ABCDE, evolving=evolving, client=client)
         content = user_message(client.calls[0])
@@ -266,7 +316,7 @@ class TestChangeAndSymptoms:
         assert '"size"' in content
 
     def test_no_prior_check_is_marked_unavailable_not_omitted(self):
-        client = FakeClient([VALID_REPLY])
+        client = FakeClient([E_NO_PRIOR_REPLY])
         evolving = {"score": None, "details": {"reason": "no prior check to compare against"}}
         llm_explainer.explain_findings(ABCDE, evolving=evolving, client=client)
         content = user_message(client.calls[0])
