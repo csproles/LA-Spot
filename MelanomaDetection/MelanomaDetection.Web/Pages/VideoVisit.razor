@@ -93,7 +93,7 @@ else
     private string Role => IsProviderView ? "provider" : "patient";
     private string OtherRole => IsProviderView ? "patient" : "provider";
     private string OtherPartyName => Appointment is null ? "" : (IsProviderView ? Appointment.PatientName : Appointment.ProviderName);
-    private string BackHref => IsProviderView ? "/provider" : "/visits";
+    private string BackHref => IsProviderView ? $"/provider/visits/{AppointmentId}" : "/visits";
     private bool HasScan => !string.IsNullOrWhiteSpace(Appointment?.ScanProcessingId);
 
     private bool IsJoinWindowOpen => Appointment is not null

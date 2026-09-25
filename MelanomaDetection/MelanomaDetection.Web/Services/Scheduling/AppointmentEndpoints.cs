@@ -40,7 +40,7 @@ public static class AppointmentEndpoints
         BookingResult result;
         try
         {
-            result = await booking.BookAsync(request.ProviderId, patientId, request.StartUtc, request.Reason, request.Scan, cancellationToken);
+            result = await booking.BookAsync(request.ProviderId, patientId, request.StartUtc, request.Reason, request.Scan, cancellationToken: cancellationToken);
         }
         catch (KeyNotFoundException)
         {

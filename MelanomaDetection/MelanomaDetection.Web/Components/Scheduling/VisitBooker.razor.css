@@ -119,6 +119,10 @@
     cursor: pointer;
 }
 
+.book-visit-share-toggle {
+    margin-top: 12px;
+}
+
 .book-visit-optional {
     font-weight: 400;
     color: var(--color-text-muted);

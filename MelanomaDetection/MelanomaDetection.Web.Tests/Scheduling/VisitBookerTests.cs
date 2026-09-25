@@ -74,7 +74,8 @@ public sealed class VisitBookerTests : BunitContext, IDisposable
             new HttpClient { BaseAddress = new Uri("http://localhost:1") },
             sp.GetRequiredService<CurrentUser>(),
             new OperationRateLimiter(),
-            new MemoryCache(new MemoryCacheOptions())));
+            new MemoryCache(new MemoryCacheOptions()),
+            new UnreachableHttpClientFactory()));
 
         JSInterop.Mode = JSRuntimeMode.Loose;
         JSInterop.Setup<string>("skinCheckScheduling.getTimeZone").SetResult("UTC");
@@ -166,4 +167,9 @@ public sealed class VisitBookerTests : BunitContext, IDisposable
             Task.FromResult(new AuthenticationState(new ClaimsPrincipal(
                 new ClaimsIdentity([new Claim(AppClaimTypes.UserId, userId.ToString())], "test"))));
     }
+}
+
+file sealed class UnreachableHttpClientFactory : IHttpClientFactory
+{
+    public HttpClient CreateClient(string name) => new() { BaseAddress = new Uri("http://localhost:1") };
 }

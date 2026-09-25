@@ -46,10 +46,13 @@ public class ImageProcessingService
     private readonly CurrentUser _currentUser;
     private readonly OperationRateLimiter _limiter;
     private readonly IMemoryCache _cache;
+    private readonly IHttpClientFactory _httpClientFactory;
 
-    public ImageProcessingService(HttpClient httpClient, CurrentUser currentUser, OperationRateLimiter limiter, IMemoryCache cache)
+    public ImageProcessingService(
+        HttpClient httpClient, CurrentUser currentUser, OperationRateLimiter limiter, IMemoryCache cache, IHttpClientFactory httpClientFactory)
     {
         _httpClient = httpClient;
+        _httpClientFactory = httpClientFactory;
         _currentUser = currentUser;
         _limiter = limiter;
         _cache = cache;
@@ -359,6 +362,47 @@ public class ImageProcessingService
         return document.ValueKind == JsonValueKind.Undefined
             ? throw new ImageProcessingApiException("The analysis service returned an empty response.")
             : document;
+    }
+
+    /// <summary>
+    /// The patient's export, read on behalf of the provider on a visit -- only while that
+    /// visit is still booked and the patient chose to share their data when booking it.
+    /// </summary>
+    public async Task<SharedHealthData> GetSharedHealthDataAsync(Scheduling.AppointmentView appointment, Guid providerId)
+    {
+        if (appointment.ProviderId != providerId
+            || !appointment.ShareHealthData
+            || appointment.Status != Data.AppointmentStatus.Booked)
+        {
+            throw new UnauthorizedAccessException("The patient hasn't shared their data for this visit.");
+        }
+
+        // A fresh client, never _httpClient: that one pins the signed-in provider's id in its
+        // default headers (AttachUserAsync), and the patient's id must not leak into or collide with it.
+        var client = _httpClientFactory.CreateClient(nameof(ImageProcessingService));
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/account/export");
+        request.Headers.Add(UserIdHeader, appointment.PatientId.ToString());
+
+        HttpResponseMessage response;
+        try
+        {
+            response = await client.SendAsync(request);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        {
+            throw new ImageProcessingApiException("Could not reach the analysis service. Try again in a moment.");
+        }
+
+        using (response)
+        {
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new ImageProcessingApiException("Couldn't load the patient's shared data.");
+            }
+
+            return await response.Content.ReadFromJsonAsync<SharedHealthData>()
+                ?? throw new ImageProcessingApiException("The analysis service returned an empty response.");
+        }
     }
 
     /// <summary>Maps to DELETE /api/account -- erases everything the API holds for one account.</summary>

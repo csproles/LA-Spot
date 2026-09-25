@@ -1,0 +1,26 @@
+@* One booked visit on the provider's schedule; the whole row opens the visit detail. *@
+
+<a class="schedule-row" href="@($"/provider/visits/{Appointment.Id}")">
+    <span class="schedule-row-time">
+        <strong>@ClientTimeZone.Format(Appointment.StartUtc, BrowserTimeZoneId, "h:mm tt")</strong>
+        <span>@ClientTimeZone.Format(Appointment.EndUtc, BrowserTimeZoneId, "h:mm tt")</span>
+    </span>
+    <span class="schedule-row-main">
+        <strong class="schedule-row-patient">@Appointment.PatientName</strong>
+        @if (HasScan)
+        {
+            <span class="schedule-row-badge">Data shared</span>
+        }
+    </span>
+    <span class="schedule-row-chevron" aria-hidden="true">&rsaquo;</span>
+</a>
+
+@code {
+    [Parameter, EditorRequired]
+    public AppointmentView Appointment { get; set; } = null!;
+
+    [Parameter]
+    public string? BrowserTimeZoneId { get; set; }
+
+    private bool HasScan => Appointment.ShareHealthData || !string.IsNullOrWhiteSpace(Appointment.ScanProcessingId);
+}

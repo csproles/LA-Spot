@@ -156,6 +156,14 @@
                           aria-label="What is this visit about? (optional)"
                           placeholder="A new spot, a follow-up, etc."></textarea>
 
+                <label class="book-visit-scan-toggle book-visit-share-toggle">
+                    <input type="checkbox" checked="@ShareHealthData" @onchange="OnShareHealthDataChanged" />
+                    <span>
+                        Share my health data with @SelectedProvider!.DisplayName for this visit -- my risk profile, spots and
+                        check history with photos (the same as "Export my data"). They can see it until the visit ends or is cancelled.
+                    </span>
+                </label>
+
                 <p class="book-visit-summary">
                     @SelectedProvider!.DisplayName, @FormatSlotFull(SelectedSlotUtc.Value)
                 </p>
@@ -201,6 +209,8 @@
     private DateTime? SelectedSlotUtc;
 
     private bool AttachScan = true;
+    private bool ShareHealthData;
+    private bool ShareHealthDataTouched;
 
     private string? Reason;
     private bool IsBooking;
@@ -221,6 +231,7 @@
         WeekStart = MinDate;
 
         PatientId = await CurrentUser.GetUserIdAsync();
+        _ = LoadSharePreferenceAsync();
 
         try
         {
@@ -258,6 +269,30 @@
         catch (JSException)
         {
         }
+    }
+
+    /// <summary>Pre-fills the share box from the profile's "Share with my dermatologist" choice
+    /// without holding up the provider list, and never overrides a box the patient already clicked.</summary>
+    private async Task LoadSharePreferenceAsync()
+    {
+        try
+        {
+            var preference = (await ImageProcessingService.GetProfileAsync()).ShareWithDermatologist;
+            if (!ShareHealthDataTouched)
+            {
+                ShareHealthData = preference;
+                StateHasChanged();
+            }
+        }
+        catch (ImageProcessingApiException)
+        {
+        }
+    }
+
+    private void OnShareHealthDataChanged(ChangeEventArgs e)
+    {
+        ShareHealthDataTouched = true;
+        ShareHealthData = e.Value is true;
     }
 
     private async Task SelectProviderAsync(ProviderSummary provider)
@@ -343,7 +378,7 @@
             scan = new AttachedScan(ScanQuery, ScanResult.RiskScore, ScanResult.OverallVisualConcern, explanation);
         }
 
-        var result = await Booking.BookAsync(SelectedProvider.Id, PatientId.Value, SelectedSlotUtc.Value, reason, scan);
+        var result = await Booking.BookAsync(SelectedProvider.Id, PatientId.Value, SelectedSlotUtc.Value, reason, scan, ShareHealthData);
 
         IsBooking = false;
         if (result.Outcome == BookingOutcome.Booked)

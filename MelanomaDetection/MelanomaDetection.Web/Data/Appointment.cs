@@ -45,6 +45,10 @@ public class Appointment
     /// <summary>PHI -- never log this. Snapshot of the plain-language explanation at booking time.</summary>
     public string? ScanExplanation { get; set; }
 
+    /// <summary>Patient's consent, given at booking, for this visit's provider to read their full
+    /// health data (the same content as "Export my data") while the visit is still booked.</summary>
+    public bool ShareHealthData { get; set; }
+
     public DateTime CreatedAtUtc { get; set; }
 
     public DateTime? CancelledAtUtc { get; set; }

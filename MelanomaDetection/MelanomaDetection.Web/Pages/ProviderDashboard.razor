@@ -1,11 +1,10 @@
 @page "/provider"
 @rendermode InteractiveServer
-@inject AvailabilityService Availability
 @inject BookingService Booking
 @inject CurrentUser CurrentUser
 @inject IJSRuntime JS
 
-<PageTitle>Provider dashboard - LA Spot</PageTitle>
+<PageTitle>Schedule - LA Spot</PageTitle>
 
 @if (!IsInitialized)
 {
@@ -18,272 +17,54 @@ else if (!IsProvider)
 else
 {
     <div class="provider-page">
-        <PageHeader Title="Provider dashboard" Subtitle="@ProviderSubtitle">
+        <PageHeader Title="Your schedule" Subtitle="@ProviderName">
             <Actions>
-                <a href="/notifications" class="btn btn-outline-primary">Notifications</a>
+                <a href="/provider/settings" class="btn btn-outline-primary">Hours &amp; profile</a>
             </Actions>
         </PageHeader>
 
-        <MedicalDisclaimer Role="note"
-            Message="This app does not provide a diagnosis. Consultations are for informational purposes. This demo is not HIPAA-compliant." />
-
-        <ErrorAlert Message="@ErrorMessage" />
-
-        <section class="card-panel">
-            <h2 class="panel-title">Upcoming visits</h2>
-            @if (Upcoming.Count == 0)
+        @if (Upcoming.Count == 0)
+        {
+            <EmptyState Title="No visits scheduled" Description="Booked visits will show up here." ActionHref="/provider/settings" ActionText="Set your hours" />
+        }
+        else
+        {
+            @foreach (var day in UpcomingByDay)
             {
-                <p class="text-muted-small">Nothing booked yet.</p>
-            }
-            else
-            {
-                <div class="visits-list">
-                    @foreach (var appt in Upcoming)
+                <section class="card-panel schedule-day">
+                    <h2 class="panel-title">@day.Key</h2>
+                    @foreach (var appt in day)
                     {
-                        <VisitCard Appointment="appt" PerspectiveOf="patient" BrowserTimeZoneId="@BrowserTimeZoneId"
-                                   ShowCancel="true" IsCancelling="CancellingIds.Contains(appt.Id)"
-                                   OnCancel="() => CancelAppointmentAsync(appt.Id)" />
+                        <ScheduleVisitRow Appointment="appt" BrowserTimeZoneId="@BrowserTimeZoneId" />
                     }
-                </div>
+                </section>
             }
-        </section>
-
-        <section class="card-panel">
-            <h2 class="panel-title">Your profile</h2>
-            <p class="text-muted-small">What patients see when browsing dermatologists. Self-reported -- not verified against a licensing board.</p>
-            <div class="provider-form-grid">
-                <label class="provider-field">
-                    Specialty
-                    <input type="text" class="form-control" maxlength="100" @bind="ProfileSpecialty" />
-                </label>
-                <label class="provider-field">
-                    License #
-                    <input type="text" class="form-control" maxlength="50" @bind="ProfileLicenseNumber" />
-                </label>
-                <label class="provider-field">
-                    Credentials
-                    <input type="text" class="form-control" maxlength="200" placeholder="MD, Board-Certified Dermatologist" @bind="ProfileCredentials" />
-                </label>
-                <label class="provider-field">
-                    Photo URL
-                    <input type="text" class="form-control" maxlength="2048" placeholder="https://..." @bind="ProfilePhotoUrl" />
-                </label>
-            </div>
-            <label class="provider-field">
-                Bio
-                <textarea class="form-control" rows="3" maxlength="2000" @bind="ProfileBio"></textarea>
-            </label>
-            <button type="button" class="btn btn-primary btn-sm" disabled="@IsSavingProfile" @onclick="SaveProfileAsync">
-                @if (IsSavingProfile)
-                {
-                    <span class="btn-spinner" aria-hidden="true"></span>
-                }
-                Save profile
-            </button>
-        </section>
-
-        <section class="card-panel">
-            <h2 class="panel-title">Visit settings</h2>
-            <div class="provider-form-grid">
-                <label class="provider-field">
-                    Visit length (minutes)
-                    <input type="number" class="form-control" min="5" max="240" step="5" @bind="SettingsLengthMinutes" />
-                </label>
-                <label class="provider-field">
-                    Buffer between visits (minutes)
-                    <input type="number" class="form-control" min="0" max="120" step="5" @bind="SettingsBufferMinutes" />
-                </label>
-                <label class="provider-field">
-                    Timezone
-                    <select class="form-select" @bind="SettingsTimeZoneId">
-                        @foreach (var tz in CommonTimeZones)
-                        {
-                            <option value="@tz.Id">@tz.Label</option>
-                        }
-                    </select>
-                </label>
-            </div>
-            <button type="button" class="btn btn-primary btn-sm" disabled="@IsSavingSettings" @onclick="SaveSettingsAsync">
-                @if (IsSavingSettings)
-                {
-                    <span class="btn-spinner" aria-hidden="true"></span>
-                }
-                Save settings
-            </button>
-        </section>
-
-        <section class="card-panel">
-            <h2 class="panel-title">Weekly availability</h2>
-            @if (Rules.Count == 0)
-            {
-                <p class="text-muted-small">No recurring hours set -- patients won't see any open slots yet.</p>
-            }
-            else
-            {
-                <div class="rule-list">
-                    @foreach (var rule in Rules)
-                    {
-                        <div class="rule-row">
-                            <span>@rule.Weekday, @rule.StartTime.ToString("h:mm tt") - @rule.EndTime.ToString("h:mm tt")</span>
-                            <button type="button" class="btn btn-outline-danger btn-sm" @onclick="() => RemoveRuleAsync(rule.Id)">Remove</button>
-                        </div>
-                    }
-                </div>
-            }
-
-            <div class="provider-form-grid">
-                <label class="provider-field">
-                    Day
-                    <select class="form-select" @bind="NewRuleWeekday">
-                        @foreach (var day in Weekdays)
-                        {
-                            <option value="@day">@day</option>
-                        }
-                    </select>
-                </label>
-                <label class="provider-field">
-                    From
-                    <input type="time" class="form-control" @bind="NewRuleStart" />
-                </label>
-                <label class="provider-field">
-                    To
-                    <input type="time" class="form-control" @bind="NewRuleEnd" />
-                </label>
-            </div>
-            <button type="button" class="btn btn-outline-primary btn-sm" @onclick="AddRuleAsync">Add hours</button>
-        </section>
-
-        <section class="card-panel">
-            <h2 class="panel-title">Blocked dates &amp; extra hours</h2>
-            @if (Exceptions.Count == 0)
-            {
-                <p class="text-muted-small">No exceptions to your weekly hours.</p>
-            }
-            else
-            {
-                <div class="rule-list">
-                    @foreach (var ex in Exceptions)
-                    {
-                        <div class="rule-row">
-                            <span>@ex.Date.ToString("MMM d") -- @DescribeException(ex)</span>
-                            <button type="button" class="btn btn-outline-danger btn-sm" @onclick="() => RemoveExceptionAsync(ex.Id)">Remove</button>
-                        </div>
-                    }
-                </div>
-            }
-
-            <SegmentedControl Options="ExceptionTypeOptions" @bind-Value="NewExceptionType" AriaLabel="Exception type" />
-            <div class="provider-form-grid">
-                <label class="provider-field">
-                    Date
-                    <input type="date" class="form-control" @bind="NewExceptionDate" />
-                </label>
-                @if (NewExceptionType != "block-day")
-                {
-                    <label class="provider-field">
-                        From
-                        <input type="time" class="form-control" @bind="NewExceptionStart" />
-                    </label>
-                    <label class="provider-field">
-                        To
-                        <input type="time" class="form-control" @bind="NewExceptionEnd" />
-                    </label>
-                }
-            </div>
-            <button type="button" class="btn btn-outline-primary btn-sm" @onclick="AddExceptionAsync">Add</button>
-        </section>
+        }
     </div>
 }
 
 @code {
-    private static readonly DayOfWeek[] Weekdays =
-    [
-        DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday,
-        DayOfWeek.Friday, DayOfWeek.Saturday, DayOfWeek.Sunday,
-    ];
-
-    private static readonly (string Id, string Label)[] CommonTimeZones =
-    [
-        ("America/Chicago", "Central (Louisiana)"),
-        ("America/New_York", "Eastern"),
-        ("America/Denver", "Mountain"),
-        ("America/Los_Angeles", "Pacific"),
-        ("America/Anchorage", "Alaska"),
-        ("Pacific/Honolulu", "Hawaii"),
-        ("UTC", "UTC"),
-    ];
-
-    private static readonly SegmentedControl.Option[] ExceptionTypeOptions =
-    [
-        new("block-day", "Block whole day"),
-        new("block-hours", "Block some hours"),
-        new("open-hours", "Add extra hours"),
-    ];
-
     private bool IsInitialized;
     private bool IsProvider;
-    private Guid ProviderId;
     private string ProviderName = "";
-    private string ProviderSpecialty = "";
-    private string ProviderSubtitle => string.IsNullOrEmpty(ProviderSpecialty) ? ProviderName : $"{ProviderName} · {ProviderSpecialty}";
-    private string? ErrorMessage;
     private string? BrowserTimeZoneId;
-
     private List<AppointmentView> Upcoming = [];
-    private readonly HashSet<Guid> CancellingIds = [];
 
-    private int SettingsLengthMinutes = 30;
-    private int SettingsBufferMinutes = 10;
-    private string SettingsTimeZoneId = "America/Chicago";
-    private bool IsSavingSettings;
-
-    private string ProfileSpecialty = "Dermatology";
-    private string? ProfileLicenseNumber;
-    private string? ProfileCredentials;
-    private string? ProfileBio;
-    private string? ProfilePhotoUrl;
-    private bool IsSavingProfile;
-
-    private List<AvailabilityRule> Rules = [];
-    private DayOfWeek NewRuleWeekday = DayOfWeek.Monday;
-    private TimeOnly NewRuleStart = new(9, 0);
-    private TimeOnly NewRuleEnd = new(17, 0);
-
-    private List<AvailabilityException> Exceptions = [];
-    private string NewExceptionType = "block-day";
-    private DateOnly NewExceptionDate = DateOnly.FromDateTime(DateTime.UtcNow);
-    private TimeOnly NewExceptionStart = new(9, 0);
-    private TimeOnly NewExceptionEnd = new(12, 0);
+    private IEnumerable<IGrouping<string, AppointmentView>> UpcomingByDay =>
+        Upcoming.GroupBy(a => ClientTimeZone.Format(a.StartUtc, BrowserTimeZoneId, "dddd, MMM d"));
 
     protected override async Task OnInitializedAsync()
     {
         IsProvider = await CurrentUser.IsProviderAsync();
-        if (!IsProvider)
+        if (IsProvider)
         {
-            IsInitialized = true;
-            return;
+            var providerId = (await CurrentUser.GetUserIdAsync())!.Value;
+            ProviderName = await CurrentUser.GetDisplayNameAsync() ?? "";
+            Upcoming = [.. (await Booking.ListForProviderAsync(providerId))
+                .Where(a => a.Status == AppointmentStatus.Booked && a.EndUtc >= DateTime.UtcNow)
+                .OrderBy(a => a.StartUtc)];
         }
 
-        ProviderId = (await CurrentUser.GetUserIdAsync())!.Value;
-        ProviderName = await CurrentUser.GetDisplayNameAsync() ?? "";
-
-        var provider = await Availability.FindProviderAsync(ProviderId);
-        if (provider is not null)
-        {
-            ProviderSpecialty = provider.Specialty;
-            SettingsLengthMinutes = provider.AppointmentLengthMinutes;
-            SettingsBufferMinutes = provider.BufferMinutes;
-            SettingsTimeZoneId = provider.TimeZoneId;
-
-            ProfileSpecialty = provider.Specialty;
-            ProfileLicenseNumber = provider.LicenseNumber;
-            ProfileCredentials = provider.Credentials;
-            ProfileBio = provider.Bio;
-            // Default to the Google avatar so most providers never have to touch this field.
-            ProfilePhotoUrl = provider.PhotoUrl ?? await CurrentUser.GetPictureUrlAsync();
-        }
-
-        await ReloadAllAsync();
         IsInitialized = true;
     }
 
@@ -302,135 +83,5 @@ else
         catch (JSException)
         {
         }
-    }
-
-    private async Task ReloadAllAsync()
-    {
-        var appointments = await Booking.ListForProviderAsync(ProviderId);
-        Upcoming = [.. appointments
-            .Where(a => a.Status == AppointmentStatus.Booked && a.EndUtc >= DateTime.UtcNow)
-            .OrderBy(a => a.StartUtc)];
-        Rules = [.. await Availability.ListRulesAsync(ProviderId)];
-        Exceptions = [.. await Availability.ListExceptionsAsync(ProviderId, DateOnly.FromDateTime(DateTime.UtcNow))];
-    }
-
-    private async Task CancelAppointmentAsync(Guid appointmentId)
-    {
-        if (!CancellingIds.Add(appointmentId))
-        {
-            return;
-        }
-
-        StateHasChanged();
-        try
-        {
-            await Booking.CancelAsync(appointmentId, ProviderId);
-            await ReloadAllAsync();
-        }
-        catch (UnauthorizedAccessException)
-        {
-            ErrorMessage = "That visit isn't yours to cancel.";
-        }
-        finally
-        {
-            CancellingIds.Remove(appointmentId);
-        }
-    }
-
-    private async Task SaveSettingsAsync()
-    {
-        IsSavingSettings = true;
-        ErrorMessage = null;
-        StateHasChanged();
-
-        try
-        {
-            await Availability.UpdateProviderSettingsAsync(ProviderId, SettingsLengthMinutes, SettingsBufferMinutes, SettingsTimeZoneId);
-        }
-        catch (Exception ex) when (ex is ArgumentException or TimeZoneNotFoundException)
-        {
-            ErrorMessage = ex.Message;
-        }
-        finally
-        {
-            IsSavingSettings = false;
-        }
-    }
-
-    private async Task SaveProfileAsync()
-    {
-        IsSavingProfile = true;
-        ErrorMessage = null;
-        StateHasChanged();
-
-        try
-        {
-            await Availability.UpdateProviderProfileAsync(
-                ProviderId, ProfileSpecialty, ProfileLicenseNumber, ProfileCredentials, ProfileBio, ProfilePhotoUrl);
-            ProviderSpecialty = ProfileSpecialty;
-        }
-        catch (Exception ex) when (ex is ArgumentException)
-        {
-            ErrorMessage = ex.Message;
-        }
-        finally
-        {
-            IsSavingProfile = false;
-        }
-    }
-
-    private async Task AddRuleAsync()
-    {
-        ErrorMessage = null;
-        try
-        {
-            await Availability.AddRuleAsync(ProviderId, NewRuleWeekday, NewRuleStart, NewRuleEnd);
-            Rules = [.. await Availability.ListRulesAsync(ProviderId)];
-        }
-        catch (ArgumentException ex)
-        {
-            ErrorMessage = ex.Message;
-        }
-    }
-
-    private async Task RemoveRuleAsync(int ruleId)
-    {
-        await Availability.RemoveRuleAsync(ProviderId, ruleId);
-        Rules = [.. await Availability.ListRulesAsync(ProviderId)];
-    }
-
-    private async Task AddExceptionAsync()
-    {
-        ErrorMessage = null;
-        var isBlocked = NewExceptionType != "open-hours";
-        TimeOnly? start = NewExceptionType == "block-day" ? null : NewExceptionStart;
-        TimeOnly? end = NewExceptionType == "block-day" ? null : NewExceptionEnd;
-
-        try
-        {
-            await Availability.AddExceptionAsync(ProviderId, NewExceptionDate, isBlocked, start, end);
-            Exceptions = [.. await Availability.ListExceptionsAsync(ProviderId, DateOnly.FromDateTime(DateTime.UtcNow))];
-        }
-        catch (ArgumentException ex)
-        {
-            ErrorMessage = ex.Message;
-        }
-    }
-
-    private async Task RemoveExceptionAsync(int exceptionId)
-    {
-        await Availability.RemoveExceptionAsync(ProviderId, exceptionId);
-        Exceptions = [.. await Availability.ListExceptionsAsync(ProviderId, DateOnly.FromDateTime(DateTime.UtcNow))];
-    }
-
-    private static string DescribeException(AvailabilityException ex)
-    {
-        if (ex.StartTime is null || ex.EndTime is null)
-        {
-            return "Blocked (whole day)";
-        }
-
-        var range = $"{ex.StartTime:h:mm tt} - {ex.EndTime:h:mm tt}";
-        return ex.IsBlocked ? $"Blocked {range}" : $"Extra hours {range}";
     }
 }

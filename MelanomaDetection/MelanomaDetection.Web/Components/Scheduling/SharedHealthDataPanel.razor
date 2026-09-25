@@ -1,0 +1,89 @@
+@* A patient's shared export, read-only for the provider on their visit: risk profile, then each spot with its checks newest first. *@
+
+<section class="card-panel shared-data">
+    <h2 class="panel-title">Shared health data</h2>
+
+    @if (Data.Profile is { } profile)
+    {
+        <dl class="shared-data-profile">
+            <div><dt>Skin type</dt><dd>@(profile.Fitzpatrick is { } f ? $"Fitzpatrick {f}" : "Not given")</dd></div>
+            <div><dt>Sun exposure</dt><dd>@OrDash(profile.SunExposure)</dd></div>
+            <div><dt>Family history</dt><dd>@YesNo(profile.FamilyHistory)</dd></div>
+            <div><dt>Blistering sunburns</dt><dd>@YesNo(profile.BlisteringSunburns)</dd></div>
+            <div><dt>Many moles</dt><dd>@YesNo(profile.ManyMoles)</dd></div>
+            <div><dt>Location</dt><dd>@OrDash(profile.Location)</dd></div>
+        </dl>
+    }
+    else
+    {
+        <p class="text-muted-small">No risk profile filled in.</p>
+    }
+
+    @if (Data.Checks.Count == 0)
+    {
+        <p class="text-muted-small">No checks recorded yet.</p>
+    }
+
+    @foreach (var group in ChecksBySpot)
+    {
+        <div class="shared-data-spot">
+            <h3 class="shared-data-spot-title">
+                @group.Title
+                <span class="text-muted-small">@group.Checks.Count check@(group.Checks.Count == 1 ? "" : "s")</span>
+            </h3>
+            <ul class="shared-data-checks">
+                @foreach (var check in group.Checks)
+                {
+                    <li class="shared-data-check">
+                        @if (!string.IsNullOrEmpty(check.ThumbnailPng))
+                        {
+                            <img class="shared-data-thumb" src="data:image/png;base64,@check.ThumbnailPng" alt="Check photo" width="72" height="72" />
+                        }
+                        <div class="shared-data-check-main">
+                            <strong>@(check.OverallVisualConcern ?? "Unscored") <span class="text-muted-small">score @check.RiskScore.ToString("F0")/100</span></strong>
+                            <span class="text-muted-small">@FormatDate(check.ProcessedAt)@(check.DiameterMm is { } d ? $" · {d:F1} mm" : "")</span>
+                            @if (check.Symptoms.Count > 0)
+                            {
+                                <span class="shared-data-symptoms">@string.Join(", ", check.Symptoms)</span>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(check.Notes))
+                            {
+                                <span class="shared-data-notes">"@check.Notes"</span>
+                            }
+                        </div>
+                    </li>
+                }
+            </ul>
+        </div>
+    }
+</section>
+
+@code {
+    [Parameter, EditorRequired]
+    public SharedHealthData Data { get; set; } = null!;
+
+    [Parameter]
+    public string? BrowserTimeZoneId { get; set; }
+
+    private sealed record SpotGroup(string Title, List<SharedCheck> Checks);
+
+    private IEnumerable<SpotGroup> ChecksBySpot =>
+        Data.Checks
+            .GroupBy(c => c.SpotId)
+            .Select(g =>
+            {
+                var spot = Data.Spots.FirstOrDefault(s => s.Id == g.Key);
+                var title = spot is null
+                    ? "Unfiled checks"
+                    : string.IsNullOrWhiteSpace(spot.BodyRegion) ? spot.Label : $"{spot.Label} ({spot.BodyRegion})";
+                return new SpotGroup(title, [.. g.OrderByDescending(c => c.ProcessedAt)]);
+            })
+            .OrderByDescending(g => g.Checks[0].ProcessedAt);
+
+    private string FormatDate(DateTimeOffset? at) =>
+        at is { } value ? ClientTimeZone.Format(value.UtcDateTime, BrowserTimeZoneId, "MMM d, yyyy") : "Unknown date";
+
+    private static string YesNo(bool value) => value ? "Yes" : "No";
+
+    private static string OrDash(string? value) => string.IsNullOrWhiteSpace(value) ? "--" : value;
+}
