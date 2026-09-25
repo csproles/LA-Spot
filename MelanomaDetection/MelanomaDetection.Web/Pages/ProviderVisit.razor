@@ -1,0 +1,196 @@
+@page "/provider/visits/{AppointmentId:guid}"
+@rendermode InteractiveServer
+@inject BookingService Booking
+@inject ImageProcessingService ImageProcessing
+@inject CurrentUser CurrentUser
+@inject IJSRuntime JS
+@inject NavigationManager NavigationManager
+
+<PageTitle>Visit details - LA Spot</PageTitle>
+
+@if (!IsInitialized)
+{
+    <SkeletonBlock Height="260px" Shape="card" />
+}
+else if (ErrorMessage is not null)
+{
+    <EmptyState Title="Can't open this visit" Description="@ErrorMessage" ActionHref="/provider" ActionText="Back to schedule" />
+}
+else
+{
+    <div class="provider-visit">
+        <a href="/provider" class="provider-visit-back">&lsaquo; Schedule</a>
+
+        <PageHeader Title="@Appointment!.PatientName" Subtitle="@FormattedWhen" />
+
+        <MedicalDisclaimer Role="note"
+            Message="This app does not provide a diagnosis. Consultations are for informational purposes. This demo is not HIPAA-compliant." />
+
+        <section class="card-panel">
+            <h2 class="panel-title">Patient's comments</h2>
+            @if (string.IsNullOrWhiteSpace(Appointment.Reason))
+            {
+                <p class="text-muted-small">The patient didn't leave a comment.</p>
+            }
+            else
+            {
+                <p class="provider-visit-comment">@Appointment.Reason</p>
+            }
+        </section>
+
+        @if (HasScan)
+        {
+            <section class="card-panel">
+                <h2 class="panel-title">Shared scan</h2>
+                <p class="provider-visit-score">
+                    @Appointment.ScanOverallVisualConcern
+                    <span class="text-muted-small">(score @Appointment.ScanRiskScore?.ToString("F0")/100)</span>
+                </p>
+                @if (!string.IsNullOrWhiteSpace(Appointment.ScanExplanation))
+                {
+                    <p class="provider-visit-explanation">@Appointment.ScanExplanation</p>
+                }
+                <p class="text-muted-small">Snapshot the patient chose to share when booking.</p>
+            </section>
+        }
+
+        @if (Appointment.ShareHealthData && Appointment.Status == AppointmentStatus.Booked)
+        {
+            @if (SharedData is not null)
+            {
+                <SharedHealthDataPanel Data="SharedData" BrowserTimeZoneId="@BrowserTimeZoneId"
+                                       ReportHref="@($"/api/appointments/{Appointment.Id}/report")" />
+            }
+            else if (SharedDataError is not null)
+            {
+                <ErrorAlert Message="@SharedDataError" />
+            }
+            else
+            {
+                <SkeletonBlock Height="180px" Shape="card" />
+            }
+        }
+        else if (!HasScan)
+        {
+            <p class="text-muted-small">The patient didn't share any health data for this visit.</p>
+        }
+
+        @if (Appointment.Status == AppointmentStatus.Booked)
+        {
+            <div class="provider-visit-actions">
+                <a href="@($"/video/{Appointment.Id}")" class="btn btn-primary">Join call</a>
+                <button type="button" class="btn btn-outline-danger" disabled="@IsCancelling" @onclick="CancelAsync">
+                    @if (IsCancelling)
+                    {
+                        <span class="btn-spinner" aria-hidden="true"></span>
+                    }
+                    Cancel visit
+                </button>
+            </div>
+            @if (!IsJoinWindowOpen)
+            {
+                <p class="text-muted-small">The call room opens 10 minutes before the visit starts.</p>
+            }
+        }
+        else
+        {
+            <p class="text-muted-small">This visit is @Appointment.Status.ToString().ToLowerInvariant().</p>
+        }
+    </div>
+}
+
+@code {
+    [Parameter]
+    public Guid AppointmentId { get; set; }
+
+    private bool IsInitialized;
+    private string? ErrorMessage;
+    private AppointmentView? Appointment;
+    private Guid ProviderId;
+    private bool IsCancelling;
+    private string? BrowserTimeZoneId;
+    private SharedHealthData? SharedData;
+    private string? SharedDataError;
+
+    private bool HasScan => !string.IsNullOrWhiteSpace(Appointment?.ScanProcessingId);
+
+    private bool IsJoinWindowOpen => Appointment is not null
+        && DateTime.UtcNow >= Appointment.StartUtc.AddMinutes(-10);
+
+    private string FormattedWhen => Appointment is null
+        ? ""
+        : $"{ClientTimeZone.Format(Appointment.StartUtc, BrowserTimeZoneId, "dddd, MMM d 'at' h:mm tt")} - {ClientTimeZone.Format(Appointment.EndUtc, BrowserTimeZoneId, "h:mm tt")}";
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            if (!await CurrentUser.IsProviderAsync())
+            {
+                ErrorMessage = "This page is for dermatologist accounts.";
+                return;
+            }
+
+            ProviderId = (await CurrentUser.GetUserIdAsync())!.Value;
+            Appointment = await Booking.FindForUserAsync(AppointmentId, ProviderId);
+            if (Appointment is null || Appointment.ProviderId != ProviderId)
+            {
+                Appointment = null;
+                ErrorMessage = "That visit isn't on your schedule.";
+            }
+        }
+        catch (UnauthorizedAccessException)
+        {
+            ErrorMessage = "That visit isn't on your schedule.";
+        }
+        finally
+        {
+            IsInitialized = true;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        try
+        {
+            BrowserTimeZoneId = await JS.InvokeAsync<string>("skinCheckScheduling.getTimeZone");
+            StateHasChanged();
+        }
+        catch (JSException)
+        {
+        }
+
+        if (Appointment is { ShareHealthData: true, Status: AppointmentStatus.Booked })
+        {
+            try
+            {
+                SharedData = await ImageProcessing.GetSharedHealthDataAsync(Appointment, ProviderId);
+            }
+            catch (Exception ex) when (ex is ImageProcessingApiException or UnauthorizedAccessException)
+            {
+                SharedDataError = ex.Message;
+            }
+
+            StateHasChanged();
+        }
+    }
+
+    private async Task CancelAsync()
+    {
+        IsCancelling = true;
+        try
+        {
+            await Booking.CancelAsync(AppointmentId, ProviderId);
+            NavigationManager.NavigateTo("/provider");
+        }
+        finally
+        {
+            IsCancelling = false;
+        }
+    }
+}

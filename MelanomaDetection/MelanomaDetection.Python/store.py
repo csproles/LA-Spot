@@ -11,12 +11,13 @@ Why this exists:
     history to outlive a restart, so the durable parts live here instead.
 
 What is deliberately NOT stored here:
-    The ten full-size pipeline visuals (filtered images, edge maps, per-criterion
-    overlays) stay in main.py's in-memory _results_store. Only the 160px
-    thumbnail, the segmentation mask, and the numeric scores are persisted --
-    enough to rebuild timelines, trends and change comparisons cheaply. The
-    trade-off is that "full breakdown" imagery is only available for checks
-    processed during the current server session.
+    The full-size pipeline visuals (filtered images, edge maps) stay in main.py's
+    in-memory _results_store. The checks table holds only the 160px thumbnail,
+    the segmentation mask, and the numeric scores -- enough to rebuild timelines,
+    trends and change comparisons cheaply. The four ABCD evidence overlays are
+    kept too, downscaled, in their own check_visuals table so the PDF report can
+    show them without every history query dragging their bytes along; checks
+    saved before that table existed simply have no row there.
 """
 
 import base64
@@ -81,6 +82,19 @@ CREATE TABLE IF NOT EXISTS checks (
 CREATE INDEX IF NOT EXISTS idx_spots_user ON spots(user_id);
 CREATE INDEX IF NOT EXISTS idx_checks_user ON checks(user_id, processed_at);
 CREATE INDEX IF NOT EXISTS idx_checks_spot ON checks(spot_id, processed_at);
+
+-- The four ABCD evidence overlays for a saved check, as downscaled JPEGs, for
+-- the PDF report. Separate from checks so list/history queries stay light.
+CREATE TABLE IF NOT EXISTS check_visuals (
+    processing_id TEXT PRIMARY KEY,
+    user_id       TEXT NOT NULL,
+    asymmetry     BLOB,
+    border        BLOB,
+    color         BLOB,
+    diameter      BLOB
+);
+
+CREATE INDEX IF NOT EXISTS idx_check_visuals_user ON check_visuals(user_id);
 
 -- One row per user (the web app's account id), not a singleton.
 CREATE TABLE IF NOT EXISTS profile (
@@ -157,7 +171,7 @@ def _connect():
 # (spots, checks, a filled-in risk profile) and init_db must never drop them;
 # a version bump from here on has to ship with an additive migration instead
 # (see _migrate_profile_columns for the 2 -> 3 example).
-SCHEMA_VERSION = 5
+SCHEMA_VERSION = 6
 
 
 def init_db():
@@ -228,7 +242,8 @@ def _has_tables(connection) -> bool:
 
 def _drop_all(connection):
     connection.executescript(
-        "DROP TABLE IF EXISTS checks; DROP TABLE IF EXISTS spots; DROP TABLE IF EXISTS profile;"
+        "DROP TABLE IF EXISTS check_visuals; DROP TABLE IF EXISTS checks; "
+        "DROP TABLE IF EXISTS spots; DROP TABLE IF EXISTS profile;"
     )
 
 
@@ -441,6 +456,36 @@ def save_check(
                 mask_png,
             ),
         )
+
+
+VISUAL_KINDS = ("asymmetry", "border", "color", "diameter")
+
+
+def save_check_visuals(user_id: str, processing_id: str, visuals: dict):
+    """Store a saved check's ABCD overlays (encoded image bytes keyed by VISUAL_KINDS). Replaces any earlier set."""
+    with _connect() as connection:
+        connection.execute(
+            """
+            INSERT INTO check_visuals (processing_id, user_id, asymmetry, border, color, diameter)
+            VALUES (?, ?, ?, ?, ?, ?)
+            ON CONFLICT(processing_id) DO UPDATE SET
+                asymmetry = excluded.asymmetry,
+                border = excluded.border,
+                color = excluded.color,
+                diameter = excluded.diameter
+            WHERE check_visuals.user_id = excluded.user_id
+            """,
+            (processing_id, user_id, *(visuals.get(kind) for kind in VISUAL_KINDS)),
+        )
+
+
+def get_check_visuals(user_id: str, processing_id: str):
+    """A check's stored overlays as {kind: bytes-or-None}, or None if none were stored for it."""
+    with _connect() as connection:
+        row = connection.execute(
+            "SELECT * FROM check_visuals WHERE processing_id = ? AND user_id = ?", (processing_id, user_id)
+        ).fetchone()
+    return {kind: row[kind] for kind in VISUAL_KINDS} if row else None
 
 
 def _score_of(abcde_scores: dict, key: str):
@@ -658,6 +703,7 @@ def export_user_data(user_id: str) -> dict:
 def delete_user_data(user_id: str) -> dict:
     """Erase every row the user owns. Returns the number removed per table."""
     with _connect() as connection:
+        connection.execute("DELETE FROM check_visuals WHERE user_id = ?", (user_id,))
         checks = connection.execute("DELETE FROM checks WHERE user_id = ?", (user_id,)).rowcount
         spots = connection.execute("DELETE FROM spots WHERE user_id = ?", (user_id,)).rowcount
         profile = connection.execute("DELETE FROM profile WHERE user_id = ?", (user_id,)).rowcount

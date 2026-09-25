@@ -79,3 +79,14 @@
     gap: 10px;
     margin-top: 6px;
 }
+
+.data-raw-link {
+    margin: 12px 0 0;
+    font-size: 0.8125rem;
+    color: var(--color-text-muted);
+}
+
+.data-raw-link a {
+    color: var(--color-accent-ink);
+    font-weight: 600;
+}

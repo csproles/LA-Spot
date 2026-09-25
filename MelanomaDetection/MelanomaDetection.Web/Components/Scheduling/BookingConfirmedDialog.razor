@@ -1,0 +1,69 @@
+@* Modal shown the moment a visit is booked. A native <dialog> opened with showModal(), so focus
+   stays inside it and Escape closes it; the host removes it from the page on OnClose. *@
+@inject IJSRuntime JS
+
+<dialog class="booking-confirmed" aria-labelledby="@TitleId" aria-describedby="@BodyId" @ref="Dialog"
+        @onkeydown="OnKeyDownAsync">
+    <span class="booking-confirmed-mark" aria-hidden="true">✓</span>
+    <h2 class="booking-confirmed-title" id="@TitleId">Your visit is booked</h2>
+    <p class="booking-confirmed-body" id="@BodyId">
+        You're seeing <strong>@ProviderName</strong> by video on <strong>@When</strong>.
+    </p>
+    <p class="booking-confirmed-note">
+        It's in My visits. The call opens 10 minutes before the start time.
+        @if (SharedHealthData)
+        {
+            <span>@ProviderName can see the health data you shared until the visit ends.</span>
+        }
+    </p>
+    <div class="booking-confirmed-actions">
+        <a href="/visits" class="btn btn-primary">See my visits</a>
+        <button type="button" class="btn btn-outline-primary" autofocus @onclick="CloseAsync">Done</button>
+    </div>
+</dialog>
+
+@code {
+    [Parameter, EditorRequired]
+    public string ProviderName { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string When { get; set; } = string.Empty;
+
+    [Parameter]
+    public bool SharedHealthData { get; set; }
+
+    [Parameter]
+    public EventCallback OnClose { get; set; }
+
+    private ElementReference Dialog;
+    private readonly string TitleId = $"booking-confirmed-title-{Guid.NewGuid():N}";
+    private readonly string BodyId = $"booking-confirmed-body-{Guid.NewGuid():N}";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        try
+        {
+            var module = await JS.InvokeAsync<IJSObjectReference>("import", "./js/dialog.js");
+            await module.InvokeVoidAsync("showModal", Dialog);
+            await module.DisposeAsync();
+        }
+        catch (JSException)
+        {
+        }
+    }
+
+    private async Task OnKeyDownAsync(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape")
+        {
+            await CloseAsync();
+        }
+    }
+
+    private Task CloseAsync() => OnClose.InvokeAsync();
+}

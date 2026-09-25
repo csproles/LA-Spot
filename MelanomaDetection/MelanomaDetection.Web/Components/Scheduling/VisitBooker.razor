@@ -11,7 +11,10 @@
 @inject IJSRuntime JS
 
 <div class="visit-booker @(Embedded ? "is-embedded" : "")">
-    <ErrorAlert Message="@LoadError" />
+    @if (SelectedProvider is null)
+    {
+        <ErrorAlert Message="@LoadError" />
+    }
 
     @if (BookedProviderName is not null && BookedStartUtc is not null)
     {
@@ -30,18 +33,18 @@
                 <a href="/visits" class="btn btn-primary">See my visits</a>
             </div>
         </div>
+
+        @if (ShowConfirmedDialog)
+        {
+            <BookingConfirmedDialog ProviderName="@BookedProviderName" When="@FormatSlotFull(BookedStartUtc.Value)"
+                                    SharedHealthData="BookedWithSharedData" OnClose="() => ShowConfirmedDialog = false" />
+        }
     }
     else
     {
-        <section class="@SectionClass">
-            @if (Embedded)
-            {
-                <h3 class="panel-title">1. Choose a provider</h3>
-            }
-            else
-            {
-                <h2 class="panel-title">1. Choose a provider</h2>
-            }
+        <BookingStep Number="1" Title="Choose a provider" Embedded="Embedded"
+                     IsOpen="IsProviderStepOpen" IsComplete="SelectedProvider is not null" Summary="@SelectedProvider?.DisplayName"
+                     OnToggle="() => IsProviderStepOpen = !IsProviderStepOpen">
             @if (IsLoadingProviders)
             {
                 <SkeletonBlock Height="48px" Shape="pill" />
@@ -83,19 +86,15 @@
                     }
                 </div>
             }
-        </section>
+        </BookingStep>
 
         @if (SelectedProvider is not null)
         {
-            <section class="@SectionClass">
-                @if (Embedded)
-                {
-                    <h3 class="panel-title">2. Choose a time</h3>
-                }
-                else
-                {
-                    <h2 class="panel-title">2. Choose a time</h2>
-                }
+            <BookingStep Number="2" Title="Choose a time" Embedded="Embedded"
+                         IsOpen="IsTimeStepOpen" IsComplete="SelectedSlotUtc is not null"
+                         Summary="@(SelectedSlotUtc is { } picked ? FormatSlotFull(picked) : null)"
+                         OnToggle="() => IsTimeStepOpen = !IsTimeStepOpen">
+                <ErrorAlert Message="@LoadError" />
                 <div class="week-nav">
                     <button type="button" class="btn btn-outline-primary btn-sm"
                             disabled="@(WeekStart <= MinDate)" @onclick="() => ChangeWeekAsync(-7)">
@@ -132,7 +131,7 @@
                                     @foreach (var slot in daySlots)
                                     {
                                         <button type="button" class="week-slot-btn @(SelectedSlotUtc == slot ? "is-selected" : "")"
-                                                @onclick="() => SelectedSlotUtc = slot">
+                                                @onclick="() => SelectSlot(slot)">
                                             @FormatSlotTime(slot)
                                         </button>
                                     }
@@ -141,18 +140,23 @@
                         </div>
                     }
                 </div>
-            </section>
+            </BookingStep>
         }
 
         @if (SelectedSlotUtc is not null)
         {
-            <section class="@SectionClass">
+            <BookingStep Number="3" Title="Visit details" Optional="true" Embedded="Embedded"
+                         IsOpen="IsDetailsStepOpen" IsComplete="true" Summary="@DetailsSummary"
+                         OnToggle="() => IsDetailsStepOpen = !IsDetailsStepOpen">
+                <label class="visit-booker-field" for="@ReasonId">What's this about?</label>
+                <textarea id="@ReasonId" class="form-control" rows="3" maxlength="500" @bind="Reason" @bind:event="oninput"
+                          placeholder="A new spot, a follow-up, etc."></textarea>
+
                 @if (ScanResult is not null)
                 {
-                    <h2 class="panel-title">3. Share your scan result <span class="book-visit-optional">(optional)</span></h2>
                     <label class="book-visit-scan-toggle">
                         <input type="checkbox" @bind="AttachScan" />
-                        Share the @ScanResult.OverallVisualConcern result (score @ScanResult.RiskScore.ToString("F0")/100) and its AI explanation with @SelectedProvider!.DisplayName
+                        <span>Share the @ScanResult.OverallVisualConcern result (score @ScanResult.RiskScore.ToString("F0")/100) and its AI explanation with @SelectedProvider!.DisplayName</span>
                     </label>
                 }
                 else if (ScanLoadError is not null)
@@ -160,22 +164,19 @@
                     <p class="text-muted-small">@ScanLoadError</p>
                 }
 
-                @if (Embedded)
-                {
-                    <h3 class="panel-title">3. What's this about? <span class="book-visit-optional">(optional)</span></h3>
-                }
-                else
-                {
-                    <h2 class="panel-title">@(ScanResult is not null ? "4." : "3.") What's this about? <span class="book-visit-optional">(optional)</span></h2>
-                }
-                <textarea class="form-control" rows="3" maxlength="500" @bind="Reason"
-                          aria-label="What is this visit about? (optional)"
-                          placeholder="A new spot, a follow-up, etc."></textarea>
+                <label class="book-visit-scan-toggle">
+                    <input type="checkbox" checked="@ShareHealthData" @onchange="OnShareHealthDataChanged" />
+                    <span>
+                        Share my health data with @SelectedProvider!.DisplayName for this visit -- my risk profile, spots and
+                        check history with photos, including the PDF report from "Export my data". They can see it until the visit ends or is cancelled.
+                    </span>
+                </label>
+            </BookingStep>
 
+            <div class="@(Embedded ? "visit-booker-step" : "card-panel") book-visit-footer">
                 <p class="book-visit-summary">
                     @SelectedProvider!.DisplayName, @FormatSlotFull(SelectedSlotUtc.Value)
                 </p>
-
                 <button type="button" class="btn btn-primary book-visit-submit" disabled="@IsBooking" @onclick="SubmitBookingAsync">
                     @if (IsBooking)
                     {
@@ -183,7 +184,7 @@
                     }
                     Book this visit
                 </button>
-            </section>
+            </div>
         }
     }
 </div>
@@ -235,8 +236,6 @@
     private bool IsClosest(ProviderSummary provider) =>
         NearRegion is { } near && string.Equals(provider.HubCity, near.CityLabel, StringComparison.OrdinalIgnoreCase);
 
-    private string SectionClass => Embedded ? "visit-booker-step" : "card-panel";
-
     private List<ProviderSummary> Providers = [];
     private bool IsLoadingProviders = true;
     private ProviderSummary? SelectedProvider;
@@ -248,7 +247,40 @@
     private List<DateTime> Slots = [];
     private DateTime? SelectedSlotUtc;
 
+    private bool IsProviderStepOpen = true;
+    private bool IsTimeStepOpen;
+    private bool IsDetailsStepOpen;
+    private bool ShowConfirmedDialog;
+    private bool BookedWithSharedData;
+    private readonly string ReasonId = $"visit-reason-{Guid.NewGuid():N}";
+
+    private string DetailsSummary
+    {
+        get
+        {
+            var parts = new List<string>();
+            if (!string.IsNullOrWhiteSpace(Reason))
+            {
+                parts.Add("Reason added");
+            }
+
+            if (AttachScan && ScanResult is not null)
+            {
+                parts.Add("sharing your scan");
+            }
+
+            if (ShareHealthData)
+            {
+                parts.Add("sharing your health data");
+            }
+
+            return parts.Count == 0 ? "Nothing added" : string.Join(" · ", parts);
+        }
+    }
+
     private bool AttachScan = true;
+    private bool ShareHealthData;
+    private bool ShareHealthDataTouched;
 
     private string? Reason;
     private bool IsBooking;
@@ -264,11 +296,11 @@
 
     protected override async Task OnInitializedAsync()
     {
-        MinDate = DateOnly.FromDateTime(DateTime.UtcNow);
-        MaxDate = MinDate.AddDays(30);
+        SetToday(BrowserTimeZoneId);
         WeekStart = MinDate;
 
         PatientId = await CurrentUser.GetUserIdAsync();
+        _ = LoadSharePreferenceAsync();
 
         try
         {
@@ -301,19 +333,72 @@
         {
             // Best-effort: if JS interop isn't available yet, times just stay in UTC.
             BrowserTimeZoneId = await JS.InvokeAsync<string>("skinCheckScheduling.getTimeZone");
-            StateHasChanged();
         }
         catch (JSException)
         {
+            return;
         }
+
+        // The calendar opened on UTC's date; move it to the visitor's own today so an
+        // evening visitor west of UTC still sees (and can book) the rest of today.
+        var startedOnFirstWeek = WeekStart == MinDate;
+        SetToday(BrowserTimeZoneId);
+        if (startedOnFirstWeek && WeekStart != MinDate)
+        {
+            WeekStart = MinDate;
+            SelectedSlotUtc = null;
+            await LoadSlotsAsync();
+        }
+
+        StateHasChanged();
+    }
+
+    private void SetToday(string? timeZoneId)
+    {
+        MinDate = DateOnly.FromDateTime(ClientTimeZone.ToLocal(DateTime.UtcNow, timeZoneId));
+        MaxDate = MinDate.AddDays(30);
+    }
+
+    /// <summary>Pre-fills the share box from the profile's "Share with my dermatologist" choice
+    /// without holding up the provider list, and never overrides a box the patient already clicked.</summary>
+    private async Task LoadSharePreferenceAsync()
+    {
+        try
+        {
+            var preference = (await ImageProcessingService.GetProfileAsync()).ShareWithDermatologist;
+            if (!ShareHealthDataTouched)
+            {
+                ShareHealthData = preference;
+                StateHasChanged();
+            }
+        }
+        catch (ImageProcessingApiException)
+        {
+        }
+    }
+
+    private void OnShareHealthDataChanged(ChangeEventArgs e)
+    {
+        ShareHealthDataTouched = true;
+        ShareHealthData = e.Value is true;
     }
 
     private async Task SelectProviderAsync(ProviderSummary provider)
     {
         SelectedProvider = provider;
         SelectedSlotUtc = null;
+        IsProviderStepOpen = false;
+        IsTimeStepOpen = true;
+        IsDetailsStepOpen = false;
         WeekStart = MinDate;
         await LoadSlotsAsync();
+    }
+
+    private void SelectSlot(DateTime slot)
+    {
+        SelectedSlotUtc = slot;
+        IsTimeStepOpen = false;
+        IsDetailsStepOpen = true;
     }
 
     private async Task ChangeWeekAsync(int deltaDays)
@@ -342,7 +427,10 @@
 
         try
         {
-            Slots = [.. await Availability.GetOpenSlotsUtcAsync(SelectedProvider.Id, WeekStart, WeekStart.AddDays(6))];
+            // A day of padding each side: the grid is in the visitor's timezone but the range is
+            // read in the provider's, so edge-of-day slots could otherwise fall outside it.
+            // Past times are already dropped, so today's remaining slots are all still offered.
+            Slots = [.. await Availability.GetOpenSlotsUtcAsync(SelectedProvider.Id, WeekStart.AddDays(-1), WeekStart.AddDays(7))];
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -391,7 +479,7 @@
             scan = new AttachedScan(ScanQuery, ScanResult.RiskScore, ScanResult.OverallVisualConcern, explanation);
         }
 
-        var result = await Booking.BookAsync(SelectedProvider.Id, PatientId.Value, SelectedSlotUtc.Value, reason, scan);
+        var result = await Booking.BookAsync(SelectedProvider.Id, PatientId.Value, SelectedSlotUtc.Value, reason, scan, ShareHealthData);
 
         IsBooking = false;
         if (result.Outcome == BookingOutcome.Booked)
@@ -399,6 +487,8 @@
             BookedProviderName = SelectedProvider.DisplayName;
             BookedStartUtc = SelectedSlotUtc;
             BookedAppointmentId = result.Appointment!.Id;
+            BookedWithSharedData = ShareHealthData;
+            ShowConfirmedDialog = true;
         }
         else
         {
@@ -407,6 +497,7 @@
             // LoadSlotsAsync clears LoadError as it starts, so the message goes up after it
             // (unless the reload itself failed, whose error is the more useful one).
             SelectedSlotUtc = null;
+            IsTimeStepOpen = true;
             await LoadSlotsAsync();
             LoadError ??= "That time was just booked by someone else. Pick another.";
         }

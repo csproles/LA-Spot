@@ -13,7 +13,10 @@ namespace MelanomaDetection.Web.Services.Scheduling;
 /// </summary>
 public sealed class JitsiVideoRoomProvider : IVideoRoomProvider
 {
-    private const string BaseUrl = "https://meet.jit.si/";
+    /// <summary>The video host's origin; SecurityHeaders allows it to be framed and to use the camera and mic.</summary>
+    public const string Origin = "https://meet.jit.si";
+
+    private const string BaseUrl = Origin + "/";
 
     public VideoRoom CreateRoom(Guid appointmentId)
     {

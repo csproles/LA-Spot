@@ -1,0 +1,36 @@
+.form-feedback {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin: 0;
+    padding: 8px 12px;
+    border-radius: var(--radius-control);
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.form-feedback.is-success {
+    background: var(--color-accent-soft);
+    color: var(--color-accent-ink);
+}
+
+.form-feedback.is-error {
+    background: var(--color-alert-soft);
+    color: var(--color-alert-ink);
+}
+
+.form-feedback-mark {
+    display: inline-grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    font-size: 0.75rem;
+    background: currentColor;
+}
+
+.form-feedback-mark span {
+    color: var(--color-surface);
+    line-height: 1;
+}

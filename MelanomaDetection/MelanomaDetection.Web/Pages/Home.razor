@@ -4,6 +4,7 @@
 @inject ImageProcessingService ImageProcessingService
 @inject NavigationManager NavigationManager
 @inject ChatPageContext ChatPageContext
+@inject CurrentUser CurrentUser
 
 <PageTitle>Home - LA Spot</PageTitle>
 
@@ -94,6 +95,12 @@
 
     protected override async Task OnInitializedAsync()
     {
+        if (await CurrentUser.IsProviderAsync())
+        {
+            NavigationManager.NavigateTo("/provider");
+            return;
+        }
+
         try
         {
             var spotsTask = ImageProcessingService.GetSpotsAsync();

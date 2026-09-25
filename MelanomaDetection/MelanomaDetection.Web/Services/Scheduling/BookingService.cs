@@ -21,7 +21,8 @@ public sealed record BookingResult(BookingOutcome Outcome, Appointment? Appointm
 public sealed record AppointmentView(
     Guid Id, Guid ProviderId, string ProviderName, Guid PatientId, string PatientName,
     DateTime StartUtc, DateTime EndUtc, AppointmentStatus Status, string? Reason, string? MeetingUrl,
-    string? ScanProcessingId, double? ScanRiskScore, string? ScanOverallVisualConcern, string? ScanExplanation);
+    string? ScanProcessingId, double? ScanRiskScore, string? ScanOverallVisualConcern, string? ScanExplanation,
+    bool ShareHealthData);
 
 /// <summary>A specific completed check the patient is choosing to share, fetched (as the
 /// patient, in their own browser session) before booking -- see Appointment.ScanProcessingId
@@ -40,7 +41,7 @@ public sealed class BookingService(
 {
     public async Task<BookingResult> BookAsync(
         Guid providerId, Guid patientId, DateTime startUtc, string? reason, AttachedScan? scan = null,
-        CancellationToken cancellationToken = default)
+        bool shareHealthData = false, CancellationToken cancellationToken = default)
     {
         var provider = await GetProviderAsync(providerId, cancellationToken)
             ?? throw new KeyNotFoundException($"No provider {providerId}.");
@@ -70,6 +71,7 @@ public sealed class BookingService(
             ScanRiskScore = scan?.RiskScore,
             ScanOverallVisualConcern = scan?.OverallVisualConcern,
             ScanExplanation = scan?.Explanation,
+            ShareHealthData = shareHealthData,
             CreatedAtUtc = DateTime.UtcNow,
         };
 
@@ -211,12 +213,13 @@ public sealed class BookingService(
                 x.a.ScanRiskScore,
                 x.a.ScanOverallVisualConcern,
                 x.a.ScanExplanation,
+                x.a.ShareHealthData,
             })
             .ToListAsync(cancellationToken);
 
         return [.. rows.Select(r => new AppointmentView(
             r.Id, r.ProviderId, r.ProviderName, r.PatientId, r.PatientName, r.StartUtc, r.EndUtc, r.Status, r.Reason,
-            r.MeetingUrl, r.ScanProcessingId, r.ScanRiskScore, r.ScanOverallVisualConcern, r.ScanExplanation))];
+            r.MeetingUrl, r.ScanProcessingId, r.ScanRiskScore, r.ScanOverallVisualConcern, r.ScanExplanation, r.ShareHealthData))];
     }
 
     private async Task<Provider?> GetProviderAsync(Guid providerId, CancellationToken cancellationToken)

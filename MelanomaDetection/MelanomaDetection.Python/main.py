@@ -17,6 +17,7 @@ from flask_compress import Compress
 import abcd_scores
 import evolution
 import policy
+import report
 import store
 import validation
 from llm_explainer import explain_findings
@@ -112,6 +113,7 @@ ENDPOINT_RATE_LIMITS = {
     "explain_results": ("explain", 5),
     "textbook_chat_endpoint": ("chat", 8),
     "export_account_endpoint": ("account", 5),
+    "account_report_endpoint": ("account", 5),
     "delete_account_endpoint": ("account", 5),
 }
 # Wrong-key attempts per client address. Keeps guessing SKINCHECK_INTERNAL_KEY impractical.
@@ -463,6 +465,14 @@ def save_to_history(processing_id):
         num_lesion_instances=results.get("num_lesion_instances"),
     )
 
+    visuals = {
+        kind: _encode_visual_jpeg(results[f"{kind}_visual"])
+        for kind in store.VISUAL_KINDS
+        if results.get(f"{kind}_visual") is not None
+    }
+    if visuals:
+        store.save_check_visuals(g.user_id, processing_id, visuals)
+
     results["saved"] = True
     results["spot_id"] = spot_id
     return jsonify({"saved": True, "spotId": spot_id})
@@ -720,6 +730,22 @@ def export_account_endpoint():
     return jsonify(store.export_user_data(g.user_id))
 
 
+@app.route("/api/account/report", methods=["GET"])
+def account_report_endpoint():
+    """The caller's data as a PDF: a cover page, then one page per spot with its ABCD breakdown.
+
+    ?name= is the account's display name, used when the risk profile has no full
+    name; ?shared_with= notes on the cover who the report was prepared for.
+    """
+    fallback_name = validation.clean_text(request.args.get("name", ""), "name", 200) or ""
+    shared_with = validation.clean_text(request.args.get("shared_with", ""), "shared_with", 300) or ""
+    pdf = report.build_report(g.user_id, fallback_name=fallback_name, shared_with=shared_with)
+    response = app.response_class(pdf, mimetype="application/pdf")
+    response.headers["Content-Disposition"] = 'attachment; filename="skin-check-report.pdf"'
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
 @app.route("/api/account", methods=["DELETE"])
 def delete_account_endpoint():
     """Erase the caller's stored data and any in-memory results of theirs."""
@@ -728,6 +754,17 @@ def delete_account_endpoint():
     pending = _results_store.delete_user(g.user_id)
 
     return jsonify({"deleted": True, **removed, "pendingResults": pending})
+
+
+def _encode_visual_jpeg(image: np.ndarray, max_width: int = 640) -> bytes:
+    """Downscale and JPEG-encode an ABCD overlay for storage -- big enough to read in the PDF report."""
+    height, width = image.shape[:2]
+    if width > max_width:
+        image = cv2.resize(image, (max_width, max(1, int(round(height * max_width / width)))), interpolation=cv2.INTER_AREA)
+    success, buffer = cv2.imencode(".jpg", image, [cv2.IMWRITE_JPEG_QUALITY, 85])
+    if not success:
+        raise ValueError("Failed to encode image to JPEG")
+    return buffer.tobytes()
 
 
 def _encode_image_png(image: np.ndarray) -> bytes:

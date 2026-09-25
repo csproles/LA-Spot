@@ -131,7 +131,14 @@ public class RiskModelAbcdeTests
         var user = new CurrentUser(new FakeAuth(Guid.NewGuid()));
         return new ImageProcessingService(
             new HttpClient(handler) { BaseAddress = new Uri("http://localhost:5002") },
-            user, new OperationRateLimiter(), new MemoryCache(new MemoryCacheOptions()));
+            user, new OperationRateLimiter(), new MemoryCache(new MemoryCacheOptions()),
+            new HandlerClientFactory(handler));
+    }
+
+    private sealed class HandlerClientFactory(HttpMessageHandler handler) : IHttpClientFactory
+    {
+        public HttpClient CreateClient(string name) =>
+            new(handler, disposeHandler: false) { BaseAddress = new Uri("http://localhost:5002") };
     }
 
     private sealed class CapturingHandler(string responseJson) : HttpMessageHandler

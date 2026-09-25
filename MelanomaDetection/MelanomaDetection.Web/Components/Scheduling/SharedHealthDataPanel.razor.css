@@ -1,0 +1,94 @@
+.shared-data {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.shared-data-profile {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 10px;
+    margin: 0;
+}
+
+.shared-data-profile dt {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--color-text-muted);
+}
+
+.shared-data-profile dd {
+    margin: 0;
+}
+
+.shared-data-spot {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.shared-data-spot-title {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 8px;
+    margin: 0;
+    font-size: 1rem;
+}
+
+.shared-data-checks {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.shared-data-check {
+    display: flex;
+    gap: 12px;
+    padding: 10px;
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-control);
+}
+
+.shared-data-thumb {
+    width: 72px;
+    height: 72px;
+    flex-shrink: 0;
+    object-fit: cover;
+    border-radius: var(--radius-control);
+    background: var(--color-well);
+}
+
+.shared-data-check-main {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.shared-data-symptoms,
+.shared-data-notes {
+    font-size: 0.875rem;
+    overflow-wrap: anywhere;
+}
+
+.shared-data-notes {
+    color: var(--color-text-muted);
+}
+
+.shared-data-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.shared-data-header .panel-title {
+    margin: 0;
+}

@@ -1,0 +1,19 @@
+@* Inline result of a form action, shown next to the button that caused it. Renders nothing when there's no message. *@
+
+@if (Value is { } feedback)
+{
+    <p class="form-feedback @(feedback.IsError ? "is-error" : "is-success")" role="@(feedback.IsError ? "alert" : "status")">
+        <span class="form-feedback-mark" aria-hidden="true"><span>@(feedback.IsError ? "!" : "✓")</span></span>
+        @feedback.Message
+    </p>
+}
+
+@code {
+    public sealed record Feedback(string Message, bool IsError = false)
+    {
+        public static Feedback Error(string message) => new(message, true);
+    }
+
+    [Parameter]
+    public Feedback? Value { get; set; }
+}

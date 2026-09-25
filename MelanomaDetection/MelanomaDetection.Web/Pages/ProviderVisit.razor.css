@@ -1,0 +1,31 @@
+.provider-visit {
+    max-width: 720px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.provider-visit-back {
+    align-self: flex-start;
+    font-weight: 600;
+    color: var(--color-accent-ink);
+    text-decoration: none;
+}
+
+.provider-visit-comment,
+.provider-visit-explanation {
+    margin: 0;
+    white-space: pre-wrap;
+}
+
+.provider-visit-score {
+    margin: 0;
+    font-weight: 700;
+}
+
+.provider-visit-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
