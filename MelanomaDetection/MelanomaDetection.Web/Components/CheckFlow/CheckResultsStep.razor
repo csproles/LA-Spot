@@ -36,6 +36,7 @@
         }
         <button type="button" class="btn btn-outline-primary" @onclick="OnStartAnother">Check another spot</button>
     </div>
+    <FormFeedback Value="SaveFeedback" />
 
     <BreakdownDisclosure Results="Results" ProcessingId="@ProcessingId" />
 </div>
@@ -56,6 +57,9 @@
 
     [Parameter]
     public bool IsSaved { get; set; }
+
+    [Parameter]
+    public FormFeedback.Feedback? SaveFeedback { get; set; }
 
     [Parameter, EditorRequired]
     public EventCallback OnSave { get; set; }

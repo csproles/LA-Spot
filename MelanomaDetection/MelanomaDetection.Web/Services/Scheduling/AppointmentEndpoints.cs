@@ -36,7 +36,8 @@ public static class AppointmentEndpoints
     /// share their data when booking and the visit is still booked. Anyone else gets a 404, so
     /// the endpoint doesn't reveal which visits exist.
     /// </summary>
-    private static async Task<Results<FileContentHttpResult, RedirectHttpResult, NotFound>> SharedReportAsync(
+    private static async Task<Results<FileContentHttpResult, RedirectHttpResult, ProblemHttpResult, NotFound>> SharedReportAsync(
+        HttpContext httpContext,
         Guid id,
         ClaimsPrincipal principal,
         BookingService booking,
@@ -81,7 +82,11 @@ public static class AppointmentEndpoints
             // would present as a failed download ("Site wasn't available").
             loggerFactory.CreateLogger(typeof(AppointmentEndpoints)).LogWarning(
                 "Shared PDF report for appointment {AppointmentId} failed: {Reason}", id, ex.Message);
-            return TypedResults.Redirect($"/provider/visits/{id}?report=failed");
+            return AccountEndpoints.IsFetch(httpContext)
+                ? TypedResults.Problem(
+                    "The patient's PDF report couldn't be created just now. The report service may still be starting up after an update -- try again in a minute.",
+                    statusCode: StatusCodes.Status502BadGateway)
+                : TypedResults.Redirect($"/provider/visits/{id}?report=failed");
         }
     }
 

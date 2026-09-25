@@ -11,7 +11,11 @@
                 <button type="button" class="btn btn-primary btn-sm"
                         disabled="@(string.IsNullOrWhiteSpace(RenameValue) || IsSaving)"
                         @onclick="SubmitRename">
-                    Save
+                    @if (IsSaving)
+                    {
+                        <span class="btn-spinner" aria-hidden="true"></span>
+                    }
+                    @(IsSaving ? "Saving…" : "Save")
                 </button>
                 <button type="button" class="btn btn-outline-primary btn-sm" @onclick="() => IsRenaming = false">
                     Cancel

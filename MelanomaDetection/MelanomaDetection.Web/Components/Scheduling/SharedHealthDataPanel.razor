@@ -5,9 +5,13 @@
         <h2 class="panel-title">Shared health data</h2>
         @if (!string.IsNullOrEmpty(ReportHref))
         {
-            <a class="btn btn-outline-primary btn-sm" href="@ReportHref" data-enhance-nav="false">Download PDF report</a>
+            <DownloadButton Href="@ReportHref" Label="Download PDF report" BusyLabel="Preparing PDF…"
+                            FileName="patient-skin-check-report.pdf" ContentType="application/pdf"
+                            CssClass="btn btn-outline-primary btn-sm"
+                            InlineFeedback="false" ResultChanged="result => ReportFeedback = result" />
         }
     </div>
+    <FormFeedback Value="ReportFeedback" />
 
     @if (Data.Profile is { } profile)
     {
@@ -74,6 +78,8 @@
     /// <summary>Where the provider downloads this patient's PDF report; no button when null.</summary>
     [Parameter]
     public string? ReportHref { get; set; }
+
+    private FormFeedback.Feedback? ReportFeedback;
 
     private sealed record SpotGroup(string Title, List<SharedCheck> Checks);
 

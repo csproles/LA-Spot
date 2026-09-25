@@ -24,6 +24,11 @@
         </Actions>
     </PageHeader>
 
+    @if (!string.IsNullOrWhiteSpace(Archived))
+    {
+        <FormFeedback Value="@(new FormFeedback.Feedback($"\u201c{Archived}\u201d was archived. It no longer appears here or in rechecks."))" />
+    }
+
     <ErrorAlert Message="@LoadError" />
 
     @if (LoadError is null)
@@ -67,6 +72,9 @@
 </div>
 
 @code {
+    [SupplyParameterFromQuery]
+    public string? Archived { get; set; }
+
     [SupplyParameterFromQuery(Name = "region")]
     public string? RegionQuery { get; set; }
 

@@ -20,6 +20,11 @@
         <span class="home-hero-dog" aria-hidden="true"></span>
     </section>
 
+    @if (Saved == "profile")
+    {
+        <FormFeedback Value="@(new FormFeedback.Feedback("Your risk profile was saved. You can change it any time in Profile."))" />
+    }
+
     <ErrorAlert Message="@LoadError" />
 
     @if (LoadError is null)
@@ -61,6 +66,9 @@
 </div>
 
 @code {
+    [SupplyParameterFromQuery]
+    public string? Saved { get; set; }
+
     private List<Spot> Spots = new();
     private List<HistoryEntry> RecentChecks = new();
     private RiskProfile Profile = new();

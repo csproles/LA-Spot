@@ -1,0 +1,104 @@
+@* A download that confirms itself: "Preparing…" while the file is fetched, then "Downloaded
+   <file>" or the real reason it failed. Without JS it is still a working plain link. *@
+@inject IJSRuntime JS
+
+<div class="download-button @(Variant == "link" ? "is-link" : "")">
+    <a class="@ButtonClass" href="@Href" data-enhance-nav="false" aria-disabled="@(IsBusy ? "true" : "false")"
+       @onclick="DownloadAsync" @onclick:preventDefault="true">
+        @if (IsBusy)
+        {
+            <span class="btn-spinner" aria-hidden="true"></span>
+        }
+        else if (Icon is not null)
+        {
+            <span class="download-button-icon"><AppIcon Name="@Icon" Size="inherit" /></span>
+        }
+        @(IsBusy ? BusyLabel : Label)
+    </a>
+    @if (InlineFeedback)
+    {
+        <FormFeedback Value="Result" />
+    }
+</div>
+
+@code {
+    public sealed record DownloadResult(bool Ok, string? FileName, long Size, string? Message);
+
+    [Parameter, EditorRequired]
+    public string Href { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string Label { get; set; } = string.Empty;
+
+    /// <summary>Used when the response doesn't name the file itself.</summary>
+    [Parameter, EditorRequired]
+    public string FileName { get; set; } = string.Empty;
+
+    /// <summary>What the response must be (e.g. application/pdf); anything else counts as a failure.</summary>
+    [Parameter]
+    public string? ContentType { get; set; }
+
+    [Parameter]
+    public string BusyLabel { get; set; } = "Preparing…";
+
+    [Parameter]
+    public string? Icon { get; set; } = "download";
+
+    /// <summary>"button" (default) or "link" for an inline text link.</summary>
+    [Parameter]
+    public string Variant { get; set; } = "button";
+
+    [Parameter]
+    public string CssClass { get; set; } = "btn btn-outline-primary";
+
+    /// <summary>False when the host shows the result itself (via ResultChanged), e.g. below a row of buttons.</summary>
+    [Parameter]
+    public bool InlineFeedback { get; set; } = true;
+
+    [Parameter]
+    public EventCallback<FormFeedback.Feedback?> ResultChanged { get; set; }
+
+    private bool IsBusy;
+    private FormFeedback.Feedback? Result;
+
+    private string ButtonClass => Variant == "link" ? "download-button-link" : $"{CssClass} download-button-button";
+
+    private async Task DownloadAsync()
+    {
+        if (IsBusy)
+        {
+            return;
+        }
+
+        IsBusy = true;
+        Result = null;
+        await ResultChanged.InvokeAsync(null);
+        StateHasChanged();
+
+        try
+        {
+            await using var module = await JS.InvokeAsync<IJSObjectReference>("import", "./js/download.js");
+            var outcome = await module.InvokeAsync<DownloadResult>("download", Href, FileName, ContentType);
+            Result = outcome is { Ok: true }
+                ? new FormFeedback.Feedback($"Downloaded {outcome.FileName} ({FormatSize(outcome.Size)}). Check your downloads folder.")
+                : FormFeedback.Feedback.Error(outcome?.Message ?? "The download didn't work. Try again in a minute.");
+        }
+        catch (JSException)
+        {
+            Result = FormFeedback.Feedback.Error("The download didn't start. Try again, or refresh the page.");
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+
+        await ResultChanged.InvokeAsync(Result);
+    }
+
+    private static string FormatSize(long bytes) => bytes switch
+    {
+        >= 1024 * 1024 => $"{bytes / (1024.0 * 1024.0):F1} MB",
+        >= 1024 => $"{bytes / 1024.0:F0} KB",
+        _ => $"{bytes} bytes",
+    };
+}

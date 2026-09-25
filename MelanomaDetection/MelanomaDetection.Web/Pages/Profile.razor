@@ -20,7 +20,7 @@
     </PageHeader>
 
     <ErrorAlert Message="@LoadError" />
-    <ErrorAlert Message="@SaveError" />
+    <FormFeedback Value="SaveFeedback" />
 
     <SessionPanel />
 
@@ -34,12 +34,12 @@
                 @(IsLoading || Model.Configured ? "" : "Not set up yet.")
             </p>
         </div>
-        <RiskProfileForm Profile="Model" IsLoading="IsLoading" ProfileChanged="_ => IsDirty = true" />
+        <RiskProfileForm Profile="Model" IsLoading="IsLoading" ProfileChanged="_ => MarkDirty()" />
     </section>
 
-    <NotificationSettingsPanel Profile="Model" ProfileChanged="_ => IsDirty = true" />
+    <NotificationSettingsPanel Profile="Model" ProfileChanged="_ => MarkDirty()" />
 
-    <PrivacySettingsPanel Profile="Model" ProfileChanged="_ => IsDirty = true" />
+    <PrivacySettingsPanel Profile="Model" ProfileChanged="_ => MarkDirty()" />
 
     <AppPreferencesPanel />
 
@@ -55,7 +55,7 @@
     private bool IsDirty;
     private bool IsSaving;
     private string? LoadError;
-    private string? SaveError;
+    private FormFeedback.Feedback? SaveFeedback;
 
     protected override async Task OnInitializedAsync()
     {
@@ -95,22 +95,30 @@
     private void UpdateFullName(string fullName)
     {
         Model.FullName = fullName;
+        MarkDirty();
+    }
+
+    /// <summary>An edit after a save makes "Saved" stale, so the confirmation goes with it.</summary>
+    private void MarkDirty()
+    {
         IsDirty = true;
+        SaveFeedback = null;
     }
 
     private async Task Save()
     {
         IsSaving = true;
-        SaveError = null;
+        SaveFeedback = null;
         try
         {
             Model = await ImageProcessingService.SaveProfileAsync(Model);
             IsDirty = false;
             SetChatContext();
+            SaveFeedback = new($"Profile saved at {AppClock.Now:h:mm tt}.");
         }
         catch (ImageProcessingApiException ex)
         {
-            SaveError = ex.Message;
+            SaveFeedback = FormFeedback.Feedback.Error($"Your changes weren't saved: {ex.Message}");
         }
         finally
         {

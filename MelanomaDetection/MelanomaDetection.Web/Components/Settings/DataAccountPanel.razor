@@ -1,5 +1,5 @@
 @* The person's rights over their data: take a copy of all of it, or erase
-   all of it. Export is a plain download; deletion is a form POST behind a
+   all of it. Export is a checked download (DownloadButton); deletion is a form POST behind a
    second, explicit confirmation because it cannot be undone. *@
 
 <div class="card-panel danger-card">
@@ -11,10 +11,9 @@
     </p>
 
     <div class="danger-actions">
-        <a class="btn btn-outline-primary danger-action" href="/account/report" data-enhance-nav="false">
-            <span class="danger-action-icon"><AppIcon Name="download" Size="inherit" /></span>
-            Export my data (PDF)
-        </a>
+        <DownloadButton Href="/account/report" Label="Export my data (PDF)" BusyLabel="Preparing your PDF…"
+                        FileName="@AccountEndpoints.ReportFileName" ContentType="application/pdf"
+                        InlineFeedback="false" ResultChanged="result => ExportFeedback = result" />
 
         @if (!ConfirmingDelete)
         {
@@ -25,7 +24,9 @@
         }
     </div>
 
-    @if (ReportFailed)
+    <FormFeedback Value="ExportFeedback" />
+
+    @if (ReportFailed && ExportFeedback is null)
     {
         <p class="data-report-error" role="alert">
             Your PDF report couldn't be created just now. The report service may still be starting up after an
@@ -33,10 +34,13 @@
         </p>
     }
 
-    <p class="data-raw-link">
-        Need it in a machine-readable format?
-        <a href="/account/export" download="@AccountEndpoints.ExportFileName">Download the raw data (JSON)</a>
-    </p>
+    <div class="data-raw-link">
+        <span>Need it in a machine-readable format?</span>
+        <DownloadButton Variant="link" Href="/account/export" Label="Download the raw data (JSON)" BusyLabel="Preparing…"
+                        FileName="@AccountEndpoints.ExportFileName" ContentType="application/json"
+                        InlineFeedback="false" ResultChanged="result => RawFeedback = result" />
+    </div>
+    <FormFeedback Value="RawFeedback" />
 
     @if (ConfirmingDelete)
     {
@@ -59,6 +63,9 @@
 </div>
 
 @code {
+    private FormFeedback.Feedback? ExportFeedback;
+    private FormFeedback.Feedback? RawFeedback;
+
     /// <summary>True after a report download failed and the endpoint sent the person back here.</summary>
     [Parameter]
     public bool ReportFailed { get; set; }

@@ -27,6 +27,16 @@ public static class AccountEndpoints
     /// <summary>Where a failed report download sends the person; the Profile page shows why.</summary>
     public const string ReportFailedRedirect = "/profile?report=failed";
 
+    public const string ReportFailedMessage =
+        "Your PDF report couldn't be created just now. The report service may still be starting up after an update -- try again in a minute.";
+
+    /// <summary>
+    /// True for DownloadButton's fetch, which shows the message itself; a plain link click
+    /// (no JS) gets a redirect back to the page instead of an error body saved as the file.
+    /// </summary>
+    public static bool IsFetch(HttpContext context) =>
+        string.Equals(context.Request.Headers["X-Requested-With"], "fetch", StringComparison.OrdinalIgnoreCase);
+
     public static IEndpointRouteBuilder MapAccountEndpoints(this IEndpointRouteBuilder endpoints)
     {
         var auth = endpoints.MapGroup("/auth");
@@ -134,6 +144,7 @@ public static class AccountEndpoints
     /// download, so an error body would otherwise surface as Chrome's vague "Site wasn't available".
     /// </summary>
     private static async Task<Results<FileContentHttpResult, RedirectHttpResult, ProblemHttpResult>> ReportAsync(
+        HttpContext httpContext,
         ClaimsPrincipal principal,
         UserAccountService accounts,
         ImageProcessingService imageProcessing,
@@ -156,7 +167,9 @@ public static class AccountEndpoints
         {
             loggerFactory.CreateLogger(typeof(AccountEndpoints)).LogWarning(
                 "PDF report for account {UserId} failed: {Reason}", userId, ex.Message);
-            return TypedResults.Redirect(ReportFailedRedirect);
+            return IsFetch(httpContext)
+                ? TypedResults.Problem(ReportFailedMessage, statusCode: StatusCodes.Status502BadGateway)
+                : TypedResults.Redirect(ReportFailedRedirect);
         }
     }
 

@@ -11,6 +11,7 @@
     <CheckStepper CurrentStep="CurrentStep" />
 
     <ErrorAlert Message="@ErrorMessage" />
+    <FormFeedback Value="StepFeedback" />
 
     @switch (CurrentStep)
     {
@@ -35,7 +36,7 @@
         case CheckStep.Outline when AnalysisResults is not null:
             <OutlineConfirmStep BorderVisual="@AnalysisResults.BorderVisual"
                                 NoDetection="@AnalysisResults.NoDetection"
-                                OnAccept="() => CurrentStep = CheckStep.Details"
+                                OnAccept="AcceptOutline"
                                 OnReject="RejectOutline" />
             break;
 
@@ -50,7 +51,7 @@
         case CheckStep.Results when AnalysisResults is not null:
             <CheckResultsStep Results="AnalysisResults" ProcessingId="@CurrentProcessingId"
                               RiskModelResult="RiskModelResult"
-                              IsSaving="IsSaving" IsSaved="IsSaved"
+                              IsSaving="IsSaving" IsSaved="IsSaved" SaveFeedback="SaveFeedback"
                               OnSave="SaveToHistory" OnStartAnother="StartNewCheck" />
             break;
     }
@@ -73,6 +74,14 @@
 
     private CheckStep CurrentStep = CheckStep.Spot;
     private string? ErrorMessage;
+
+    /// <summary>Confirms the last thing that reached the server (spot created, photo uploaded).</summary>
+    private FormFeedback.Feedback? StepFeedback;
+
+    private string? JustCreatedSpotId;
+
+    /// <summary>Shown beside the save button on the results step.</summary>
+    private FormFeedback.Feedback? SaveFeedback;
 
     private List<Spot> Spots = new();
     private bool IsLoadingSpots = true;
@@ -148,14 +157,18 @@
         }
     }
 
+    // Called through a plain Func, not an EventCallback, so re-render explicitly for the spinner.
     private async Task<Spot?> CreateSpot(string label, string region)
     {
         ErrorMessage = null;
         IsSaving = true;
+        StateHasChanged();
         try
         {
             var created = await ImageProcessingService.CreateSpotAsync(label, region);
             Spots.Insert(0, created);
+            StepFeedback = new($"Spot \u201c{created.Label}\u201d created.");
+            JustCreatedSpotId = created.Id;
             return created;
         }
         catch (ImageProcessingApiException ex)
@@ -171,13 +184,26 @@
 
     private void StartCapture(Spot spot)
     {
+        // Keep "Spot created" only for the spot that was just created, not a different pick.
+        if (spot.Id != JustCreatedSpotId)
+        {
+            StepFeedback = null;
+        }
+
         SelectedSpot = spot;
         ErrorMessage = null;
         CurrentStep = CheckStep.Capture;
     }
 
+    private void AcceptOutline()
+    {
+        StepFeedback = null;
+        CurrentStep = CheckStep.Details;
+    }
+
     private void RetakePhoto()
     {
+        StepFeedback = null;
         PreviewDataUrl = null;
         SelectedFileName = null;
         SelectedFileBytes = null;
@@ -289,6 +315,7 @@
                 SelectedFileBytes, SelectedFileName, SelectedSpot.Id, SelectedSpot.BodyRegion);
             CurrentProcessingId = response.ProcessingId;
             AnalysisResults = await ImageProcessingService.GetResultsAsync(response.ProcessingId);
+            StepFeedback = new($"Photo uploaded ({SelectedFileSize / 1024.0 / 1024.0:F1} MB) and analyzed.");
             CurrentStep = CheckStep.Outline;
         }
         catch (ImageProcessingApiException ex)
@@ -332,17 +359,20 @@
         }
 
         IsSaving = true;
-        ErrorMessage = null;
+        SaveFeedback = null;
         StateHasChanged();
 
         try
         {
             await ImageProcessingService.SaveToHistoryAsync(CurrentProcessingId, SelectedSymptoms, Notes);
             IsSaved = true;
+            SaveFeedback = new(SelectedSpot is null
+                ? "Check saved to your history."
+                : $"Check saved to \u201c{SelectedSpot.Label}\u201d's history.");
         }
         catch (ImageProcessingApiException ex)
         {
-            ErrorMessage = ex.Message;
+            SaveFeedback = FormFeedback.Feedback.Error($"This check wasn't saved: {ex.Message}");
         }
         finally
         {
@@ -366,6 +396,8 @@
         RiskModelResult = null;
         CurrentProcessingId = string.Empty;
         IsSaved = false;
+        SaveFeedback = null;
+        StepFeedback = null;
         RetakeHint = null;
         CurrentStep = CheckStep.Spot;
         NavigationManager.NavigateTo("/check");

@@ -10,8 +10,6 @@
                 Title="A few questions about your skin"
                 Subtitle="These are the personal risk factors dermatologists screen on. They tune how often we suggest rechecking each spot, and you can change them any time in Profile." />
 
-    <ErrorAlert Message="@ErrorMessage" />
-
     <RiskProfileForm @bind-Profile="Profile" IsLoading="IsLoading" />
 
     <div class="onboarding-actions">
@@ -24,13 +22,14 @@
         </button>
         <a href="/" class="link-button">Skip for now</a>
     </div>
+    <FormFeedback Value="SaveFeedback" />
 </div>
 
 @code {
     private RiskProfile Profile = new();
     private bool IsLoading = true;
     private bool IsSaving;
-    private string? ErrorMessage;
+    private FormFeedback.Feedback? SaveFeedback;
 
     protected override async Task OnInitializedAsync()
     {
@@ -55,15 +54,15 @@
     private async Task Save()
     {
         IsSaving = true;
-        ErrorMessage = null;
+        SaveFeedback = null;
         try
         {
             await ImageProcessingService.SaveProfileAsync(Profile);
-            NavigationManager.NavigateTo("/");
+            NavigationManager.NavigateTo("/?saved=profile");
         }
         catch (ImageProcessingApiException ex)
         {
-            ErrorMessage = ex.Message;
+            SaveFeedback = FormFeedback.Feedback.Error($"Your answers weren't saved: {ex.Message}");
         }
         finally
         {

@@ -12,6 +12,7 @@
 .danger-actions {
     display: flex;
     flex-wrap: wrap;
+    align-items: flex-start;
     gap: 12px;
 }
 
@@ -81,14 +82,13 @@
 }
 
 .data-raw-link {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 6px;
     margin: 12px 0 0;
     font-size: 0.8125rem;
     color: var(--color-text-muted);
-}
-
-.data-raw-link a {
-    color: var(--color-accent-ink);
-    font-weight: 600;
 }
 
 .data-report-error {
@@ -99,4 +99,8 @@
     color: var(--color-alert-ink);
     font-size: 0.875rem;
     font-weight: 600;
+}
+
+.danger-card ::deep .form-feedback {
+    margin-top: 12px;
 }

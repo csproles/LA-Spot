@@ -22,7 +22,7 @@
     {
         <SpotDetailHeader Spot="Spot" OnRename="SaveRename" IsSaving="IsSaving" />
 
-        <ErrorAlert Message="@SaveError" />
+        <FormFeedback Value="SaveFeedback" />
 
         @if (Spot.Checks.Count == 0)
         {
@@ -55,7 +55,7 @@
 
     private SpotDetail? Spot;
     private string? LoadError;
-    private string? SaveError;
+    private FormFeedback.Feedback? SaveFeedback;
     private bool IsSaving;
     private bool ConfirmArchive;
 
@@ -92,24 +92,29 @@
         });
     }
 
+    // Called through a plain Func, not an EventCallback, so this page doesn't re-render on
+    // its own afterwards -- without the StateHasChanged calls the spinner and message never show.
     private async Task<bool> SaveRename(string label)
     {
         IsSaving = true;
-        SaveError = null;
+        SaveFeedback = null;
+        StateHasChanged();
         try
         {
             var updated = await ImageProcessingService.UpdateSpotAsync(SpotId, label: label);
             Spot!.Label = updated.Label;
+            SaveFeedback = new($"Renamed to \u201c{updated.Label}\u201d.");
             return true;
         }
         catch (ImageProcessingApiException ex)
         {
-            SaveError = ex.Message;
+            SaveFeedback = FormFeedback.Feedback.Error($"The new name wasn't saved: {ex.Message}");
             return false;
         }
         finally
         {
             IsSaving = false;
+            StateHasChanged();
         }
     }
 
@@ -122,15 +127,15 @@
         }
 
         IsSaving = true;
-        SaveError = null;
+        SaveFeedback = null;
         try
         {
             await ImageProcessingService.UpdateSpotAsync(SpotId, archived: true);
-            NavigationManager.NavigateTo("/spots");
+            NavigationManager.NavigateTo($"/spots?archived={Uri.EscapeDataString(Spot!.Label)}");
         }
         catch (ImageProcessingApiException ex)
         {
-            SaveError = ex.Message;
+            SaveFeedback = FormFeedback.Feedback.Error($"The spot wasn't archived: {ex.Message}");
             ConfirmArchive = false;
         }
         finally
