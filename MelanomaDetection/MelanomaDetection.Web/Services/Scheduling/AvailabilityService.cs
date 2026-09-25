@@ -131,6 +131,15 @@ public sealed class AvailabilityService(IDbContextFactory<AppDbContext> dbFactor
         }
 
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+        var clash = await db.AvailabilityRules.AsNoTracking()
+            .Where(r => r.ProviderId == providerId && r.Weekday == weekday && r.StartTime < end && start < r.EndTime)
+            .FirstOrDefaultAsync(cancellationToken);
+        if (clash is not null)
+        {
+            throw new ArgumentException(
+                $"That overlaps your existing {weekday} hours ({clash.StartTime:h:mm tt} - {clash.EndTime:h:mm tt}). Remove those first or pick a different time.");
+        }
+
         db.AvailabilityRules.Add(new AvailabilityRule { ProviderId = providerId, Weekday = weekday, StartTime = start, EndTime = end });
         await db.SaveChangesAsync(cancellationToken);
     }
@@ -185,6 +194,15 @@ public sealed class AvailabilityService(IDbContextFactory<AppDbContext> dbFactor
         }
 
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+        var timeZoneId = await db.Providers.AsNoTracking()
+            .Where(p => p.Id == providerId).Select(p => p.TimeZoneId).SingleOrDefaultAsync(cancellationToken) ?? "UTC";
+        var providerToday = DateOnly.FromDateTime(
+            TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById(timeZoneId)));
+        if (date < providerToday)
+        {
+            throw new ArgumentException("That date has already passed.");
+        }
+
         db.AvailabilityExceptions.Add(new AvailabilityException
         {
             ProviderId = providerId,

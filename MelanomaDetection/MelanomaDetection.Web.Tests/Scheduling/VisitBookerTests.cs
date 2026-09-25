@@ -31,6 +31,8 @@ public sealed class VisitBookerTests : BunitContext, IDisposable
         _options = new DbContextOptionsBuilder<AppDbContext>().UseSqlite($"Data Source={_dbPath}").Options;
     }
 
+    private string _browserTimeZone = "UTC";
+
     private async Task SeedAsync(int providerCount, string?[]? hubCities = null)
     {
         await using (var db = new AppDbContext(_options))
@@ -78,7 +80,7 @@ public sealed class VisitBookerTests : BunitContext, IDisposable
             new UnreachableHttpClientFactory()));
 
         JSInterop.Mode = JSRuntimeMode.Loose;
-        JSInterop.Setup<string>("skinCheckScheduling.getTimeZone").SetResult("UTC");
+        JSInterop.Setup<string>("skinCheckScheduling.getTimeZone").SetResult(_browserTimeZone);
     }
 
     [Fact]
@@ -170,6 +172,30 @@ public sealed class VisitBookerTests : BunitContext, IDisposable
         cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll(".choice-card").Count));
         Assert.Contains("Dr. Number 1", cut.FindAll(".choice-card")[0].TextContent);
         Assert.Contains("Dr. Number 0", cut.FindAll(".choice-card")[1].TextContent);
+    }
+
+    [Fact]
+    public async Task TheCalendarStartsOnTheVisitorsOwnTodayNotUtcs()
+    {
+        // Pick a zone whose date differs from UTC's right now: 12h behind in UTC's
+        // morning (local is still "yesterday"), 14h ahead otherwise ("tomorrow").
+        var behind = DateTime.UtcNow.Hour < 11;
+        var zone = behind ? "Etc/GMT+12" : "Pacific/Kiritimati";
+        var localToday = DateOnly.FromDateTime(ClientTimeZone.ToLocal(DateTime.UtcNow, zone));
+        Assert.NotEqual(DateOnly.FromDateTime(DateTime.UtcNow), localToday);
+        _browserTimeZone = zone;
+        await SeedAsync(1);
+
+        var cut = Render<VisitBooker>(p => p.Add(x => x.Embedded, true));
+
+        cut.WaitForAssertion(() =>
+            Assert.Equal(localToday.Day.ToString(), cut.FindAll(".week-day-header strong")[0].TextContent));
+        if (behind)
+        {
+            // The rest of the visitor's today is still bookable, not skipped.
+            cut.WaitForAssertion(() =>
+                Assert.NotEmpty(cut.FindAll(".week-day-column")[0].QuerySelectorAll("button.week-slot-btn")));
+        }
     }
 
     [Fact]

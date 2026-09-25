@@ -1,0 +1,57 @@
+@* What patients can actually book right now, from the provider's own hours, blocks and bookings. *@
+
+<section class="card-panel bookable-summary @(IsLoading ? "" : OpenSlots.Count == 0 ? "is-empty" : "is-open")" aria-live="polite">
+    <h2 class="panel-title">What patients can book</h2>
+    @if (IsLoading)
+    {
+        <SkeletonBlock Height="44px" Shape="pill" />
+    }
+    else if (OpenSlots.Count > 0)
+    {
+        <p class="bookable-summary-headline">
+            <strong>@OpenSlots.Count open visit time@(OpenSlots.Count == 1 ? "" : "s")</strong> in the next @DaysAhead days.
+        </p>
+        <p class="bookable-summary-detail">
+            Next opening: <strong>@Format(OpenSlots[0], "dddd, MMM d 'at' h:mm tt")</strong>
+            @if (IsToday(OpenSlots[0]))
+            {
+                <span class="bookable-summary-today">today</span>
+            }
+        </p>
+        <p class="text-muted-small">Times are in @TimeZoneLabel. Patients see them in their own timezone.</p>
+    }
+    else
+    {
+        <p class="bookable-summary-headline"><strong>Patients can't book you right now.</strong></p>
+        <p class="bookable-summary-detail">
+            @(HasWeeklyHours
+                ? $"Every time in the next {DaysAhead} days is already booked, blocked, or has passed. Add more hours or extra hours on a specific date."
+                : "Add your weekly hours below to open times for booking.")
+        </p>
+    }
+</section>
+
+@code {
+    [Parameter, EditorRequired]
+    public IReadOnlyList<DateTime> OpenSlots { get; set; } = [];
+
+    [Parameter]
+    public bool IsLoading { get; set; }
+
+    [Parameter]
+    public bool HasWeeklyHours { get; set; }
+
+    [Parameter]
+    public int DaysAhead { get; set; } = 14;
+
+    [Parameter, EditorRequired]
+    public string TimeZoneId { get; set; } = "UTC";
+
+    [Parameter]
+    public string TimeZoneLabel { get; set; } = "UTC";
+
+    private string Format(DateTime utc, string format) => ClientTimeZone.Format(utc, TimeZoneId, format);
+
+    private bool IsToday(DateTime utc) =>
+        DateOnly.FromDateTime(ClientTimeZone.ToLocal(utc, TimeZoneId)) == DateOnly.FromDateTime(ClientTimeZone.ToLocal(DateTime.UtcNow, TimeZoneId));
+}

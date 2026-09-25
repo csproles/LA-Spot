@@ -16,13 +16,173 @@ else if (!IsProvider)
 else
 {
     <div class="provider-page">
-        <PageHeader Title="Provider settings" Subtitle="Your profile, visit length and the hours patients can book.">
+        <PageHeader Title="Hours & profile" Subtitle="Your profile, visit length and the hours patients can book.">
             <Actions>
                 <a href="/provider" class="btn btn-outline-primary">Back to schedule</a>
             </Actions>
         </PageHeader>
 
-        <ErrorAlert Message="@ErrorMessage" />
+        <BookableSummary OpenSlots="OpenSlots" IsLoading="IsLoadingSummary" HasWeeklyHours="Rules.Count > 0"
+                         DaysAhead="SummaryDays" TimeZoneId="@SavedTimeZoneId" TimeZoneLabel="@TimeZoneLabel(SavedTimeZoneId)" />
+
+        <section class="card-panel">
+            <h2 class="panel-title">Weekly hours</h2>
+            <p class="text-muted-small">Repeats every week. Times are in @TimeZoneLabel(SavedTimeZoneId).</p>
+            @if (Rules.Count == 0)
+            {
+                <p class="text-muted-small">No weekly hours yet -- patients won't see any open times.</p>
+            }
+            else
+            {
+                <ul class="rule-list">
+                    @foreach (var rule in Rules)
+                    {
+                        var visits = VisitsIn(rule.StartTime, rule.EndTime);
+                        <li class="rule-row">
+                            <span class="rule-row-main">
+                                <strong>@rule.Weekday</strong> @rule.StartTime.ToString("h:mm tt") - @rule.EndTime.ToString("h:mm tt")
+                                <span class="rule-row-count @(visits == 0 ? "is-warn" : "")">
+                                    @(visits == 0 ? $"too short for a {SavedLengthMinutes}-min visit" : $"{visits} visit{(visits == 1 ? "" : "s")}")
+                                </span>
+                            </span>
+                            <button type="button" class="btn btn-outline-danger btn-sm" disabled="@RemovingRuleIds.Contains(rule.Id)"
+                                    aria-label="@($"Remove {rule.Weekday} {rule.StartTime:h:mm tt} to {rule.EndTime:h:mm tt}")"
+                                    @onclick="() => RemoveRuleAsync(rule)">
+                                @if (RemovingRuleIds.Contains(rule.Id))
+                                {
+                                    <span class="btn-spinner" aria-hidden="true"></span>
+                                }
+                                Remove
+                            </button>
+                        </li>
+                    }
+                </ul>
+            }
+
+            <div class="provider-form-grid">
+                <label class="provider-field">
+                    Day
+                    <select class="form-select" @bind="NewRuleWeekday">
+                        @foreach (var day in Weekdays)
+                        {
+                            <option value="@day">@day</option>
+                        }
+                    </select>
+                </label>
+                <label class="provider-field">
+                    From
+                    <input type="time" class="form-control" @bind="NewRuleStart" @bind:event="oninput" />
+                </label>
+                <label class="provider-field">
+                    To
+                    <input type="time" class="form-control" @bind="NewRuleEnd" @bind:event="oninput" />
+                </label>
+            </div>
+            <p class="provider-hint @(NewRuleProblem is null ? "" : "is-warn")">@(NewRuleProblem ?? NewRulePreview)</p>
+            <div class="provider-actions">
+                <button type="button" class="btn btn-outline-primary btn-sm" disabled="@(IsAddingRule || NewRuleProblem is not null)" @onclick="AddRuleAsync">
+                    @if (IsAddingRule)
+                    {
+                        <span class="btn-spinner" aria-hidden="true"></span>
+                    }
+                    Add hours
+                </button>
+            </div>
+            <FormFeedback Value="RulesFeedback" />
+        </section>
+
+        <section class="card-panel">
+            <h2 class="panel-title">Blocked dates &amp; extra hours</h2>
+            @if (Exceptions.Count == 0)
+            {
+                <p class="text-muted-small">No changes to your weekly hours.</p>
+            }
+            else
+            {
+                <ul class="rule-list">
+                    @foreach (var ex in Exceptions)
+                    {
+                        <li class="rule-row">
+                            <span class="rule-row-main"><strong>@ex.Date.ToString("ddd, MMM d")</strong> @DescribeException(ex)</span>
+                            <button type="button" class="btn btn-outline-danger btn-sm" disabled="@RemovingExceptionIds.Contains(ex.Id)"
+                                    @onclick="() => RemoveExceptionAsync(ex)">
+                                @if (RemovingExceptionIds.Contains(ex.Id))
+                                {
+                                    <span class="btn-spinner" aria-hidden="true"></span>
+                                }
+                                Remove
+                            </button>
+                        </li>
+                    }
+                </ul>
+            }
+
+            <SegmentedControl Options="ExceptionTypeOptions" @bind-Value="NewExceptionType" AriaLabel="Exception type" />
+            <div class="provider-form-grid">
+                <label class="provider-field">
+                    Date
+                    <input type="date" class="form-control" min="@ProviderToday.ToString("yyyy-MM-dd")" @bind="NewExceptionDate" @bind:event="oninput" />
+                </label>
+                @if (NewExceptionType != "block-day")
+                {
+                    <label class="provider-field">
+                        From
+                        <input type="time" class="form-control" @bind="NewExceptionStart" @bind:event="oninput" />
+                    </label>
+                    <label class="provider-field">
+                        To
+                        <input type="time" class="form-control" @bind="NewExceptionEnd" @bind:event="oninput" />
+                    </label>
+                }
+            </div>
+            @if (NewExceptionProblem is not null)
+            {
+                <p class="provider-hint is-warn">@NewExceptionProblem</p>
+            }
+            <div class="provider-actions">
+                <button type="button" class="btn btn-outline-primary btn-sm" disabled="@(IsAddingException || NewExceptionProblem is not null)" @onclick="AddExceptionAsync">
+                    @if (IsAddingException)
+                    {
+                        <span class="btn-spinner" aria-hidden="true"></span>
+                    }
+                    Add
+                </button>
+            </div>
+            <FormFeedback Value="ExceptionsFeedback" />
+        </section>
+
+        <section class="card-panel">
+            <h2 class="panel-title">Visit settings</h2>
+            <div class="provider-form-grid">
+                <label class="provider-field">
+                    Visit length (minutes)
+                    <input type="number" class="form-control" min="5" max="240" step="5" @bind="SettingsLengthMinutes" />
+                </label>
+                <label class="provider-field">
+                    Buffer between visits (minutes)
+                    <input type="number" class="form-control" min="0" max="120" step="5" @bind="SettingsBufferMinutes" />
+                </label>
+                <label class="provider-field">
+                    Timezone
+                    <select class="form-select" @bind="SettingsTimeZoneId">
+                        @foreach (var tz in CommonTimeZones)
+                        {
+                            <option value="@tz.Id">@tz.Label</option>
+                        }
+                    </select>
+                </label>
+            </div>
+            <div class="provider-actions">
+                <button type="button" class="btn btn-primary btn-sm" disabled="@IsSavingSettings" @onclick="SaveSettingsAsync">
+                    @if (IsSavingSettings)
+                    {
+                        <span class="btn-spinner" aria-hidden="true"></span>
+                    }
+                    Save settings
+                </button>
+            </div>
+            <FormFeedback Value="SettingsFeedback" />
+        </section>
 
         <section class="card-panel">
             <h2 class="panel-title">Your profile</h2>
@@ -49,129 +209,23 @@ else
                 Bio
                 <textarea class="form-control" rows="3" maxlength="2000" @bind="ProfileBio"></textarea>
             </label>
-            <button type="button" class="btn btn-primary btn-sm" disabled="@IsSavingProfile" @onclick="SaveProfileAsync">
-                @if (IsSavingProfile)
-                {
-                    <span class="btn-spinner" aria-hidden="true"></span>
-                }
-                Save profile
-            </button>
-        </section>
-
-        <section class="card-panel">
-            <h2 class="panel-title">Visit settings</h2>
-            <div class="provider-form-grid">
-                <label class="provider-field">
-                    Visit length (minutes)
-                    <input type="number" class="form-control" min="5" max="240" step="5" @bind="SettingsLengthMinutes" />
-                </label>
-                <label class="provider-field">
-                    Buffer between visits (minutes)
-                    <input type="number" class="form-control" min="0" max="120" step="5" @bind="SettingsBufferMinutes" />
-                </label>
-                <label class="provider-field">
-                    Timezone
-                    <select class="form-select" @bind="SettingsTimeZoneId">
-                        @foreach (var tz in CommonTimeZones)
-                        {
-                            <option value="@tz.Id">@tz.Label</option>
-                        }
-                    </select>
-                </label>
-            </div>
-            <button type="button" class="btn btn-primary btn-sm" disabled="@IsSavingSettings" @onclick="SaveSettingsAsync">
-                @if (IsSavingSettings)
-                {
-                    <span class="btn-spinner" aria-hidden="true"></span>
-                }
-                Save settings
-            </button>
-        </section>
-
-        <section class="card-panel">
-            <h2 class="panel-title">Weekly availability</h2>
-            @if (Rules.Count == 0)
-            {
-                <p class="text-muted-small">No recurring hours set -- patients won't see any open slots yet.</p>
-            }
-            else
-            {
-                <div class="rule-list">
-                    @foreach (var rule in Rules)
+            <div class="provider-actions">
+                <button type="button" class="btn btn-primary btn-sm" disabled="@IsSavingProfile" @onclick="SaveProfileAsync">
+                    @if (IsSavingProfile)
                     {
-                        <div class="rule-row">
-                            <span>@rule.Weekday, @rule.StartTime.ToString("h:mm tt") - @rule.EndTime.ToString("h:mm tt")</span>
-                            <button type="button" class="btn btn-outline-danger btn-sm" @onclick="() => RemoveRuleAsync(rule.Id)">Remove</button>
-                        </div>
+                        <span class="btn-spinner" aria-hidden="true"></span>
                     }
-                </div>
-            }
-
-            <div class="provider-form-grid">
-                <label class="provider-field">
-                    Day
-                    <select class="form-select" @bind="NewRuleWeekday">
-                        @foreach (var day in Weekdays)
-                        {
-                            <option value="@day">@day</option>
-                        }
-                    </select>
-                </label>
-                <label class="provider-field">
-                    From
-                    <input type="time" class="form-control" @bind="NewRuleStart" />
-                </label>
-                <label class="provider-field">
-                    To
-                    <input type="time" class="form-control" @bind="NewRuleEnd" />
-                </label>
+                    Save profile
+                </button>
             </div>
-            <button type="button" class="btn btn-outline-primary btn-sm" @onclick="AddRuleAsync">Add hours</button>
-        </section>
-
-        <section class="card-panel">
-            <h2 class="panel-title">Blocked dates &amp; extra hours</h2>
-            @if (Exceptions.Count == 0)
-            {
-                <p class="text-muted-small">No exceptions to your weekly hours.</p>
-            }
-            else
-            {
-                <div class="rule-list">
-                    @foreach (var ex in Exceptions)
-                    {
-                        <div class="rule-row">
-                            <span>@ex.Date.ToString("MMM d") -- @DescribeException(ex)</span>
-                            <button type="button" class="btn btn-outline-danger btn-sm" @onclick="() => RemoveExceptionAsync(ex.Id)">Remove</button>
-                        </div>
-                    }
-                </div>
-            }
-
-            <SegmentedControl Options="ExceptionTypeOptions" @bind-Value="NewExceptionType" AriaLabel="Exception type" />
-            <div class="provider-form-grid">
-                <label class="provider-field">
-                    Date
-                    <input type="date" class="form-control" @bind="NewExceptionDate" />
-                </label>
-                @if (NewExceptionType != "block-day")
-                {
-                    <label class="provider-field">
-                        From
-                        <input type="time" class="form-control" @bind="NewExceptionStart" />
-                    </label>
-                    <label class="provider-field">
-                        To
-                        <input type="time" class="form-control" @bind="NewExceptionEnd" />
-                    </label>
-                }
-            </div>
-            <button type="button" class="btn btn-outline-primary btn-sm" @onclick="AddExceptionAsync">Add</button>
+            <FormFeedback Value="ProfileFeedback" />
         </section>
     </div>
 }
 
 @code {
+    private const int SummaryDays = 14;
+
     private static readonly DayOfWeek[] Weekdays =
     [
         DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday,
@@ -199,12 +253,17 @@ else
     private bool IsInitialized;
     private bool IsProvider;
     private Guid ProviderId;
-    private string? ErrorMessage;
 
     private int SettingsLengthMinutes = 30;
     private int SettingsBufferMinutes = 10;
     private string SettingsTimeZoneId = "America/Chicago";
     private bool IsSavingSettings;
+    private FormFeedback.Feedback? SettingsFeedback;
+
+    // What slot counts and the summary are computed from -- only changes on a successful save.
+    private int SavedLengthMinutes = 30;
+    private int SavedBufferMinutes = 10;
+    private string SavedTimeZoneId = "America/Chicago";
 
     private string ProfileSpecialty = "Dermatology";
     private string? ProfileLicenseNumber;
@@ -212,17 +271,50 @@ else
     private string? ProfileBio;
     private string? ProfilePhotoUrl;
     private bool IsSavingProfile;
+    private FormFeedback.Feedback? ProfileFeedback;
 
     private List<AvailabilityRule> Rules = [];
     private DayOfWeek NewRuleWeekday = DayOfWeek.Monday;
     private TimeOnly NewRuleStart = new(9, 0);
     private TimeOnly NewRuleEnd = new(17, 0);
+    private bool IsAddingRule;
+    private readonly HashSet<int> RemovingRuleIds = [];
+    private FormFeedback.Feedback? RulesFeedback;
 
     private List<AvailabilityException> Exceptions = [];
     private string NewExceptionType = "block-day";
-    private DateOnly NewExceptionDate = DateOnly.FromDateTime(DateTime.UtcNow);
+    private DateOnly NewExceptionDate;
     private TimeOnly NewExceptionStart = new(9, 0);
     private TimeOnly NewExceptionEnd = new(12, 0);
+    private bool IsAddingException;
+    private readonly HashSet<int> RemovingExceptionIds = [];
+    private FormFeedback.Feedback? ExceptionsFeedback;
+
+    private IReadOnlyList<DateTime> OpenSlots = [];
+    private bool IsLoadingSummary = true;
+
+    private DateOnly ProviderToday => DateOnly.FromDateTime(ClientTimeZone.ToLocal(DateTime.UtcNow, SavedTimeZoneId));
+
+    private string? NewRuleProblem =>
+        NewRuleStart >= NewRuleEnd ? "End time must be after the start time."
+        : Rules.FirstOrDefault(r => r.Weekday == NewRuleWeekday && r.StartTime < NewRuleEnd && NewRuleStart < r.EndTime) is { } clash
+            ? $"Overlaps your {clash.Weekday} hours ({clash.StartTime:h:mm tt} - {clash.EndTime:h:mm tt})."
+        : VisitsIn(NewRuleStart, NewRuleEnd) == 0 ? $"Too short to fit a {SavedLengthMinutes}-minute visit."
+        : null;
+
+    private string NewRulePreview
+    {
+        get
+        {
+            var visits = VisitsIn(NewRuleStart, NewRuleEnd);
+            return $"Opens {visits} visit time{(visits == 1 ? "" : "s")} every {NewRuleWeekday}.";
+        }
+    }
+
+    private string? NewExceptionProblem =>
+        NewExceptionDate < ProviderToday ? "That date has already passed."
+        : NewExceptionType != "block-day" && NewExceptionStart >= NewExceptionEnd ? "End time must be after the start time."
+        : null;
 
     protected override async Task OnInitializedAsync()
     {
@@ -238,9 +330,9 @@ else
         var provider = await Availability.FindProviderAsync(ProviderId);
         if (provider is not null)
         {
-            SettingsLengthMinutes = provider.AppointmentLengthMinutes;
-            SettingsBufferMinutes = provider.BufferMinutes;
-            SettingsTimeZoneId = provider.TimeZoneId;
+            SettingsLengthMinutes = SavedLengthMinutes = provider.AppointmentLengthMinutes;
+            SettingsBufferMinutes = SavedBufferMinutes = provider.BufferMinutes;
+            SettingsTimeZoneId = SavedTimeZoneId = provider.TimeZoneId;
 
             ProfileSpecialty = provider.Specialty;
             ProfileLicenseNumber = provider.LicenseNumber;
@@ -250,24 +342,56 @@ else
             ProfilePhotoUrl = provider.PhotoUrl ?? await CurrentUser.GetPictureUrlAsync();
         }
 
+        NewExceptionDate = ProviderToday;
         Rules = [.. await Availability.ListRulesAsync(ProviderId)];
-        Exceptions = [.. await Availability.ListExceptionsAsync(ProviderId, DateOnly.FromDateTime(DateTime.UtcNow))];
+        Exceptions = [.. await Availability.ListExceptionsAsync(ProviderId, ProviderToday)];
         IsInitialized = true;
+        await RefreshSummaryAsync();
+    }
+
+    private async Task RefreshSummaryAsync()
+    {
+        IsLoadingSummary = true;
+        try
+        {
+            OpenSlots = await Availability.GetOpenSlotsUtcAsync(ProviderId, ProviderToday, ProviderToday.AddDays(SummaryDays - 1));
+        }
+        finally
+        {
+            IsLoadingSummary = false;
+        }
+    }
+
+    /// <summary>How many visits fit in a window, matching SlotGenerator's stepping (length + buffer).</summary>
+    private int VisitsIn(TimeOnly start, TimeOnly end)
+    {
+        var window = (int)(end - start).TotalMinutes;
+        if (end <= start || window < SavedLengthMinutes)
+        {
+            return 0;
+        }
+
+        return (window - SavedLengthMinutes) / (SavedLengthMinutes + SavedBufferMinutes) + 1;
     }
 
     private async Task SaveSettingsAsync()
     {
         IsSavingSettings = true;
-        ErrorMessage = null;
+        SettingsFeedback = null;
         StateHasChanged();
 
         try
         {
             await Availability.UpdateProviderSettingsAsync(ProviderId, SettingsLengthMinutes, SettingsBufferMinutes, SettingsTimeZoneId);
+            SavedLengthMinutes = SettingsLengthMinutes;
+            SavedBufferMinutes = SettingsBufferMinutes;
+            SavedTimeZoneId = SettingsTimeZoneId;
+            SettingsFeedback = new($"Saved. Visits are now {SavedLengthMinutes} minutes with {SavedBufferMinutes} minutes between them.");
+            await RefreshSummaryAsync();
         }
         catch (Exception ex) when (ex is ArgumentException or TimeZoneNotFoundException)
         {
-            ErrorMessage = ex.Message;
+            SettingsFeedback = FormFeedback.Feedback.Error(ex.Message);
         }
         finally
         {
@@ -278,17 +402,18 @@ else
     private async Task SaveProfileAsync()
     {
         IsSavingProfile = true;
-        ErrorMessage = null;
+        ProfileFeedback = null;
         StateHasChanged();
 
         try
         {
             await Availability.UpdateProviderProfileAsync(
                 ProviderId, ProfileSpecialty, ProfileLicenseNumber, ProfileCredentials, ProfileBio, ProfilePhotoUrl);
+            ProfileFeedback = new("Profile saved. Patients will see these details when they book.");
         }
         catch (ArgumentException ex)
         {
-            ErrorMessage = ex.Message;
+            ProfileFeedback = FormFeedback.Feedback.Error(ex.Message);
         }
         finally
         {
@@ -298,27 +423,67 @@ else
 
     private async Task AddRuleAsync()
     {
-        ErrorMessage = null;
+        if (NewRuleProblem is not null)
+        {
+            return;
+        }
+
+        IsAddingRule = true;
+        RulesFeedback = null;
+        StateHasChanged();
+
         try
         {
             await Availability.AddRuleAsync(ProviderId, NewRuleWeekday, NewRuleStart, NewRuleEnd);
+            RulesFeedback = new($"Added {NewRuleWeekday}, {NewRuleStart:h:mm tt} - {NewRuleEnd:h:mm tt}. {NewRulePreview}");
             Rules = [.. await Availability.ListRulesAsync(ProviderId)];
+            // Step to the next day with the same times so the form doesn't instantly flag the
+            // hours just added as an overlap, and filling in Mon-Fri is one click per day.
+            NewRuleWeekday = Weekdays[(Array.IndexOf(Weekdays, NewRuleWeekday) + 1) % Weekdays.Length];
+            await RefreshSummaryAsync();
         }
         catch (ArgumentException ex)
         {
-            ErrorMessage = ex.Message;
+            RulesFeedback = FormFeedback.Feedback.Error(ex.Message);
+        }
+        finally
+        {
+            IsAddingRule = false;
         }
     }
 
-    private async Task RemoveRuleAsync(int ruleId)
+    private async Task RemoveRuleAsync(AvailabilityRule rule)
     {
-        await Availability.RemoveRuleAsync(ProviderId, ruleId);
-        Rules = [.. await Availability.ListRulesAsync(ProviderId)];
+        if (!RemovingRuleIds.Add(rule.Id))
+        {
+            return;
+        }
+
+        RulesFeedback = null;
+        try
+        {
+            await Availability.RemoveRuleAsync(ProviderId, rule.Id);
+            RulesFeedback = new($"Removed {rule.Weekday}, {rule.StartTime:h:mm tt} - {rule.EndTime:h:mm tt}. Visits already booked in those hours stay booked.");
+            Rules = [.. await Availability.ListRulesAsync(ProviderId)];
+            await RefreshSummaryAsync();
+        }
+        finally
+        {
+            RemovingRuleIds.Remove(rule.Id);
+        }
     }
 
     private async Task AddExceptionAsync()
     {
-        ErrorMessage = null;
+        if (NewExceptionProblem is not null)
+        {
+            return;
+        }
+
+        IsAddingException = true;
+        ExceptionsFeedback = null;
+        StateHasChanged();
+
         var isBlocked = NewExceptionType != "open-hours";
         TimeOnly? start = NewExceptionType == "block-day" ? null : NewExceptionStart;
         TimeOnly? end = NewExceptionType == "block-day" ? null : NewExceptionEnd;
@@ -326,19 +491,45 @@ else
         try
         {
             await Availability.AddExceptionAsync(ProviderId, NewExceptionDate, isBlocked, start, end);
-            Exceptions = [.. await Availability.ListExceptionsAsync(ProviderId, DateOnly.FromDateTime(DateTime.UtcNow))];
+            var added = new AvailabilityException { Date = NewExceptionDate, IsBlocked = isBlocked, StartTime = start, EndTime = end };
+            ExceptionsFeedback = new($"{NewExceptionDate:ddd, MMM d}: {DescribeException(added)}." +
+                (isBlocked ? " Visits already booked then stay booked -- cancel them from your schedule if needed." : ""));
+            Exceptions = [.. await Availability.ListExceptionsAsync(ProviderId, ProviderToday)];
+            await RefreshSummaryAsync();
         }
         catch (ArgumentException ex)
         {
-            ErrorMessage = ex.Message;
+            ExceptionsFeedback = FormFeedback.Feedback.Error(ex.Message);
+        }
+        finally
+        {
+            IsAddingException = false;
         }
     }
 
-    private async Task RemoveExceptionAsync(int exceptionId)
+    private async Task RemoveExceptionAsync(AvailabilityException ex)
     {
-        await Availability.RemoveExceptionAsync(ProviderId, exceptionId);
-        Exceptions = [.. await Availability.ListExceptionsAsync(ProviderId, DateOnly.FromDateTime(DateTime.UtcNow))];
+        if (!RemovingExceptionIds.Add(ex.Id))
+        {
+            return;
+        }
+
+        ExceptionsFeedback = null;
+        try
+        {
+            await Availability.RemoveExceptionAsync(ProviderId, ex.Id);
+            ExceptionsFeedback = new($"Removed the change on {ex.Date:ddd, MMM d}. That day follows your weekly hours again.");
+            Exceptions = [.. await Availability.ListExceptionsAsync(ProviderId, ProviderToday)];
+            await RefreshSummaryAsync();
+        }
+        finally
+        {
+            RemovingExceptionIds.Remove(ex.Id);
+        }
     }
+
+    private static string TimeZoneLabel(string id) =>
+        CommonTimeZones.FirstOrDefault(tz => tz.Id == id).Label ?? id;
 
     private static string DescribeException(AvailabilityException ex)
     {

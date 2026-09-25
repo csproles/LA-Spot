@@ -120,6 +120,64 @@ public class AvailabilityServiceCrudTests
     }
 
     [Theory]
+    [InlineData(12, 0, 14, 0)]  // inside
+    [InlineData(8, 0, 9, 30)]   // straddles the start
+    [InlineData(9, 0, 17, 0)]   // exact duplicate
+    public async Task AddRuleRejectsHoursOverlappingAnExistingRuleThatDay(int sh, int sm, int eh, int em)
+    {
+        var (service, dbPath) = NewService();
+        try
+        {
+            var providerId = Guid.NewGuid();
+            await service.AddRuleAsync(providerId, DayOfWeek.Monday, new TimeOnly(9, 0), new TimeOnly(17, 0));
+
+            var ex = await Assert.ThrowsAsync<ArgumentException>(() =>
+                service.AddRuleAsync(providerId, DayOfWeek.Monday, new TimeOnly(sh, sm), new TimeOnly(eh, em)));
+            Assert.Contains("9:00 AM - 5:00 PM", ex.Message);
+            Assert.Single(await service.ListRulesAsync(providerId));
+        }
+        finally
+        {
+            Cleanup(dbPath);
+        }
+    }
+
+    [Fact]
+    public async Task AddRuleAllowsBackToBackHoursAndTheSameHoursOnAnotherDay()
+    {
+        var (service, dbPath) = NewService();
+        try
+        {
+            var providerId = Guid.NewGuid();
+            await service.AddRuleAsync(providerId, DayOfWeek.Monday, new TimeOnly(9, 0), new TimeOnly(12, 0));
+            await service.AddRuleAsync(providerId, DayOfWeek.Monday, new TimeOnly(12, 0), new TimeOnly(17, 0));
+            await service.AddRuleAsync(providerId, DayOfWeek.Tuesday, new TimeOnly(9, 0), new TimeOnly(12, 0));
+
+            Assert.Equal(3, (await service.ListRulesAsync(providerId)).Count);
+        }
+        finally
+        {
+            Cleanup(dbPath);
+        }
+    }
+
+    [Fact]
+    public async Task AddExceptionRejectsADateThatHasPassed()
+    {
+        var (service, dbPath) = NewService();
+        try
+        {
+            var yesterday = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(-2);
+            await Assert.ThrowsAsync<ArgumentException>(() =>
+                service.AddExceptionAsync(Guid.NewGuid(), yesterday, isBlocked: true, start: null, end: null));
+        }
+        finally
+        {
+            Cleanup(dbPath);
+        }
+    }
+
+    [Theory]
     [InlineData(0, 10, "America/Chicago")] // too short
     [InlineData(30, -1, "America/Chicago")] // negative buffer
     [InlineData(30, 10, "Not/A_Real_Zone")] // bad timezone

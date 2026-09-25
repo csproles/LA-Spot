@@ -274,8 +274,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        MinDate = DateOnly.FromDateTime(DateTime.UtcNow);
-        MaxDate = MinDate.AddDays(30);
+        SetToday(BrowserTimeZoneId);
         WeekStart = MinDate;
 
         PatientId = await CurrentUser.GetUserIdAsync();
@@ -312,11 +311,30 @@
         {
             // Best-effort: if JS interop isn't available yet, times just stay in UTC.
             BrowserTimeZoneId = await JS.InvokeAsync<string>("skinCheckScheduling.getTimeZone");
-            StateHasChanged();
         }
         catch (JSException)
         {
+            return;
         }
+
+        // The calendar opened on UTC's date; move it to the visitor's own today so an
+        // evening visitor west of UTC still sees (and can book) the rest of today.
+        var startedOnFirstWeek = WeekStart == MinDate;
+        SetToday(BrowserTimeZoneId);
+        if (startedOnFirstWeek && WeekStart != MinDate)
+        {
+            WeekStart = MinDate;
+            SelectedSlotUtc = null;
+            await LoadSlotsAsync();
+        }
+
+        StateHasChanged();
+    }
+
+    private void SetToday(string? timeZoneId)
+    {
+        MinDate = DateOnly.FromDateTime(ClientTimeZone.ToLocal(DateTime.UtcNow, timeZoneId));
+        MaxDate = MinDate.AddDays(30);
     }
 
     /// <summary>Pre-fills the share box from the profile's "Share with my dermatologist" choice
@@ -377,7 +395,10 @@
 
         try
         {
-            Slots = [.. await Availability.GetOpenSlotsUtcAsync(SelectedProvider.Id, WeekStart, WeekStart.AddDays(6))];
+            // A day of padding each side: the grid is in the visitor's timezone but the range is
+            // read in the provider's, so edge-of-day slots could otherwise fall outside it.
+            // Past times are already dropped, so today's remaining slots are all still offered.
+            Slots = [.. await Availability.GetOpenSlotsUtcAsync(SelectedProvider.Id, WeekStart.AddDays(-1), WeekStart.AddDays(7))];
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
