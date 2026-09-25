@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using MelanomaDetection.Web.Services.Scheduling;
 
 namespace MelanomaDetection.Web.Services;
 
@@ -8,8 +9,9 @@ namespace MelanomaDetection.Web.Services;
 /// The Content-Security-Policy is what limits the damage of any script that
 /// slips into a page: only this site's own scripts run, and only the hosts the
 /// app genuinely uses (Google Maps, Google Fonts, Google profile pictures) can
-/// be loaded from. The camera is allowed for this site alone because the check
-/// flow uses it; nothing else in the browser is.
+/// be loaded from. The camera is allowed for this site because the check flow
+/// uses it, and camera, mic and screen share are delegated to the embedded video
+/// visit host (JitsiVideoRoomProvider.Origin); nothing else in the browser is.
 /// </summary>
 public static class SecurityHeaders
 {
@@ -26,7 +28,7 @@ public static class SecurityHeaders
     /// treat 'self' as covering it. Inline styles are needed by Blazor's scoped CSS and
     /// by Google Maps. Inline <em>scripts</em> are not allowed, except the nonce'd one.
     /// </summary>
-    private static string BuildContentSecurityPolicy(string nonce) => string.Join("; ",
+    public static string BuildContentSecurityPolicy(string nonce) => string.Join("; ",
         "default-src 'self'",
         $"script-src 'self' 'nonce-{nonce}' {GoogleMaps} blob:",
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
@@ -35,10 +37,19 @@ public static class SecurityHeaders
         $"connect-src 'self' ws: wss: {GoogleMaps} data: blob:",
         "worker-src 'self' blob:",
         "manifest-src 'self'",
+        $"frame-src {JitsiVideoRoomProvider.Origin}",
         "object-src 'none'",
         "base-uri 'self'",
         "form-action 'self' https://accounts.google.com",
         "frame-ancestors 'self'");
+
+    /// <summary>The video visit's iframe only gets camera/mic/screen share if this header delegates them to its origin.</summary>
+    public const string PermissionsPolicy =
+        "camera=(self \"" + JitsiVideoRoomProvider.Origin + "\"), " +
+        "microphone=(self \"" + JitsiVideoRoomProvider.Origin + "\"), " +
+        "display-capture=(self \"" + JitsiVideoRoomProvider.Origin + "\"), " +
+        "fullscreen=(self \"" + JitsiVideoRoomProvider.Origin + "\"), " +
+        "geolocation=(), payment=()";
 
     public static IApplicationBuilder UseSkinCheckSecurityHeaders(this IApplicationBuilder app)
     {
@@ -55,7 +66,7 @@ public static class SecurityHeaders
                 headers.ContentSecurityPolicy = BuildContentSecurityPolicy(nonce);
                 headers.XContentTypeOptions = "nosniff";
                 headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
-                headers["Permissions-Policy"] = "camera=(self), microphone=(), geolocation=(), payment=()";
+                headers["Permissions-Policy"] = PermissionsPolicy;
 
                 // Every page here reflects request-time session state -- even the
                 // "static" sign-in page embeds an antiforgery token bound to whoever

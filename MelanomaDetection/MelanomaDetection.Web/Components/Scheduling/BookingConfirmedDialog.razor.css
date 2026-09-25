@@ -1,0 +1,70 @@
+.booking-confirmed {
+    width: min(420px, calc(100vw - 32px));
+    padding: 28px 24px 24px;
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-card);
+    background: var(--color-surface);
+    color: var(--color-text);
+    text-align: center;
+    box-shadow: 0 20px 50px rgb(0 0 0 / 0.25);
+}
+
+.booking-confirmed::backdrop {
+    background: var(--color-scrim);
+}
+
+.booking-confirmed[open] {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    animation: booking-confirmed-in 0.18s ease-out;
+}
+
+.booking-confirmed-mark {
+    display: inline-grid;
+    place-items: center;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    font-size: 1.6rem;
+    font-weight: 700;
+    background: var(--color-accent-strong);
+    color: var(--color-on-accent);
+}
+
+.booking-confirmed-title {
+    margin: 4px 0 0;
+    font-size: 1.35rem;
+}
+
+.booking-confirmed-body,
+.booking-confirmed-note {
+    margin: 0;
+}
+
+.booking-confirmed-note {
+    font-size: 0.875rem;
+    color: var(--color-text-muted);
+}
+
+.booking-confirmed-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+@keyframes booking-confirmed-in {
+    from {
+        opacity: 0;
+        transform: translateY(8px) scale(0.98);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .booking-confirmed[open] {
+        animation: none;
+    }
+}

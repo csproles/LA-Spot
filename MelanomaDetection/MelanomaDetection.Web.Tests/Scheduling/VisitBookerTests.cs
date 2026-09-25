@@ -92,17 +92,27 @@ public sealed class VisitBookerTests : BunitContext, IDisposable
 
         // Their open times are on screen without picking anyone first.
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll("button.week-slot-btn")));
-        Assert.Contains("2. Choose a time", cut.Markup);
+        Assert.Contains("Choose a time", cut.Markup);
+        // Step 1 folded away on its own, showing who was picked.
+        Assert.Empty(cut.FindAll(".choice-card"));
+        Assert.Contains("Dr. Number 0", cut.FindAll(".booking-step-summary")[0].TextContent);
 
         cut.Find("button.week-slot-btn").Click();
-        cut.Find("textarea").Change("a new spot on my arm");
+        // Picking a time folds the calendar and opens the details step.
+        Assert.Empty(cut.FindAll("button.week-slot-btn"));
+        cut.Find("textarea").Input("a new spot on my arm");
         Assert.Contains("Dr. Number 0", cut.Find("p.book-visit-summary").TextContent);
 
         cut.Find("button.book-visit-submit").Click();
 
-        cut.WaitForAssertion(() => Assert.NotNull(cut.Find(".book-visit-confirmation")));
-        Assert.Contains("Visit booked", cut.Markup);
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("dialog.booking-confirmed")));
+        Assert.Contains("Your visit is booked", cut.Find("dialog.booking-confirmed").TextContent);
+        Assert.Contains("Dr. Number 0", cut.Find("dialog.booking-confirmed").TextContent);
         Assert.Contains("Join call now", cut.Markup);
+
+        cut.Find("dialog.booking-confirmed button").Click();
+        Assert.Empty(cut.FindAll("dialog.booking-confirmed"));
+        Assert.NotNull(cut.Find(".book-visit-confirmation"));
 
         var visits = await _booking.ListForPatientAsync(_patientId);
         var visit = Assert.Single(visits);
@@ -123,7 +133,25 @@ public sealed class VisitBookerTests : BunitContext, IDisposable
         cut.FindAll(".choice-card")[1].Click();
 
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll("button.week-slot-btn")));
-        Assert.Contains("2. Choose a time", cut.Markup);
+        Assert.Contains("Choose a time", cut.Markup);
+    }
+
+    [Fact]
+    public async Task ACollapsedStepReopensFromItsHeaderToChangeTheChoice()
+    {
+        await SeedAsync(2);
+
+        var cut = Render<VisitBooker>(p => p.Add(x => x.Embedded, true));
+        cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll(".choice-card").Count));
+        cut.FindAll(".choice-card")[0].Click();
+        cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(".choice-card")));
+
+        var providerHeader = cut.FindAll("button.booking-step-toggle")[0];
+        Assert.Equal("false", providerHeader.GetAttribute("aria-expanded"));
+        providerHeader.Click();
+
+        Assert.Equal(2, cut.FindAll(".choice-card").Count);
+        Assert.Equal("true", cut.FindAll("button.booking-step-toggle")[0].GetAttribute("aria-expanded"));
     }
 
     [Fact]

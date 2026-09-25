@@ -4,10 +4,11 @@
     gap: 16px;
 }
 
-.visit-booker section.card-panel,
-.visit-booker section.visit-booker-step {
+.book-visit-footer {
     display: flex;
-    flex-direction: column;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
     gap: 12px;
 }
 
@@ -16,7 +17,8 @@
     gap: 14px;
 }
 
-.visit-booker section.visit-booker-step + section.visit-booker-step {
+.visit-booker ::deep .booking-step.is-embedded + .booking-step.is-embedded,
+.visit-booker ::deep .booking-step.is-embedded + .book-visit-footer {
     padding-top: 14px;
     border-top: 1px solid var(--color-border-subtle);
 }
@@ -119,8 +121,11 @@
     cursor: pointer;
 }
 
-.book-visit-share-toggle {
-    margin-top: 12px;
+.visit-booker-field {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-text-muted);
+    margin-bottom: -6px;
 }
 
 .book-visit-optional {
