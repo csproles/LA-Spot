@@ -370,6 +370,52 @@ public class ImageProcessingService
     /// </summary>
     public async Task<SharedHealthData> GetSharedHealthDataAsync(Scheduling.AppointmentView appointment, Guid providerId)
     {
+        using var response = await SendAsSharingPatientAsync(appointment, providerId, "/api/account/export");
+        return await response.Content.ReadFromJsonAsync<SharedHealthData>()
+            ?? throw new ImageProcessingApiException("The analysis service returned an empty response.");
+    }
+
+    /// <summary>Maps to GET /api/account/report -- the account's PDF report (cover page, then a page per spot).</summary>
+    public async Task<byte[]> GetReportPdfAsync(Guid userId, string? displayName)
+    {
+        using var response = await SendAsync(
+            () => _httpClient.GetAsync(ReportPath(displayName, sharedWith: null)), userId);
+        return await response.Content.ReadAsByteArrayAsync();
+    }
+
+    /// <summary>The patient's PDF report for the provider on their visit, under the same rules as <see cref="GetSharedHealthDataAsync"/>.</summary>
+    public async Task<byte[]> GetSharedReportPdfAsync(Scheduling.AppointmentView appointment, Guid providerId)
+    {
+        var visitDay = Scheduling.ClientTimeZone.ToLocal(appointment.StartUtc, "America/Chicago");
+        var sharedWith = $"{appointment.ProviderName} for the visit on {visitDay:MMM d, yyyy}";
+        using var response = await SendAsSharingPatientAsync(
+            appointment, providerId, ReportPath(appointment.PatientName, sharedWith));
+        return await response.Content.ReadAsByteArrayAsync();
+    }
+
+    private static string ReportPath(string? displayName, string? sharedWith)
+    {
+        var query = new List<string>();
+        if (!string.IsNullOrWhiteSpace(displayName))
+        {
+            query.Add("name=" + Uri.EscapeDataString(displayName.Trim()));
+        }
+
+        if (!string.IsNullOrWhiteSpace(sharedWith))
+        {
+            query.Add("shared_with=" + Uri.EscapeDataString(sharedWith));
+        }
+
+        return "/api/account/report" + (query.Count == 0 ? "" : "?" + string.Join("&", query));
+    }
+
+    /// <summary>
+    /// A GET as the patient on a visit, for that visit's provider. Refuses unless the visit
+    /// is still booked and the patient chose to share their data when booking it.
+    /// </summary>
+    private async Task<HttpResponseMessage> SendAsSharingPatientAsync(
+        Scheduling.AppointmentView appointment, Guid providerId, string path)
+    {
         if (appointment.ProviderId != providerId
             || !appointment.ShareHealthData
             || appointment.Status != Data.AppointmentStatus.Booked)
@@ -380,7 +426,7 @@ public class ImageProcessingService
         // A fresh client, never _httpClient: that one pins the signed-in provider's id in its
         // default headers (AttachUserAsync), and the patient's id must not leak into or collide with it.
         var client = _httpClientFactory.CreateClient(nameof(ImageProcessingService));
-        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/account/export");
+        using var request = new HttpRequestMessage(HttpMethod.Get, path);
         request.Headers.Add(UserIdHeader, appointment.PatientId.ToString());
 
         HttpResponseMessage response;
@@ -393,16 +439,13 @@ public class ImageProcessingService
             throw new ImageProcessingApiException("Could not reach the analysis service. Try again in a moment.");
         }
 
-        using (response)
+        if (!response.IsSuccessStatusCode)
         {
-            if (!response.IsSuccessStatusCode)
-            {
-                throw new ImageProcessingApiException("Couldn't load the patient's shared data.");
-            }
-
-            return await response.Content.ReadFromJsonAsync<SharedHealthData>()
-                ?? throw new ImageProcessingApiException("The analysis service returned an empty response.");
+            response.Dispose();
+            throw new ImageProcessingApiException("Couldn't load the patient's shared data.");
         }
+
+        return response;
     }
 
     /// <summary>Maps to DELETE /api/account -- erases everything the API holds for one account.</summary>

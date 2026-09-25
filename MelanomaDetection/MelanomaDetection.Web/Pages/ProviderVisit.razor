@@ -58,7 +58,8 @@ else
         {
             @if (SharedData is not null)
             {
-                <SharedHealthDataPanel Data="SharedData" BrowserTimeZoneId="@BrowserTimeZoneId" />
+                <SharedHealthDataPanel Data="SharedData" BrowserTimeZoneId="@BrowserTimeZoneId"
+                                       ReportHref="@($"/api/appointments/{Appointment.Id}/report")" />
             }
             else if (SharedDataError is not null)
             {

@@ -101,3 +101,14 @@ class TestAccount:
             "profile": None, "spots": [], "checks": [],
         }
         assert [s["label"] for s in client.get("/api/spots", headers=BOB).get_json()["spots"]] == ["other"]
+
+    def test_report_is_a_pdf_of_the_callers_own_data(self, client):
+        client.put("/api/profile", json={"fullName": "Alice"}, headers=ALICE)
+
+        response = client.get("/api/account/report?name=Fallback&shared_with=Dr.%20Test", headers=ALICE)
+
+        assert response.status_code == 200
+        assert response.mimetype == "application/pdf"
+        assert response.data.startswith(b"%PDF")
+        assert "attachment" in response.headers["Content-Disposition"]
+        assert client.get("/api/account/report", headers={"X-User-Id": "alice"}).status_code == 401

@@ -45,6 +45,31 @@ public class SharedHealthDataTests
         Assert.False(_sessionClient.DefaultRequestHeaders.Contains(ImageProcessingService.UserIdHeader));
     }
 
+    [Fact]
+    public async Task TheSharedReportIsFetchedAsThePatientAndNamesTheVisit()
+    {
+        var pdf = await _service.GetSharedReportPdfAsync(Visit(), ProviderId);
+
+        Assert.Equal("%PDF", System.Text.Encoding.ASCII.GetString(pdf, 0, 4));
+        Assert.Equal(PatientId.ToString(), Assert.Single(_handler.UserIds));
+        var query = Uri.UnescapeDataString(Assert.Single(_handler.Paths).Query);
+        Assert.Contains("name=Pat", query);
+        Assert.Contains("shared_with=Dr. Test for the visit on", query);
+        Assert.False(_sessionClient.DefaultRequestHeaders.Contains(ImageProcessingService.UserIdHeader));
+    }
+
+    [Theory]
+    [InlineData(false, false, AppointmentStatus.Booked)]
+    [InlineData(true, true, AppointmentStatus.Booked)]
+    [InlineData(true, false, AppointmentStatus.Cancelled)]
+    public async Task TheSharedReportIsRefusedWithoutConsentOnABookedVisitOfThisProvider(bool shared, bool otherProvider, AppointmentStatus status)
+    {
+        var visit = Visit(shared, otherProvider ? Guid.NewGuid() : null, status);
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => _service.GetSharedReportPdfAsync(visit, ProviderId));
+        Assert.Empty(_handler.UserIds);
+    }
+
     [Theory]
     [InlineData(false, false, AppointmentStatus.Booked)]
     [InlineData(true, true, AppointmentStatus.Booked)]
@@ -62,9 +87,20 @@ public class SharedHealthDataTests
     {
         public List<string> UserIds { get; } = [];
 
+        public List<Uri> Paths { get; } = [];
+
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             UserIds.AddRange(request.Headers.GetValues(ImageProcessingService.UserIdHeader));
+            Paths.Add(request.RequestUri!);
+            if (request.RequestUri!.AbsolutePath == "/api/account/report")
+            {
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new ByteArrayContent("%PDF-1.4 test"u8.ToArray()),
+                });
+            }
+
             const string body = """{"profile":null,"spots":[{"id":"s1","label":"mole","bodyRegion":"arm"}],"checks":[]}""";
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
             {

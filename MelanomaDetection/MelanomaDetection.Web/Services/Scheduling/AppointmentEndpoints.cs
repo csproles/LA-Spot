@@ -25,8 +25,70 @@ public static class AppointmentEndpoints
         appointments.MapPost("/{id:guid}/cancel", CancelAsync);
         appointments.MapGet("/mine", MyAppointmentsAsync);
         appointments.MapGet("/schedule", ScheduleAsync);
+        appointments.MapGet("/{id:guid}/report", SharedReportAsync)
+            .RequireRateLimiting(RateLimiting.RateLimitPolicies.AccountData);
 
         return endpoints;
+    }
+
+    /// <summary>
+    /// The patient's PDF report, for the provider on the visit -- only if the patient chose to
+    /// share their data when booking and the visit is still booked. Anyone else gets a 404, so
+    /// the endpoint doesn't reveal which visits exist.
+    /// </summary>
+    private static async Task<Results<FileContentHttpResult, ProblemHttpResult, NotFound>> SharedReportAsync(
+        Guid id,
+        ClaimsPrincipal principal,
+        BookingService booking,
+        ImageProcessingService imageProcessing,
+        CancellationToken cancellationToken)
+    {
+        if (!CurrentUser.IsProvider(principal))
+        {
+            return TypedResults.NotFound();
+        }
+
+        var providerId = CurrentUser.ReadUserId(principal)!.Value;
+        AppointmentView? appointment;
+        try
+        {
+            appointment = await booking.FindForUserAsync(id, providerId, cancellationToken);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return TypedResults.NotFound();
+        }
+
+        if (appointment is null)
+        {
+            return TypedResults.NotFound();
+        }
+
+        try
+        {
+            var pdf = await imageProcessing.GetSharedReportPdfAsync(appointment, providerId);
+            var fileName = $"{Slug(appointment.PatientName)}-skin-check-report.pdf";
+            return TypedResults.File(pdf, "application/pdf", fileName);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return TypedResults.NotFound();
+        }
+        catch (ImageProcessingApiException ex)
+        {
+            return TypedResults.Problem(ex.Message, statusCode: StatusCodes.Status502BadGateway);
+        }
+    }
+
+    private static string Slug(string name)
+    {
+        var slug = new string([.. name.ToLowerInvariant().Select(c => char.IsAsciiLetterOrDigit(c) ? c : '-')]).Trim('-');
+        while (slug.Contains("--", StringComparison.Ordinal))
+        {
+            slug = slug.Replace("--", "-", StringComparison.Ordinal);
+        }
+
+        return slug.Length == 0 ? "patient" : slug;
     }
 
     private static async Task<Results<Created<AppointmentSummary>, ProblemHttpResult, NotFound>> BookAsync(

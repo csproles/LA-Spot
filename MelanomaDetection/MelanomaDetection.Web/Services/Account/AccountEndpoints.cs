@@ -22,6 +22,8 @@ public static class AccountEndpoints
 {
     public const string ExportFileName = "skin-check-export.json";
 
+    public const string ReportFileName = "skin-check-report.pdf";
+
     public static IEndpointRouteBuilder MapAccountEndpoints(this IEndpointRouteBuilder endpoints)
     {
         var auth = endpoints.MapGroup("/auth");
@@ -48,6 +50,7 @@ public static class AccountEndpoints
             .RequireRateLimiting(RateLimitPolicies.AccountData);
 
         account.MapGet("/export", ExportAsync);
+        account.MapGet("/report", ReportAsync);
         account.MapPost("/delete", DeleteAsync);
 
         return endpoints;
@@ -122,6 +125,31 @@ public static class AccountEndpoints
     /// the account row here plus the spots, checks and risk profile from the
     /// analysis service. This is the "right of access / portability" path.
     /// </summary>
+    /// <summary>The same data as the export, as a readable PDF: a cover page, then a page per spot.</summary>
+    private static async Task<Results<FileContentHttpResult, ProblemHttpResult>> ReportAsync(
+        ClaimsPrincipal principal,
+        UserAccountService accounts,
+        ImageProcessingService imageProcessing,
+        CancellationToken cancellationToken)
+    {
+        var userId = CurrentUser.ReadUserId(principal)!.Value;
+        var user = await accounts.FindAsync(userId, cancellationToken);
+        if (user is null)
+        {
+            return TypedResults.Problem("Account not found.", statusCode: StatusCodes.Status404NotFound);
+        }
+
+        try
+        {
+            var pdf = await imageProcessing.GetReportPdfAsync(userId, user.DisplayName);
+            return TypedResults.File(pdf, "application/pdf", ReportFileName);
+        }
+        catch (ImageProcessingApiException ex)
+        {
+            return TypedResults.Problem(ex.Message, statusCode: StatusCodes.Status502BadGateway);
+        }
+    }
+
     private static async Task<Results<FileContentHttpResult, ProblemHttpResult>> ExportAsync(
         ClaimsPrincipal principal,
         UserAccountService accounts,

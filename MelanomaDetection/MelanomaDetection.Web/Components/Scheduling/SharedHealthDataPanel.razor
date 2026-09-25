@@ -1,7 +1,13 @@
 @* A patient's shared export, read-only for the provider on their visit: risk profile, then each spot with its checks newest first. *@
 
 <section class="card-panel shared-data">
-    <h2 class="panel-title">Shared health data</h2>
+    <div class="shared-data-header">
+        <h2 class="panel-title">Shared health data</h2>
+        @if (!string.IsNullOrEmpty(ReportHref))
+        {
+            <a class="btn btn-outline-primary btn-sm" href="@ReportHref" download>Download PDF report</a>
+        }
+    </div>
 
     @if (Data.Profile is { } profile)
     {
@@ -64,6 +70,10 @@
 
     [Parameter]
     public string? BrowserTimeZoneId { get; set; }
+
+    /// <summary>Where the provider downloads this patient's PDF report; no button when null.</summary>
+    [Parameter]
+    public string? ReportHref { get; set; }
 
     private sealed record SpotGroup(string Title, List<SharedCheck> Checks);
 

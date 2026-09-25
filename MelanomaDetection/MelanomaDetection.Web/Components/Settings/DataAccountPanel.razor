@@ -5,15 +5,15 @@
 <div class="card-panel danger-card">
     <p class="panel-title">Data &amp; account</p>
     <p class="danger-lead">
-        Export gives you a JSON file with your account details, every spot,
-        every saved check and your risk profile. Deleting your account erases
-        all of it immediately and cannot be undone.
+        Export gives you a PDF report: a cover page with your risk profile, then a
+        page for each spot with its ABCD scores, breakdown images and check history.
+        Deleting your account erases all of it immediately and cannot be undone.
     </p>
 
     <div class="danger-actions">
-        <a class="btn btn-outline-primary danger-action" href="/account/export" download="@AccountEndpoints.ExportFileName">
+        <a class="btn btn-outline-primary danger-action" href="/account/report" download="@AccountEndpoints.ReportFileName">
             <span class="danger-action-icon"><AppIcon Name="download" Size="inherit" /></span>
-            Export my data
+            Export my data (PDF)
         </a>
 
         @if (!ConfirmingDelete)
@@ -24,6 +24,11 @@
             </button>
         }
     </div>
+
+    <p class="data-raw-link">
+        Need it in a machine-readable format?
+        <a href="/account/export" download="@AccountEndpoints.ExportFileName">Download the raw data (JSON)</a>
+    </p>
 
     @if (ConfirmingDelete)
     {
