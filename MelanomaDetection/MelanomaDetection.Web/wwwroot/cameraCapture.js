@@ -142,17 +142,38 @@
         });
     }
 
+    // While a camera starts up, browsers can report a placeholder frame (2x2 in
+    // Chrome) before real frames arrive; a shutter tap then would "capture" a
+    // photo too small to be of any use. .NET calls waitForFrame first and only
+    // captures once it says a real frame is there -- "not ready" can't travel as
+    // the capture's own result, because .NET reads that as a stream and neither a
+    // null nor an empty one can be read.
+    const MIN_FRAME_EDGE = 64;
+    const FRAME_WAIT_MS = 2000;
+
+    function hasRealFrame(videoElement) {
+        return videoElement.videoWidth >= MIN_FRAME_EDGE && videoElement.videoHeight >= MIN_FRAME_EDGE;
+    }
+
+    async function waitForRealFrame(videoElement) {
+        const deadline = Date.now() + FRAME_WAIT_MS;
+        while (!hasRealFrame(videoElement) && Date.now() < deadline) {
+            await new Promise((resolve) => setTimeout(resolve, 50));
+        }
+        return hasRealFrame(videoElement);
+    }
+
     // Draws the video's current frame to canvasElement and returns it as JPEG
     // bytes (a Uint8Array, which .NET receives as an IJSStreamReference), or null
-    // when there is no frame yet or it couldn't be encoded. The frame is scaled
+    // when there is no real frame or it couldn't be encoded. The frame is scaled
     // down to MAX_LONG_EDGE and the quality lowered step by step until it fits
     // maxBytes, so a big sensor doesn't produce a photo the upload will refuse.
     async function capture(videoElement, canvasElement, maxBytes) {
-        let width = videoElement.videoWidth;
-        let height = videoElement.videoHeight;
-        if (!width || !height) {
+        if (!hasRealFrame(videoElement)) {
             return null;
         }
+        let width = videoElement.videoWidth;
+        let height = videoElement.videoHeight;
 
         const scale = Math.min(1, MAX_LONG_EDGE / Math.max(width, height));
         width = Math.round(width * scale);
@@ -174,5 +195,12 @@
         return bytes;
     }
 
-    window.skinCheckCamera = { isSupported, start, capture, stop };
+    // Opens the viewfinder <dialog> as a modal so it covers the screen from the top layer.
+    function showOverlay(dialog) {
+        if (dialog && !dialog.open && typeof dialog.showModal === 'function') {
+            dialog.showModal();
+        }
+    }
+
+    window.skinCheckCamera = { isSupported, start, waitForFrame: waitForRealFrame, capture, stop, showOverlay };
 })();

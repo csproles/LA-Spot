@@ -5,7 +5,7 @@ namespace MelanomaDetection.Web.Services;
 /// <summary>
 /// Gets a picked or camera-taken photo into a form the app accepts, before its own checks run.
 /// iPhone photos are the reason it exists: they are often over the 5 MB limit, and a photo in
-/// Apple's HEIC format has a type the app doesn't take. Both are re-encoded as a JPEG by the
+/// Apple's HEIC format (or WebP) has a type the analysis can't decode. All are re-encoded as a JPEG by the
 /// person's own browser (Blazor's RequestImageFileAsync), so nothing large is uploaded first.
 /// Anything already within the limits is left exactly as it was.
 /// </summary>
@@ -26,11 +26,13 @@ public static class PhotoIntake
 
     /// <summary>
     /// True for an Apple HEIC/HEIF photo (some browsers give it no type at all, so the file
-    /// extension counts too), or for a photo of a supported type that is over the size limit.
+    /// extension counts too) or a WebP photo, whatever their size, since the analysis service
+    /// only decodes JPEG, PNG and BMP. Also true for a photo of a supported type that is over
+    /// the size limit.
     /// </summary>
     public static bool NeedsConversion(string? contentType, long size, string? fileName)
     {
-        if (IsHeif(contentType, fileName))
+        if (IsHeif(contentType, fileName) || IsWebP(contentType, fileName))
         {
             return true;
         }
@@ -56,6 +58,10 @@ public static class PhotoIntake
                 .AsTask()
                 .WaitAsync(ConversionTimeout)
             : file;
+
+    private static bool IsWebP(string? contentType, string? fileName) =>
+        string.Equals(contentType, "image/webp", StringComparison.OrdinalIgnoreCase)
+        || (!string.IsNullOrEmpty(fileName) && fileName.EndsWith(".webp", StringComparison.OrdinalIgnoreCase));
 
     private static bool IsHeif(string? contentType, string? fileName) =>
         (!string.IsNullOrEmpty(contentType) && HeifTypes.Contains(contentType))

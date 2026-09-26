@@ -23,10 +23,19 @@ public class PhotoIntakeTests
     }
 
     [Theory]
+    [InlineData("image/webp", "photo.webp")]
+    [InlineData("IMAGE/WEBP", "photo")]
+    [InlineData("", "photo.WEBP")]
+    public void AWebPPhotoIsConvertedWhateverItsSize(string? contentType, string fileName)
+    {
+        // The analysis service only decodes JPEG, PNG and BMP.
+        Assert.True(PhotoIntake.NeedsConversion(contentType, 300_000, fileName));
+    }
+
+    [Theory]
     [InlineData("image/jpeg")]
     [InlineData("image/jpg")]
     [InlineData("image/png")]
-    [InlineData("image/webp")]
     [InlineData("image/bmp")]
     public void ASupportedPhotoOverTheSizeLimitIsShrunk(string contentType)
     {

@@ -10,6 +10,7 @@ Anything invalid raises ValidationError; main.py turns that into a 400 whose
 message is safe to show directly to the user.
 """
 
+import math
 import re
 import struct
 
@@ -31,6 +32,18 @@ _CHAT_ROLES = {"user", "assistant"}
 MAX_IMAGE_PIXELS = 25_000_000  # ~5000x5000; a small PNG can otherwise inflate to gigabytes when decoded
 
 SPOT_ID_PATTERN = re.compile(r"^spot_[0-9a-f]{12}$")
+
+# Coins a person can line the on-screen circle up with, for a real mm scale. Official US Mint
+# diameters in millimetres; mirrored by the web app's Services/CoinScale.cs. The web app only
+# sends which coin and how many pixels across it is: the millimetres always come from here.
+COIN_DIAMETERS_MM = {
+    "penny": 19.05,
+    "nickel": 21.21,
+    "dime": 17.91,
+    "quarter": 24.26,
+}
+# A coin narrower than this many pixels is too small to line a circle up with accurately.
+COIN_MIN_DIAMETER_PX = 20.0
 
 # /predict's own metadata fields -- risk_model.py falls back to "missing" for
 # sex/anatom_site_general (the CatBoost models were trained with that literal
@@ -172,6 +185,38 @@ def clean_processing_id(value):
     if not isinstance(value, str) or not PROCESSING_ID_PATTERN.match(value):
         raise ValidationError("processing id is not valid.")
     return value
+
+
+def clean_coin_scale(coin, diameter_px, image_size):
+    """Millimetres per pixel from a coin the person lined a circle up with, or None without one.
+
+    coin and diameter_px come as a pair (form fields "coin" and "coin_diameter_px"); either
+    both are present or neither is. image_size is the photo's (width, height) in pixels, the
+    same pixels the circle was measured in, and the coin has to fit inside it.
+    """
+    coin = (coin or "").strip().lower()
+    diameter_text = (diameter_px or "").strip()
+    if not coin and not diameter_text:
+        return None
+    if not coin or not diameter_text:
+        raise ValidationError("coin and coin_diameter_px must be sent together.")
+    if coin not in COIN_DIAMETERS_MM:
+        raise ValidationError(f"coin must be one of: {', '.join(sorted(COIN_DIAMETERS_MM))}.")
+
+    try:
+        diameter = float(diameter_text)
+    except ValueError:
+        raise ValidationError("coin_diameter_px must be a number.")
+    if not math.isfinite(diameter):
+        raise ValidationError("coin_diameter_px must be a number.")
+
+    width, height = image_size
+    if not COIN_MIN_DIAMETER_PX <= diameter <= min(width, height):
+        raise ValidationError(
+            f"The coin circle has to be at least {COIN_MIN_DIAMETER_PX:.0f} pixels across "
+            "and fit inside the photo."
+        )
+    return COIN_DIAMETERS_MM[coin] / diameter
 
 
 def optional_bool(body: dict, key: str, default: bool) -> bool:

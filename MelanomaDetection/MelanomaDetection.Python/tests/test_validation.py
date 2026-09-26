@@ -263,3 +263,37 @@ class TestRateLimiter:
         clock.now += 200
         limiter.hit("r", "someone-new", 1, 60)
         assert len(limiter._hits) == 1
+
+
+class TestCoinScale:
+    PHOTO = (1200, 900)
+
+    def test_no_coin_means_no_scale(self):
+        assert validation.clean_coin_scale(None, None, self.PHOTO) is None
+        assert validation.clean_coin_scale("", "  ", self.PHOTO) is None
+
+    def test_millimetres_come_from_the_servers_own_coin_table(self):
+        mm_per_px = validation.clean_coin_scale("Quarter", "242.6", self.PHOTO)
+        assert mm_per_px == pytest.approx(0.1)
+
+    @pytest.mark.parametrize("coin, diameter", [("penny", None), (None, "100"), ("", "100")])
+    def test_coin_and_size_must_come_together(self, coin, diameter):
+        with pytest.raises(ValidationError, match="together"):
+            validation.clean_coin_scale(coin, diameter, self.PHOTO)
+
+    def test_unknown_coin_is_refused(self):
+        with pytest.raises(ValidationError, match="coin must be one of"):
+            validation.clean_coin_scale("doubloon", "100", self.PHOTO)
+
+    @pytest.mark.parametrize("diameter", ["abc", "nan", "inf", "-inf", "1e999"])
+    def test_size_must_be_a_real_number(self, diameter):
+        with pytest.raises(ValidationError, match="number"):
+            validation.clean_coin_scale("dime", diameter, self.PHOTO)
+
+    @pytest.mark.parametrize("diameter", ["0", "-50", "19.9", "901"])
+    def test_circle_must_be_visible_and_fit_inside_the_photo(self, diameter):
+        with pytest.raises(ValidationError, match="fit inside the photo"):
+            validation.clean_coin_scale("dime", diameter, self.PHOTO)
+
+    def test_circle_can_fill_the_short_side(self):
+        assert validation.clean_coin_scale("nickel", "900", self.PHOTO) == pytest.approx(21.21 / 900)

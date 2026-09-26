@@ -30,6 +30,7 @@
         case CheckStep.Confirm:
             <PhotoConfirmStep PreviewDataUrl="@PreviewDataUrl" FileName="@SelectedFileName"
                               FileSize="SelectedFileSize" IsAnalyzing="IsAnalyzing"
+                              OnCropped="ApplyCrop" IsCropped="@(OriginalPhoto is not null)" OnUndoCrop="UndoCrop"
                               OnConfirm="AnalyzeImage" OnRetake="RetakePhoto" />
             break;
 
@@ -64,9 +65,10 @@
 
     private const long MaxFileSizeBytes = InputLimits.ImageMaxBytes;
 
+    // After PhotoIntake, WebP and HEIC photos have become JPEGs, so only these remain.
     private static readonly HashSet<string> AllowedContentTypes = new(StringComparer.OrdinalIgnoreCase)
     {
-        "image/jpeg", "image/jpg", "image/png", "image/bmp", "image/webp"
+        "image/jpeg", "image/jpg", "image/png", "image/bmp"
     };
 
     private static string Today => AppClock.Now.ToString("dddd, MMMM d, yyyy").ToUpperInvariant();
@@ -196,8 +198,34 @@
         CurrentStep = CheckStep.Details;
     }
 
+    /// <summary>The photo as it was before cropping (bytes, content type, name), for Undo crop.</summary>
+    private (byte[] Bytes, string ContentType, string FileName)? OriginalPhoto;
+    private string SelectedContentType = "image/jpeg";
+
+    private void ApplyCrop(byte[] bytes)
+    {
+        if (SelectedFileBytes is null || SelectedFileName is null)
+        {
+            return;
+        }
+
+        OriginalPhoto ??= (SelectedFileBytes, SelectedContentType, SelectedFileName);
+        // Always a .jpg name: the analysis service picks the decoder from the extension.
+        var name = Path.GetFileNameWithoutExtension(OriginalPhoto.Value.FileName) + "-cropped.jpg";
+        AcceptImage(bytes, "image/jpeg", name, keepOriginal: true);
+    }
+
+    private void UndoCrop()
+    {
+        if (OriginalPhoto is { } original)
+        {
+            AcceptImage(original.Bytes, original.ContentType, original.FileName);
+        }
+    }
+
     private void RetakePhoto()
     {
+        OriginalPhoto = null;
         StepFeedback = null;
         PreviewDataUrl = null;
         SelectedFileName = null;
@@ -236,7 +264,7 @@
 
         if (!AllowedContentTypes.Contains(file.ContentType))
         {
-            ErrorMessage = $"Unsupported file type '{file.ContentType}'. Please upload a JPEG, PNG, BMP, or WebP image.";
+            ErrorMessage = $"Unsupported file type '{file.ContentType}'. Please upload a JPEG, PNG, BMP, WebP, or HEIC image.";
             return;
         }
 
@@ -279,25 +307,29 @@
             return;
         }
 
-        if (bytes.Length > MaxFileSizeBytes)
-        {
-            ErrorMessage = $"Captured photo is too large ({bytes.Length / (1024.0 * 1024.0):F2} MB). Maximum allowed size is 5 MB.";
-            return;
-        }
-
         AcceptImage(bytes, "image/jpeg", $"camera-capture-{DateTime.Now:yyyyMMdd-HHmmss}.jpg");
     }
 
-    private void AcceptImage(byte[] bytes, string contentType, string fileName)
+    private void AcceptImage(byte[] bytes, string contentType, string fileName, bool keepOriginal = false)
     {
-        // The browser's declared type is only a claim; make sure the bytes really are a photo.
-        if (!InputLimits.LooksLikeImage(bytes))
+        if (!keepOriginal)
         {
-            ErrorMessage = "That file doesn't look like a photo. Please choose a JPEG, PNG, BMP, or WebP image.";
+            OriginalPhoto = null;
+        }
+
+        // Picked, camera and cropped photos all pass the same check. The browser's declared
+        // type and name are only claims, so both are taken from the bytes themselves.
+        if (InputLimits.ImageProblem(bytes) is { } problem)
+        {
+            ErrorMessage = problem;
             return;
         }
 
+        fileName = InputLimits.ImageFileName(bytes, fileName);
+        contentType = InputLimits.ImageContentType(Path.GetExtension(fileName));
+
         SelectedFileBytes = bytes;
+        SelectedContentType = contentType;
         PreviewDataUrl = $"data:{contentType};base64,{Convert.ToBase64String(bytes)}";
         SelectedFileName = fileName;
         SelectedFileSize = bytes.Length;
@@ -413,6 +445,7 @@
         PreviewDataUrl = null;
         SelectedFileName = null;
         SelectedFileBytes = null;
+        OriginalPhoto = null;
         SelectedSpot = null;
         SelectedSymptoms = new HashSet<string>();
         Notes = string.Empty;

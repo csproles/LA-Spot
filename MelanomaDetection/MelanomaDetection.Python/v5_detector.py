@@ -14,8 +14,8 @@ main.py / llm_explainer.py / evolution.py already expect from a detector.
 Does NOT modify pipeline_v5/, revised_abcd/, or Code/ -- it only calls
 them. Does NOT touch YOLO, ABCD formulas, the 17 V5 features,
 frozen_model.pkl, or the 0.25 threshold. Never computes a hair-width mm
-calibration: diameter is always reported as pixels only (mm_per_px is
-always None), per policy.
+calibration, per policy: diameter is in pixels unless the person lined a
+circle up with a coin in the photo, which gives a real mm_per_px.
 
 image_processor.MelanomaDetector only supplies the generic preprocessing and
 visualization helpers this module reuses by composition (its old classical
@@ -52,6 +52,7 @@ if str(REPO_ROOT) not in sys.path:
 from revised_abcd.pipeline_v2 import process_image as v5_process_image, preprocess_image as v5_preprocess_image  # noqa: E402
 from pipeline_v5.decision_model import v5_predict_from_row, load_frozen_pipeline, V5_CONFIG  # noqa: E402
 from pipeline_v5.feature_extraction import extract_v5_new_features  # noqa: E402
+from revised_abcd.revised_diameter import score_diameter_revised  # noqa: E402
 
 CONF = 0.25  # YOLO acceptance threshold -- UNCHANGED, matches every prior V4/V5 evaluation
 
@@ -102,6 +103,28 @@ def _relative_lesion_size_pct(d_px, image_width_px):
     return round(100.0 * float(d_px) / float(image_width_px), 1)
 
 
+def diameter_details(mask, d_px, relative_size_pct, mm_per_px):
+    """The diameter's details: pixel proxies always, plus millimetres and the (unchanged
+    10 mm) concern flag when a coin gave this photo a real scale."""
+    details = {
+        "diameter_px": d_px,
+        "lesion_size_px": d_px,
+        "relative_size_pct": relative_size_pct,
+        "concern": False,
+    }
+    if mm_per_px is None:
+        details["reason"] = ("no coin was lined up in this photo, so there is no physical (mm) scale; "
+                             "lesion_size_px and relative_size_pct hold pixel-based proxies instead")
+        return details
+
+    measured = score_diameter_revised(mask, mm_per_px)
+    if measured["value"] is not None:
+        details["diameter_mm"] = measured["value"]
+        details["concern"] = measured["concern"]
+        details["scale_source"] = "coin"
+    return details
+
+
 class V5Detector:
     """Drop-in replacement for MelanomaDetector as main.py's `detector`.
     V4Detector-equivalent, but scores with the frozen V5 model instead."""
@@ -114,7 +137,10 @@ class V5Detector:
         self._yolo_model = YOLO(get_yolo_weights_path())
         self._decision_pipeline = load_frozen_pipeline()
 
-    def process_image(self, image_path: str) -> dict:
+    def process_image(self, image_path: str, mm_per_px=None) -> dict:
+        """mm_per_px comes only from a coin the person lined up in this same photo
+        (validation.clean_coin_scale). It adds a millimetre diameter for display, the
+        explanation and growth tracking; the frozen V5 decision still uses D_px alone."""
         original = cv2.imread(image_path)
         if original is None:
             raise FileNotFoundError(f"Could not read image: {image_path}")
@@ -213,19 +239,11 @@ class V5Detector:
                 },
             },
             "diameter": {
-                # No mm score, ever -- D_px only, per policy. lesion_size_px
-                # and relative_size_pct are pixel/relative proxies only, never
-                # labeled as millimeters.
+                # No 0-10 score, ever. Millimetres only with a coin the person
+                # lined up in this photo; otherwise lesion_size_px and
+                # relative_size_pct are pixel/relative proxies, never labeled as mm.
                 "score": None,
-                "details": {
-                    "reason": "no validated physical (mm) calibration is available for this "
-                              "pipeline; lesion_size_px and relative_size_pct hold pixel-based "
-                              "proxies instead",
-                    "diameter_px": primary["D_px"],
-                    "lesion_size_px": primary["D_px"],
-                    "relative_size_pct": relative_size_pct,
-                    "concern": False,
-                },
+                "details": diameter_details(mask, primary["D_px"], relative_size_pct, mm_per_px),
             },
             "evolving": {"score": None, "details": {"reason": "no prior check to compare against"}},
         }
@@ -250,6 +268,7 @@ class V5Detector:
         result["yolo_confidence"] = primary["confidence"]
         result["quality_flags"] = primary["quality_flags"].split(";") if primary["quality_flags"] not in ("", "ok") else []
         result["no_detection"] = False
+        result["mm_per_px"] = mm_per_px
         return result
 
     @staticmethod
@@ -270,9 +289,9 @@ class V5Detector:
             "multi_instance_overlay": multi_instance_overlay,
             "abcde_scores": abcde_scores,
             "risk_score": risk_score,
-            # Always None: no hair-width (or any other) physical calibration
-            # is used by V5. Diameter is pixels/relative-only; downstream
-            # code (evolution.score_change) already tolerates mm_per_px=None.
+            # Never a hair-width guess. process_image sets it from a coin the
+            # person lined up; otherwise None, which evolution.score_change
+            # already tolerates.
             "mm_per_px": None,
             "num_lesion_instances": num_instances,
             "multi_lesion_detected": multi_lesion_detected,

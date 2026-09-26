@@ -15,15 +15,26 @@
             Usually under 30 seconds.
         </p>
     }
+    else if (IsCropping)
+    {
+        <h2 class="panel-title">Crop the photo</h2>
+        <PhotoCropper Src="@PreviewDataUrl" OnCropped="ApplyCropAsync" OnCancel="() => IsCropping = false" />
+    }
     else
     {
         <h2 class="panel-title">Use this photo?</h2>
         <img src="@PreviewDataUrl" alt="Captured lesion preview" class="confirm-preview" />
         <p class="preview-filename">@FileName <span class="preview-filesize">(@FormattedSize)</span></p>
+        <FormFeedback Value="CropFeedback" />
         <div class="result-actions">
             <button type="button" class="btn btn-primary" @onclick="OnConfirm">Use this photo</button>
+            <button type="button" class="btn btn-outline-primary" @onclick="StartCrop">Crop</button>
             <button type="button" class="btn btn-outline-primary" @onclick="OnRetake">Retake</button>
         </div>
+        @if (IsCropped)
+        {
+            <button type="button" class="link-button" @onclick="UndoCropAsync">Undo crop</button>
+        }
     }
 </div>
 
@@ -45,6 +56,39 @@
 
     [Parameter, EditorRequired]
     public EventCallback OnRetake { get; set; }
+
+    /// <summary>Replaces the photo with its cropped version (JPEG bytes).</summary>
+    [Parameter, EditorRequired]
+    public EventCallback<byte[]> OnCropped { get; set; }
+
+    /// <summary>True once the photo has been cropped, so the original can be restored.</summary>
+    [Parameter]
+    public bool IsCropped { get; set; }
+
+    [Parameter]
+    public EventCallback OnUndoCrop { get; set; }
+
+    private bool IsCropping;
+    private FormFeedback.Feedback? CropFeedback;
+
+    private void StartCrop()
+    {
+        CropFeedback = null;
+        IsCropping = true;
+    }
+
+    private async Task ApplyCropAsync(byte[] bytes)
+    {
+        await OnCropped.InvokeAsync(bytes);
+        IsCropping = false;
+        CropFeedback = new("Photo cropped. Check that the whole spot is still in view.");
+    }
+
+    private async Task UndoCropAsync()
+    {
+        await OnUndoCrop.InvokeAsync();
+        CropFeedback = new("Back to the original photo.");
+    }
 
     private string FormattedSize => FileSize < 1024 * 1024
         ? $"{FileSize / 1024.0:F1} KB"

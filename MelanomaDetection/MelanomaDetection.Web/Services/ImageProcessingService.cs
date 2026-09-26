@@ -68,20 +68,7 @@ public class ImageProcessingService
         byte[] data, string filename, string? spotId = null, string? location = null,
         IEnumerable<string>? symptoms = null, string? notes = null)
     {
-        if (data.Length == 0)
-        {
-            throw new ImageProcessingApiException("The photo is empty. Please choose another one.");
-        }
-
-        if (data.Length > InputLimits.ImageMaxBytes)
-        {
-            throw new ImageProcessingApiException("The photo is too large. Maximum allowed size is 5 MB.");
-        }
-
-        if (!InputLimits.LooksLikeImage(data))
-        {
-            throw new ImageProcessingApiException("That file doesn't look like a photo. Please use a JPEG, PNG or BMP image.");
-        }
+        var photo = CheckedPhoto(data, filename);
 
         location = RequireText(location, "Location", InputLimits.LocationMax);
         notes = RequireText(notes, "Notes", InputLimits.NotesMax, multiline: true);
@@ -91,8 +78,8 @@ public class ImageProcessingService
 
         using var content = new MultipartFormDataContent();
         using var fileContent = new ByteArrayContent(data);
-        fileContent.Headers.ContentType = new MediaTypeHeaderValue(GetContentType(filename));
-        content.Add(fileContent, "file", filename);
+        fileContent.Headers.ContentType = new MediaTypeHeaderValue(photo.ContentType);
+        content.Add(fileContent, "file", photo.FileName);
 
         if (!string.IsNullOrWhiteSpace(spotId))
         {
@@ -129,27 +116,14 @@ public class ImageProcessingService
     public async Task<PredictResponse> PredictRiskAsync(
         byte[] data, string filename, int? age, string? sex, string? bodySite, string? linkedProcessingId = null)
     {
-        if (data.Length == 0)
-        {
-            throw new ImageProcessingApiException("The photo is empty. Please choose another one.");
-        }
-
-        if (data.Length > InputLimits.ImageMaxBytes)
-        {
-            throw new ImageProcessingApiException("The photo is too large. Maximum allowed size is 5 MB.");
-        }
-
-        if (!InputLimits.LooksLikeImage(data))
-        {
-            throw new ImageProcessingApiException("That file doesn't look like a photo. Please use a JPEG, PNG or BMP image.");
-        }
+        var photo = CheckedPhoto(data, filename);
 
         await ThrottleAsync(LimitedOperation.AnalyzePhoto);
 
         using var content = new MultipartFormDataContent();
         using var fileContent = new ByteArrayContent(data);
-        fileContent.Headers.ContentType = new MediaTypeHeaderValue(GetContentType(filename));
-        content.Add(fileContent, "image", filename);
+        fileContent.Headers.ContentType = new MediaTypeHeaderValue(photo.ContentType);
+        content.Add(fileContent, "image", photo.FileName);
 
         if (age is not null)
         {
@@ -592,15 +566,20 @@ public class ImageProcessingService
         }
     }
 
-    private static string GetContentType(string filename)
+    /// <summary>
+    /// The one check every photo passes before it is sent: not empty, within the size limit,
+    /// and really a JPEG, PNG or BMP by its bytes. The name and media type sent with it come
+    /// from those bytes too, never from what the browser claimed, so the analysis service's
+    /// own extension check agrees with the content.
+    /// </summary>
+    private static (string FileName, string ContentType) CheckedPhoto(byte[] data, string filename)
     {
-        return Path.GetExtension(filename).ToLowerInvariant() switch
+        if (InputLimits.ImageProblem(data) is { } problem)
         {
-            ".png" => "image/png",
-            ".jpg" or ".jpeg" => "image/jpeg",
-            ".bmp" => "image/bmp",
-            ".webp" => "image/webp",
-            _ => "application/octet-stream",
-        };
+            throw new ImageProcessingApiException(problem);
+        }
+
+        var name = InputLimits.ImageFileName(data, filename);
+        return (name, InputLimits.ImageContentType(Path.GetExtension(name)));
     }
 }

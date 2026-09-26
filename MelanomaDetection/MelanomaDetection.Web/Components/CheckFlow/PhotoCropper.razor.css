@@ -1,0 +1,98 @@
+.cropper {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+}
+
+.cropper-help {
+    margin: 0;
+    font-size: 0.875rem;
+    color: var(--color-text-muted);
+}
+
+/* Shrinks to the photo, so the box's percentages are percentages of the photo. */
+.cropper-frame {
+    position: relative;
+    display: inline-block;
+    align-self: center;
+    max-width: 100%;
+    overflow: hidden;
+    border-radius: 12px;
+    background: var(--color-well);
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.cropper-image {
+    display: block;
+    max-width: 100%;
+    max-height: min(60vh, 480px);
+    pointer-events: none;
+}
+
+.crop-box {
+    position: absolute;
+    left: 10%;
+    top: 10%;
+    width: 80%;
+    height: 80%;
+    border: 2px solid #fff;
+    /* Darkens everything outside the box; the frame's overflow clips it to the photo. */
+    box-shadow: 0 0 0 9999px rgb(0 0 0 / 0.5);
+    cursor: move;
+    touch-action: none;
+}
+
+.crop-box:focus-visible {
+    outline: 3px solid var(--color-accent);
+    outline-offset: 2px;
+}
+
+/* Thirds grid, to help centre the spot. */
+.crop-box::before,
+.crop-box::after {
+    content: "";
+    position: absolute;
+    pointer-events: none;
+    border: 0 solid rgb(255 255 255 / 0.45);
+}
+
+.crop-box::before {
+    inset: 0 33.33%;
+    border-left-width: 1px;
+    border-right-width: 1px;
+}
+
+.crop-box::after {
+    inset: 33.33% 0;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+}
+
+/* Big enough to hit with a finger; the visible dot is smaller. */
+.crop-handle {
+    position: absolute;
+    width: 32px;
+    height: 32px;
+    z-index: 1;
+}
+
+.crop-handle::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 14px;
+    height: 14px;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 0 0 1px rgb(0 0 0 / 0.35);
+}
+
+.crop-handle-nw { left: -16px; top: -16px; cursor: nwse-resize; }
+.crop-handle-ne { right: -16px; top: -16px; cursor: nesw-resize; }
+.crop-handle-sw { left: -16px; bottom: -16px; cursor: nesw-resize; }
+.crop-handle-se { right: -16px; bottom: -16px; cursor: nwse-resize; }

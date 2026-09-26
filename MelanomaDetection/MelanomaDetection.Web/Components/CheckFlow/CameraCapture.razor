@@ -21,7 +21,10 @@ else
 
 @if (IsOpen)
 {
-    <div class="camera-overlay" role="dialog" aria-modal="true" aria-label="Camera">
+    @* A native <dialog> opened with showModal(), so it covers the whole screen from the browser's
+       top layer: a position:fixed <div> here was trapped inside the check-flow card (its entrance
+       animation leaves a transform on it), sat under the site header on phones, and hid the close button. *@
+    <dialog class="camera-overlay" aria-modal="true" aria-label="Camera" @ref="OverlayElement" @onkeydown="OnOverlayKeyDown">
         <video @ref="VideoElement" class="camera-video" autoplay playsinline muted></video>
         <canvas @ref="CanvasElement" class="camera-canvas-hidden"></canvas>
 
@@ -55,7 +58,7 @@ else
                 <span class="camera-icon-button-spacer" aria-hidden="true"></span>
             </div>
         }
-    </div>
+    </dialog>
 }
 
 @code {
@@ -67,6 +70,7 @@ else
     [Parameter, EditorRequired]
     public EventCallback<byte[]> OnCaptured { get; set; }
 
+    private ElementReference OverlayElement;
     private ElementReference VideoElement;
     private ElementReference CanvasElement;
 
@@ -100,6 +104,7 @@ else
         if (_pendingStart)
         {
             _pendingStart = false;
+            await JS.InvokeVoidAsync("skinCheckCamera.showOverlay", OverlayElement);
             await StartStream();
         }
     }
@@ -110,6 +115,15 @@ else
         CaptureMessage = null;
         IsOpen = true;
         _pendingStart = true;
+    }
+
+    // Escape would close the native dialog on its own and leave the camera running; close it properly.
+    private async Task OnOverlayKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape")
+        {
+            await Close();
+        }
     }
 
     private async Task StartStream()
@@ -138,7 +152,8 @@ else
         {
             photo = await ReadPhotoAsync();
         }
-        catch (Exception ex) when (ex is JSException or IOException or InvalidOperationException or FormatException)
+        catch (Exception ex) when (ex is JSException or IOException or InvalidOperationException or FormatException
+            or ArgumentOutOfRangeException)
         {
             photo = null;
             CaptureMessage = "That photo could not be read. Please try again.";
@@ -166,6 +181,13 @@ else
     /// </summary>
     private async Task<byte[]?> ReadPhotoAsync()
     {
+        // Wait (up to ~2 s) for a real frame; while the camera is still starting there
+        // is nothing worth capturing, and the caller then says so.
+        if (!await JS.InvokeAsync<bool>("skinCheckCamera.waitForFrame", VideoElement))
+        {
+            return null;
+        }
+
         await using var reference = await JS.InvokeAsync<IJSStreamReference?>(
             "skinCheckCamera.capture", VideoElement, CanvasElement, InputLimits.ImageMaxBytes);
         if (reference is null)

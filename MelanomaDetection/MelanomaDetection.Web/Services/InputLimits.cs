@@ -21,16 +21,69 @@ public static class InputLimits
     public const long ImageMaxBytes = 5 * 1024 * 1024;
 
     /// <summary>
-    /// True when the bytes start like a PNG, JPEG, BMP or WebP. A file's declared type
-    /// and name are just claims from the browser; this is what it actually is.
+    /// The file extension that matches what the bytes really are: ".jpg", ".png" or ".bmp",
+    /// the formats the analysis service decodes (validation.py's check_image_upload). Null for
+    /// anything else, WebP and HEIC included (PhotoIntake turns those into JPEGs first). A
+    /// file's declared type and name are just claims from the browser; this is what it is.
     /// </summary>
-    public static bool LooksLikeImage(ReadOnlySpan<byte> data)
+    public static string? ImageExtension(ReadOnlySpan<byte> data)
     {
-        return data.StartsWith(PngSignature)
-            || data.StartsWith(JpegSignature)
-            || data.StartsWith("BM"u8)
-            || (data.Length >= 12 && data[..4].SequenceEqual("RIFF"u8) && data.Slice(8, 4).SequenceEqual("WEBP"u8));
+        if (data.StartsWith(JpegSignature))
+        {
+            return ".jpg";
+        }
+
+        if (data.StartsWith(PngSignature))
+        {
+            return ".png";
+        }
+
+        // "BM" alone is two ordinary letters, so also require room for the BMP header.
+        return data.Length >= 26 && data.StartsWith("BM"u8) ? ".bmp" : null;
     }
+
+    /// <summary>True when the bytes are a JPEG, PNG or BMP (see <see cref="ImageExtension"/>).</summary>
+    public static bool LooksLikeImage(ReadOnlySpan<byte> data) => ImageExtension(data) is not null;
+
+    /// <summary>
+    /// Why these bytes can't be sent for analysis, as a message to show the person, or null
+    /// when they can. Every photo passes this, whether picked, taken with the camera or cropped.
+    /// </summary>
+    public static string? ImageProblem(ReadOnlySpan<byte> data)
+    {
+        if (data.IsEmpty)
+        {
+            return "The photo is empty. Please choose another one.";
+        }
+
+        if (data.Length > ImageMaxBytes)
+        {
+            return $"The photo is too large ({data.Length / (1024.0 * 1024.0):F2} MB). Maximum allowed size is 5 MB.";
+        }
+
+        return LooksLikeImage(data)
+            ? null
+            : "That file doesn't look like a photo. Please choose a JPEG, PNG, BMP, WebP or HEIC image.";
+    }
+
+    /// <summary>
+    /// <paramref name="fileName"/> with its extension replaced by the one the bytes really
+    /// have. A HEIC photo converted to JPEG in the browser keeps its "IMG_0001.HEIC" name, and
+    /// the analysis service refuses a file whose extension isn't .jpg, .png or .bmp.
+    /// </summary>
+    public static string ImageFileName(ReadOnlySpan<byte> data, string? fileName)
+    {
+        var stem = Path.GetFileNameWithoutExtension(fileName ?? string.Empty);
+        return (string.IsNullOrWhiteSpace(stem) ? "photo" : stem) + (ImageExtension(data) ?? string.Empty);
+    }
+
+    /// <summary>The media type for an extension from <see cref="ImageExtension"/>.</summary>
+    public static string ImageContentType(string extension) => extension switch
+    {
+        ".png" => "image/png",
+        ".bmp" => "image/bmp",
+        _ => "image/jpeg",
+    };
 
     // Raw bytes, not UTF-8 literals: 0x89 and 0xFF aren't valid single-byte UTF-8.
     private static ReadOnlySpan<byte> PngSignature => [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];

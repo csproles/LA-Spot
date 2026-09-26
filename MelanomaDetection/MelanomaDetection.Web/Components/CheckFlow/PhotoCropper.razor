@@ -1,0 +1,145 @@
+@* Crop the photo before it's analyzed: a box over the photo that can be dragged and
+   resized (mouse, touch, or arrow keys). All the dragging happens in wwwroot/js/crop.js;
+   only the finished crop comes back, at full resolution, as JPEG bytes. *@
+@implements IAsyncDisposable
+@inject IJSRuntime JS
+
+<div class="cropper">
+    <p class="cropper-help" id="@HelpId">
+        Drag the box to move it and its corners to resize it. Keep the whole spot and a little
+        skin around it inside the box. On a keyboard: arrow keys move it, Shift + arrows resize it.
+    </p>
+
+    <div class="cropper-frame" @ref="Frame">
+        <img src="@Src" alt="Photo to crop" class="cropper-image" draggable="false" />
+        <div class="crop-box" tabindex="0" role="group" aria-label="Crop area" aria-describedby="@HelpId">
+            <span class="crop-handle crop-handle-nw" data-handle="nw" aria-hidden="true"></span>
+            <span class="crop-handle crop-handle-ne" data-handle="ne" aria-hidden="true"></span>
+            <span class="crop-handle crop-handle-sw" data-handle="sw" aria-hidden="true"></span>
+            <span class="crop-handle crop-handle-se" data-handle="se" aria-hidden="true"></span>
+        </div>
+    </div>
+
+    <div class="result-actions">
+        <button type="button" class="btn btn-primary" disabled="@(IsBusy || !IsReady)" @onclick="ApplyAsync">
+            @if (IsBusy)
+            {
+                <span class="btn-spinner" aria-hidden="true"></span>
+            }
+            @(IsBusy ? "Cropping…" : "Apply crop")
+        </button>
+        <button type="button" class="btn btn-outline-primary" disabled="@IsBusy" @onclick="OnCancel">Cancel</button>
+    </div>
+    <FormFeedback Value="Problem" />
+</div>
+
+@code {
+    public sealed record CropOutcome(bool Ok, string? Message);
+
+    [Parameter, EditorRequired]
+    public string? Src { get; set; }
+
+    /// <summary>The cropped photo as JPEG bytes.</summary>
+    [Parameter, EditorRequired]
+    public EventCallback<byte[]> OnCropped { get; set; }
+
+    [Parameter, EditorRequired]
+    public EventCallback OnCancel { get; set; }
+
+    private ElementReference Frame;
+    private IJSObjectReference? Module;
+    private bool IsReady;
+    private bool IsBusy;
+    private FormFeedback.Feedback? Problem;
+    private readonly string HelpId = $"crop-help-{Guid.NewGuid():N}";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        try
+        {
+            Module = await JS.InvokeAsync<IJSObjectReference>("import", "./js/crop.js");
+            await Module.InvokeVoidAsync("init", Frame);
+            IsReady = true;
+        }
+        catch (JSException)
+        {
+            Problem = FormFeedback.Feedback.Error("Cropping isn't available in this browser. You can still use the photo as it is.");
+        }
+
+        StateHasChanged();
+    }
+
+    private async Task ApplyAsync()
+    {
+        if (Module is null || IsBusy)
+        {
+            return;
+        }
+
+        IsBusy = true;
+        Problem = null;
+        try
+        {
+            var outcome = await Module.InvokeAsync<CropOutcome>("crop", Frame, InputLimits.ImageMaxBytes);
+            if (outcome is not { Ok: true })
+            {
+                Problem = FormFeedback.Feedback.Error(outcome?.Message ?? "The photo couldn't be cropped. Try again.");
+                return;
+            }
+
+            await using var reference = await Module.InvokeAsync<IJSStreamReference?>("takeResult", Frame);
+            if (reference is null)
+            {
+                Problem = FormFeedback.Feedback.Error("The photo couldn't be cropped. Try again.");
+                return;
+            }
+
+            await using var stream = await reference.OpenReadStreamAsync(InputLimits.ImageMaxBytes);
+            using var buffer = new MemoryStream();
+            await stream.CopyToAsync(buffer);
+            if (buffer.Length == 0)
+            {
+                Problem = FormFeedback.Feedback.Error("The photo couldn't be cropped. Try again.");
+                return;
+            }
+
+            await OnCropped.InvokeAsync(buffer.ToArray());
+        }
+        catch (JSException)
+        {
+            Problem = FormFeedback.Feedback.Error("The photo couldn't be cropped. Try again.");
+        }
+        catch (ArgumentOutOfRangeException)
+        {
+            // OpenReadStreamAsync refuses a stream over the 5 MB limit before reading any of it.
+            Problem = FormFeedback.Feedback.Error("The cropped photo is over 5 MB. Try a smaller crop.");
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (Module is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await Module.InvokeVoidAsync("dispose", Frame);
+            await Module.DisposeAsync();
+        }
+        catch (JSDisconnectedException)
+        {
+            // The circuit is already gone; nothing left to clean up in the browser.
+        }
+    }
+}

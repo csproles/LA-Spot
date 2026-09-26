@@ -17,10 +17,11 @@ public sealed class CameraCaptureTests : BunitContext
 {
     private byte[]? _captured;
 
-    private IRenderedComponent<CameraCapture> RenderWithCamera(IJSStreamReference? photo, bool supported = true)
+    private IRenderedComponent<CameraCapture> RenderWithCamera(IJSStreamReference? photo, bool supported = true, bool frameReady = true)
     {
         JSInterop.Mode = JSRuntimeMode.Loose;
         JSInterop.Setup<bool>("skinCheckCamera.isSupported").SetResult(supported);
+        JSInterop.Setup<bool>("skinCheckCamera.waitForFrame", _ => true).SetResult(frameReady);
         JSInterop.Setup<string?>("skinCheckCamera.start", _ => true).SetResult(null);
         JSInterop.SetupVoid("skinCheckCamera.stop", _ => true).SetVoidResult();
         JSInterop.Setup<IJSStreamReference?>("skinCheckCamera.capture", _ => true).SetResult(photo);
@@ -51,6 +52,19 @@ public sealed class CameraCaptureTests : BunitContext
         cut.WaitForAssertion(() => Assert.NotNull(_captured));
         Assert.Equal(photo, _captured);
         Assert.Empty(cut.FindAll(".camera-overlay"));
+    }
+
+    [Fact]
+    public void AShutterTapBeforeTheCameraHasARealFrameSaysSoAndCapturesNothing()
+    {
+        var cut = RenderWithCamera(new FakeStreamReference([0xFF, 0xD8]), frameReady: false);
+
+        OpenAndPressShutter(cut);
+
+        cut.WaitForAssertion(() => Assert.Contains("has not produced a picture yet", cut.Find(".camera-hint").TextContent));
+        Assert.Null(_captured);
+        Assert.Empty(JSInterop.Invocations.Where(i => i.Identifier == "skinCheckCamera.capture"));
+        Assert.NotEmpty(cut.FindAll(".camera-overlay"));
     }
 
     [Fact]

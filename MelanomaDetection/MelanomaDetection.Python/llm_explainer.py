@@ -385,15 +385,15 @@ def _map_to_llm_schema(abcde_scores: dict, overall_visual_concern=None) -> dict:
 
     diameter_mm = diameter.get("diameter_mm")
     if diameter_mm is not None:
-        # Legacy only -- V5 (and V4 before it) never sets this key. Kept so a
-        # pre-V4 saved check's explanation still renders correctly.
+        # Set when the person lined a circle up with a coin in the photo
+        # (v5_detector.diameter_details), and on pre-V4 saved checks.
         payload["diameter_mm"] = {
             "value": diameter_mm,
             "flagged": diameter.get("concern", False),
             "measured": True,
         }
     # else: omit diameter_mm entirely, per rule 4a -- absence, not a null value.
-    # V5 always takes this branch (diameter_mm is always None); the pixel/
+    # V5 takes this branch whenever no coin was lined up; the pixel/
     # relative-size figures shown in the UI (AbcdeDetails.cs) are deliberately
     # NOT sent here, since rule 4a's job is simply "say size isn't available
     # as mm," not to describe the pixel proxy.

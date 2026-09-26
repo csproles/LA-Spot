@@ -209,6 +209,9 @@ def process_image_endpoint():
     # sized PNG/JPEG/BMP before OpenCV is asked to decode them.
     data = uploaded.read()
     validation.check_image_upload(data)
+    mm_per_px = validation.clean_coin_scale(
+        request.form.get("coin"), request.form.get("coin_diameter_px"), validation.image_dimensions(data),
+    )
 
     spot_id = validation.clean_spot_id(request.form.get("spot_id"))
     location = validation.clean_text(request.form.get("location"), "location", validation.LOCATION_MAX)
@@ -220,7 +223,7 @@ def process_image_endpoint():
         tmp_file.write(data)
 
     try:
-        results = detector.process_image(tmp_path)
+        results = detector.process_image(tmp_path, mm_per_px=mm_per_px)
     except FileNotFoundError:
         return jsonify({
             "error": "Could not read the uploaded file as an image. It may be corrupted or in an unsupported format.",

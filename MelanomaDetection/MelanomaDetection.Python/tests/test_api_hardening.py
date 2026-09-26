@@ -175,3 +175,30 @@ class TestJsonValidation:
         response = client.put("/api/profile", json=body, headers=ALICE)
         assert response.status_code == 200
         assert response.get_json()["familyHistory"] is True
+
+
+class TestCoinScaleUpload:
+    @staticmethod
+    def photo():
+        photo = np.full((300, 300, 3), (200, 190, 220), np.uint8)
+        cv2.circle(photo, (150, 150), 60, (40, 50, 90), -1)
+        return cv2.imencode(".png", photo)[1].tobytes()
+
+    def test_a_coin_gives_the_check_a_real_scale(self, client):
+        response = upload(client, self.photo(), coin="quarter", coin_diameter_px="121.3")
+        assert response.status_code == 200
+
+        results = client.get(f"/api/image/results/{response.get_json()['processingId']}", headers=ALICE).get_json()
+        details = results["abcde_scores"]["diameter"]["details"]
+        if "diameter_px" in details:  # absent only when nothing was detected in the synthetic photo
+            assert details["scale_source"] == "coin"
+            assert details["diameter_mm"] == pytest.approx(details["diameter_px"] * 0.2, abs=0.05)
+
+    def test_a_coin_bigger_than_the_photo_is_refused(self, client):
+        response = upload(client, self.photo(), coin="quarter", coin_diameter_px="301")
+        assert response.status_code == 400
+        assert "fit inside the photo" in response.get_json()["error"]
+
+    def test_a_coin_without_its_size_is_refused(self, client):
+        response = upload(client, self.photo(), coin="dime")
+        assert response.status_code == 400
