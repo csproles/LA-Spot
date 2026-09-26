@@ -1,0 +1,16 @@
+{
+  "winning_candidate": "full_ABC_D_conf_fraction__logistic_regression",
+  "selected": {
+    "threshold": 0.25,
+    "TP": 476,
+    "TN": 1003,
+    "FP": 448,
+    "FN": 163,
+    "sensitivity": 0.7449,
+    "specificity": 0.6912,
+    "precision": 0.5152,
+    "f1": 0.6091,
+    "balanced_accuracy": 0.7181
+  },
+  "selection_rule": "max balanced_accuracy among thresholds with sens>=0.55 AND spec>=0.55, else max balanced_accuracy overall"
+}

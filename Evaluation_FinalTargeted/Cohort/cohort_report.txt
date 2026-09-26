@@ -1,0 +1,27 @@
+PHASE 1 — TARGETED COHORT REPORT
+==================================================
+
+INCLUSION CRITERIA:
+  Positive (melanoma): diagnosis_2='Malignant melanocytic proliferations (Melanoma)' AND diagnosis_3 in ['Melanoma Invasive', 'Melanoma in situ', 'Melanoma metastasis', 'Melanoma, NOS']
+  Negative (benign melanocytic): diagnosis_2='Benign melanocytic proliferations' AND diagnosis_3 in ['Lentigo simplex', 'Nevus']
+  Both classes additionally require melanocytic=True and image_type=dermoscopic
+  (verified: both are already 100% true for every qualifying row — not an active filter)
+  All 8277 source rows are diagnosis_confirm_type=histopathology (verified dataset-wide)
+
+EXCLUSION:
+  4795 images excluded (all other diagnoses, or missing image file) — no guessing
+
+Melanoma (positive):        973
+  by subtype: {'Melanoma in situ': 469, 'Melanoma Invasive': 412, 'Melanoma, NOS': 80, 'Melanoma metastasis': 12}
+Benign melanocytic (negative): 2509
+  by subtype: {'Nevus': 2494, 'Lentigo simplex': 15}
+
+patient_id populated: melanoma 409/973 (42.0%), benign 1182/2509 (47.1%)
+lesion_id populated:  melanoma 856/973 (88.0%), benign 1814/2509 (72.3%)
+
+Source/institution (melanoma): {'Memorial Sloan Kettering Cancer Center': 526, 'MILK study team': 447}
+Source/institution (benign):   {'Memorial Sloan Kettering Cancer Center': 1877, 'MILK study team': 632}
+
+Total cohort: 3482
+Already have existing V2 pipeline results (from Evaluation_3500): 1504
+Require NEW V2 pipeline execution: 1978

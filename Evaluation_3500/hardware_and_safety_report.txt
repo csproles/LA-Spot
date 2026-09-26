@@ -1,0 +1,100 @@
+EVALUATION_3500 — HARDWARE, BENCHMARK, AND PRE-RUN SAFETY REPORT
+==================================================================
+
+1. DATASET INSPECTION (source: C:\Users\sirjanaa\Downloads\ISIC-images)
+-------------------------------------------------------------------
+Total images (files):                 8277
+Total metadata rows:                  8277 (1:1 correspondence with files; 0 orphans either direction)
+diagnosis_1 = Benign:                 4028
+diagnosis_1 = Malignant:              4249
+diagnosis_1 = other/blank (indeterminate/unlabeled): 0
+Duplicate isic_id in metadata:        0
+Duplicate image CONTENT (MD5 hash across all 8277 files): 0 duplicate groups found
+Total dataset disk size:              1.96 GB
+Average file size:                    230.9 KB (median 32.2 KB — heavily right-skewed)
+Image width range:                    320-7360 px (mean 1673, median 600)
+Image height range:                   320-4912 px (mean 1248, median 450)
+Most common resolution:               600x450 (4910 images), then 3264x2448 (2488 images)
+Ground-truth field used:              diagnosis_1 (values: "Benign" / "Malignant" only)
+diagnosis_confirm_type:               100% "histopathology" (biopsy-confirmed for every image)
+clin_size_long_diam_mm populated:     1905 / 8277 (23%) — NOTE: this field does NOT exist in the
+                                       smaller project dataset used for all prior steps. It is NOT
+                                       used here (D_mm stays None throughout, per the finalized,
+                                       unmodified evaluation policy) but is recorded in the manifest
+                                       for future reference.
+lesion_id populated:                  6938 / 8277; 19 lesion_ids are shared by >1 image (repeat
+                                       photos of the same lesion) — noted, not deduplicated (only
+                                       image-ID-level dedup and class-exclusivity were requested).
+
+CONFIRMED: every image_id maps to exactly one, unambiguous ground-truth label (Benign or
+Malignant), via a single categorical metadata field. No image can appear in both classes by
+construction.
+
+2. EVALUATION MANIFEST (Evaluation_3500/evaluation_manifest_3500.csv)
+-------------------------------------------------------------------
+Sampling seed:               20260918 (single random.Random instance, benign then malignant draw)
+Sampling method:              stratified, 1750 benign + 1750 malignant, drawn without replacement
+                               from the deduplicated Benign/Malignant pools (4028 / 4249 available)
+Total in manifest:             3500
+Benign in manifest:            1750
+Malignant in manifest:         1750
+Unique image_ids in manifest:  3500 (verified, no repeats)
+Images copied from source:     0 (manifest references original Downloads/ISIC-images/*.jpg paths
+                               directly; source dataset untouched — verified no writes occurred
+                               there)
+
+3. HARDWARE
+-------------------------------------------------------------------
+CPU:                    Intel(R) Core(TM) 5 210H — 8 cores / 12 logical processors
+Total RAM:               15.5 GB
+Free RAM (at check time): 3.57 GB (Windows under-reports available RAM due to file-cache reuse;
+                          not a constraint given this pipeline's <600MB per-process footprint)
+PyTorch build:            2.13.0+cpu
+CUDA available:           False
+GPU:                      none detected / not applicable
+Device actually used:     CPU (confirmed via explicit device selection log in every run)
+Free disk space (C:):     ~102.8 GB (dataset is 1.96 GB; estimated full-run mask output well under
+                          1 GB — see below)
+
+4. BENCHMARK (30 images, drawn from the front of the fixed 3500-image manifest,
+   using the EXACT run_large_dataset_v2.py / revised_abcd.pipeline_v2 code path
+   that the full run uses — same conf=0.25, same model, same scoring)
+-------------------------------------------------------------------
+Benchmark image count:        30
+Total benchmark time:         53s (a second, independent 30-image sample measured 57s; a further
+                              30-image resume-validation batch measured 54s — consistent ~1.8-2.2s/img)
+Average seconds/image:        1.80-2.17s/img across three independent 30-image batches
+Device used:                  CPU (confirmed)
+Peak process RSS (memory):    569-589 MB across the three batches
+Results this batch:           26 processed_ok, 4 NO_DETECTION, 0 failed, 30 instances, 3 multi-lesion
+Estimated full 3500-image runtime: ~1.9s/img x 3500 = ~6650s = ~1h51m (range ~1.75h-2.1h given the
+                              observed per-batch variance)
+Estimated mask output size:   30 images -> 448 KB of instance masks -> ~52 KB/image average ->
+                              3500 images -> ~185 MB total (small; source images are mostly modest
+                              resolution, see resolution distribution above)
+
+Checkpoint/resume validated:  ran the benchmark, then re-invoked the identical command without
+                              --fresh: it correctly skipped all 30 already-logged images and
+                              proceeded to the NEXT 30 images in the manifest (60 unique image
+                              names total logged afterward, 0 duplicates) — resume is correct.
+
+5. SAFETY CHECKS (all passed)
+-------------------------------------------------------------------
+[PASS] Dataset labels read correctly       — manifest ground_truth matches diagnosis_1 exactly;
+                                             1750/1750 balanced split confirmed
+[PASS] Single-image YOLO inference works   — 90 total benchmark-phase images processed via
+                                             single-image (non-batched) calls, confirmed via
+                                             per-image device/inference logging
+[PASS] ABCD completes correctly            — A/B/C/D fields populated for every PROCESSED row;
+                                             D_mm empty and D_concern False for all rows, as required
+[PASS] Incremental output saving works     — results.csv grows and is readable after each image;
+                                             row counts verified against processed counts
+[PASS] Checkpoint/resume works             — validated above (60 unique, 0 duplicate rows after
+                                             two invocations)
+[PASS] Sufficient disk space               — ~102.8 GB free vs. an estimated <1 GB of new output
+[PASS] No RAM/VRAM problem                 — peak RSS ~590 MB against 15.5 GB total RAM; no GPU
+                                             in use, so no VRAM constraint applies
+[PASS] No pipeline error encountered       — 0 FAILED rows across 90 benchmark-phase images
+
+RESULT: No critical problem found. Proceeding automatically with the full 3500-image run, per
+instruction.

@@ -1,0 +1,16 @@
+{
+  "selected": {
+    "threshold": 0.25,
+    "TP": 492,
+    "TN": 977,
+    "FP": 474,
+    "FN": 146,
+    "sensitivity": 0.7712,
+    "specificity": 0.6733,
+    "precision": 0.5093,
+    "f1": 0.6135,
+    "accuracy": 0.7032,
+    "balanced_accuracy": 0.7222
+  },
+  "selection_rule": "max balanced_accuracy among thresholds with sens>=0.55 AND spec>=0.55, else max balanced_accuracy overall -- identical rule to Evaluation_V4/select_threshold.py"
+}

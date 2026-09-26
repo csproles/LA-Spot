@@ -1,0 +1,217 @@
+Resuming: 0 image(s) already logged and will be skipped (pass --fresh to ignore prior progress).
+torch reports CUDA available: False -> using device: cpu
+Loading model: C:\Users\sirjanaa\Downloads\runs\runs\segment\melanoma_yolo26n_seg\weights\best.pt
+Discovering images from manifest: Evaluation_3500/evaluation_manifest_3500.csv
+--limit 30 applied: only the first 30 remaining image(s) will be processed in this invocation.
+Dataset: 3500 image(s) total, 30 to process in this invocation.
+Vignette removed center=(1598,1222) radius=2011px
+Border irregularity: 0.239 ✔
+Skin color sampled 2454970 pixels LAB=(162.0, 146.0, 139.0)
+Skin baseline: L=162 A=146 B=139
+Lesion L: median=117 p10=83 B_p10=149
+Color: CV=0.467 ⚠ | Dangerous: none
+[1/30] ISIC_8988016: 1 instance(s), evaluation_status=SINGLE_LESION_EVALUABLE  | elapsed=0m04s avg=4.23s/img remaining=29 eta=2m02s rss=532MB
+[2/30] ISIC_3175480: NO_DETECTION  | elapsed=0m04s avg=2.19s/img remaining=28 eta=1m01s rss=411MB
+Vignette removed center=(1632,1224) radius=2039px
+Border irregularity: 0.200 ✔
+Skin color sampled 2453517 pixels LAB=(173.0, 134.0, 139.0)
+Skin baseline: L=173 A=134 B=139
+Lesion L: median=146 p10=118 B_p10=160
+Color: CV=0.351 ⚠ | Dangerous: none
+[3/30] ISIC_8838144: 1 instance(s), evaluation_status=SINGLE_LESION_EVALUABLE  | elapsed=0m06s avg=2.07s/img remaining=27 eta=0m55s rss=529MB
+Vignette removed center=(1632,1224) radius=2039px
+Border irregularity: 0.180 ✔
+Skin color sampled 2453517 pixels LAB=(163.0, 139.0, 140.0)
+Skin baseline: L=163 A=139 B=140
+Lesion L: median=191 p10=165 B_p10=155
+Color: CV=0.143 ✔ | Dangerous: ['blue-gray(15%)']
+[4/30] ISIC_1553968: 1 instance(s), evaluation_status=SINGLE_LESION_EVALUABLE  | elapsed=0m08s avg=2.22s/img remaining=26 eta=0m57s rss=503MB
+Vignette removed center=(300,224) radius=374px
+Border irregularity: 0.254 ✔
+Skin color sampled 82921 pixels LAB=(207.0, 136.0, 130.0)
+Skin baseline: L=207 A=136 B=130
+Lesion L: median=92 p10=68 B_p10=136
+Color: CV=0.266 ✔ | Dangerous: ['black(29%)']
+[5/30] ISIC_6355154: 1 instance(s), evaluation_status=SINGLE_LESION_EVALUABLE  | elapsed=0m09s avg=1.82s/img remaining=25 eta=0m45s rss=477MB
+Vignette removed center=(1632,1224) radius=2039px
+Border irregularity: 0.243 ✔
+Skin color sampled 2453517 pixels LAB=(168.0, 136.0, 131.0)
+Skin baseline: L=168 A=136 B=131
+Lesion L: median=151 p10=124 B_p10=142
+Color: CV=0.403 ⚠ | Dangerous: ['pink/red(19%)', 'blue-gray(15%)']
+Border irregularity: 0.249 ✔
+Skin color sampled 2453517 pixels LAB=(168.0, 136.0, 131.0)
+Skin baseline: L=168 A=136 B=131
+Lesion L: median=151 p10=124 B_p10=142
+Color: CV=0.404 ⚠ | Dangerous: ['pink/red(19%)', 'blue-gray(15%)']
+Border irregularity: 0.292 ✔
+Skin color sampled 2453517 pixels LAB=(168.0, 136.0, 131.0)
+Skin baseline: L=168 A=136 B=131
+Lesion L: median=191 p10=183 B_p10=144
+Color: CV=0.111 ✔ | Dangerous: none
+[6/30] ISIC_0549791: 3 instance(s), evaluation_status=MULTI_LESION_AMBIGUOUS  | elapsed=0m12s avg=2.12s/img remaining=24 eta=0m50s rss=572MB
+Vignette removed center=(1290,963) radius=1586px
+Border irregularity: 0.312 ✔
+Skin color sampled 1537325 pixels LAB=(137.0, 138.0, 137.0)
+Skin baseline: L=137 A=138 B=137
+Lesion L: median=117 p10=103 B_p10=152
+Color: CV=0.289 ✔ | Dangerous: ['pink/red(43%)']
+[7/30] ISIC_6228536: 1 instance(s), evaluation_status=SINGLE_LESION_EVALUABLE  | elapsed=0m14s avg=2.00s/img remaining=23 eta=0m46s rss=531MB
+Vignette removed center=(1715,1224) radius=1973px
+Border irregularity: 0.247 ✔
+Skin color sampled 2447140 pixels LAB=(178.0, 133.0, 144.0)
+Skin baseline: L=178 A=133 B=144
+Lesion L: median=193 p10=180 B_p10=145
+Color: CV=0.280 ✔ | Dangerous: ['pink/red(11%)']
+[8/30] ISIC_9324976: 1 instance(s), evaluation_status=SINGLE_LESION_EVALUABLE  | elapsed=0m16s avg=2.01s/img remaining=22 eta=0m44s rss=495MB
+Vignette removed center=(2110,1438) radius=2537px
+Border irregularity: 0.325 ✔
+Skin color sampled 3388076 pixels LAB=(153.0, 137.0, 138.0)
+Skin baseline: L=153 A=137 B=138
+Lesion L: median=105 p10=90 B_p10=143
+Color: CV=0.281 ✔ | Dangerous: none
+[9/30] ISIC_4443776: 1 instance(s), evaluation_status=SINGLE_LESION_EVALUABLE  | elapsed=0m19s avg=2.16s/img remaining=21 eta=0m45s rss=552MB
+[10/30] ISIC_3623141: NO_DETECTION  | elapsed=0m19s avg=1.96s/img remaining=20 eta=0m39s rss=445MB
+Vignette removed center=(1632,1223) radius=2039px
+Border irregularity: 0.120 ✔
+Skin color sampled 2453517 pixels LAB=(158.0, 142.0, 131.0)
+Skin baseline: L=158 A=142 B=131
+Lesion L: median=143 p10=127 B_p10=130
+Color: CV=0.278 ✔ | Dangerous: ['pink/red(84%)']
+[11/30] ISIC_8387580: 1 instance(s), evaluation_status=SINGLE_LESION_EVALUABLE  | elapsed=0m21s avg=1.97s/img remaining=19 eta=0m37s rss=518MB
+Vignette removed center=(1632,1224) radius=2039px
+Border irregularity: 0.172 ✔
+Skin color sampled 2453517 pixels LAB=(168.0, 140.0, 128.0)
+Skin baseline: L=168 A=140 B=128
+Lesion L: median=124 p10=88 B_p10=148
+Color: CV=0.373 ⚠ | Dangerous: ['black(12%)']
+[12/30] ISIC_8223110: 1 instance(s), evaluation_status=SINGLE_LESION_EVALUABLE  | elapsed=0m23s avg=1.98s/img remaining=18 eta=0m35s rss=506MB
+Vignette removed center=(300,224) radius=374px
+Border irregularity: 0.506 ⚠
+Skin color sampled 53627 pixels LAB=(184.0, 145.0, 125.0)
+Skin baseline: L=184 A=145 B=125
+Lesion L: median=170 p10=144 B_p10=123
+Color: CV=0.876 ⚠ | Dangerous: none
+[13/30] ISIC_6435029: 1 instance(s), evaluation_status=SINGLE_LESION_EVALUABLE  | elapsed=0m23s avg=1.84s/img remaining=17 eta=0m31s rss=476MB
+Vignette removed center=(1602,1077) radius=1930px
+Border irregularity: 0.395 ✔
+Skin color sampled 2078655 pixels LAB=(115.0, 147.0, 120.0)
+Skin baseline: L=115 A=147 B=120
+Lesion L: median=155 p10=80 B_p10=51
+Color: CV=0.361 ⚠ | Dangerous: ['pink/red(14%)', 'blue-gray(15%)', 'black(12%)']
+[14/30] ISIC_3378080: 1 instance(s), evaluation_status=SINGLE_LESION_EVALUABLE  | elapsed=0m26s avg=1.93s/img remaining=16 eta=0m30s rss=495MB
+Vignette removed center=(1632,1224) radius=2039px
+Border irregularity: 0.394 ✔
+Skin color sampled 2451667 pixels LAB=(184.0, 128.0, 150.0)
+Skin baseline: L=184 A=128 B=150
+Lesion L: median=151 p10=119 B_p10=151
+Color: CV=0.541 ⚠ | Dangerous: none
+[15/30] ISIC_6761840: 1 instance(s), evaluation_status=SINGLE_LESION_EVALUABLE  | elapsed=0m29s avg=1.97s/img remaining=15 eta=0m29s rss=502MB
+Vignette removed center=(300,224) radius=374px
+Border irregularity: 0.197 ✔
+Skin color sampled 82921 pixels LAB=(197.0, 136.0, 126.0)
+Skin baseline: L=197 A=136 B=126
+Lesion L: median=93 p10=77 B_p10=144
+Color: CV=0.241 ✔ | Dangerous: none
+[16/30] ISIC_1579405: 1 instance(s), evaluation_status=SINGLE_LESION_EVALUABLE  | elapsed=0m29s avg=1.86s/img remaining=14 eta=0m26s rss=441MB
+Vignette removed center=(1632,1224) radius=2039px
+Border irregularity: 0.404 ✔
+Skin color sampled 2453517 pixels LAB=(178.0, 133.0, 139.0)
+Skin baseline: L=178 A=133 B=139
+Lesion L: median=169 p10=106 B_p10=152
+Color: CV=0.599 ⚠ | Dangerous: ['black(12%)']
+[17/30] ISIC_3673376: 1 instance(s), evaluation_status=SINGLE_LESION_EVALUABLE  | elapsed=0m33s avg=1.96s/img remaining=13 eta=0m25s rss=528MB
+Vignette removed center=(1224,1224) radius=1730px
+Border irregularity: 0.215 ✔
+Skin color sampled 110478 pixels LAB=(174.0, 133.0, 143.0)
+Skin baseline: L=174 A=133 B=143
+Lesion L: median=167 p10=135 B_p10=139
+Color: CV=0.735 ⚠ | Dangerous: none
+[18/30] ISIC_8458339: 1 instance(s), evaluation_status=SINGLE_LESION_EVALUABLE  | elapsed=0m36s avg=2.00s/img remaining=12 eta=0m24s rss=465MB
+Vignette removed center=(1674,1252) radius=1984px
+Border irregularity: 0.248 ✔
+Skin color sampled 2457179 pixels LAB=(132.0, 141.0, 122.0)
+Skin baseline: L=132 A=141 B=122
+Lesion L: median=90 p10=75 B_p10=137
+Color: CV=0.284 ✔ | Dangerous: none
+[19/30] ISIC_7559201: 1 instance(s), evaluation_status=SINGLE_LESION_EVALUABLE  | elapsed=0m38s avg=2.04s/img remaining=11 eta=0m22s rss=534MB
+Vignette removed center=(1687,1227) radius=1991px
+Border irregularity: 0.132 ✔
+Skin color sampled 2454216 pixels LAB=(168.0, 145.0, 147.0)
+Skin baseline: L=168 A=145 B=147
+Lesion L: median=173 p10=159 B_p10=151
+Color: CV=0.258 ✔ | Dangerous: ['pink/red(33%)']
+Border irregularity: 0.131 ✔
+Skin color sampled 2454216 pixels LAB=(168.0, 145.0, 147.0)
+Skin baseline: L=168 A=145 B=147
+Lesion L: median=173 p10=159 B_p10=151
+Color: CV=0.258 ✔ | Dangerous: ['pink/red(33%)']
+[20/30] ISIC_1156392: 2 instance(s), evaluation_status=MULTI_LESION_AMBIGUOUS  | elapsed=0m41s avg=2.09s/img remaining=10 eta=0m20s rss=537MB
+[21/30] ISIC_5657310: NO_DETECTION  | elapsed=0m41s avg=2.00s/img remaining=9 eta=0m17s rss=492MB
+Vignette removed center=(2144,1424) radius=2573px
+Border irregularity: 0.209 ✔
+Skin color sampled 3411706 pixels LAB=(136.0, 133.0, 130.0)
+Skin baseline: L=136 A=133 B=130
+Lesion L: median=124 p10=113 B_p10=134
+Color: CV=0.435 ⚠ | Dangerous: ['pink/red(31%)']
+[22/30] ISIC_6029052: 1 instance(s), evaluation_status=SINGLE_LESION_EVALUABLE  | elapsed=0m45s avg=2.05s/img remaining=8 eta=0m16s rss=547MB
+Vignette removed center=(1295,1010) radius=1591px
+Border irregularity: 0.166 ✔
+Skin color sampled 1541798 pixels LAB=(145.0, 139.0, 139.0)
+Skin baseline: L=145 A=139 B=139
+Lesion L: median=135 p10=101 B_p10=153
+Color: CV=0.464 ⚠ | Dangerous: none
+[23/30] ISIC_3804339: 1 instance(s), evaluation_status=SINGLE_LESION_EVALUABLE  | elapsed=0m46s avg=2.02s/img remaining=7 eta=0m14s rss=476MB
+Vignette removed center=(1632,1248) radius=2024px
+Border irregularity: 0.162 ✔
+Skin color sampled 2458221 pixels LAB=(144.0, 131.0, 139.0)
+Skin baseline: L=144 A=131 B=139
+Lesion L: median=174 p10=166 B_p10=148
+Color: CV=0.127 ✔ | Dangerous: none
+Border irregularity: 0.168 ✔
+Skin color sampled 2458221 pixels LAB=(144.0, 131.0, 139.0)
+Skin baseline: L=144 A=131 B=139
+Lesion L: median=150 p10=108 B_p10=143
+Color: CV=0.353 ⚠ | Dangerous: ['pink/red(23%)', 'black(12%)']
+[24/30] ISIC_1287491: 2 instance(s), evaluation_status=MULTI_LESION_AMBIGUOUS  | elapsed=0m49s avg=2.05s/img remaining=6 eta=0m12s rss=551MB
+[25/30] ISIC_1017188: NO_DETECTION  | elapsed=0m49s avg=1.98s/img remaining=5 eta=0m09s rss=487MB
+Vignette removed center=(300,224) radius=374px
+Border irregularity: 0.231 ✔
+Skin color sampled 82921 pixels LAB=(146.0, 144.0, 121.0)
+Skin baseline: L=146 A=144 B=121
+Lesion L: median=130 p10=123 B_p10=129
+Color: CV=0.321 ✔ | Dangerous: none
+[26/30] ISIC_2205902: 1 instance(s), evaluation_status=SINGLE_LESION_EVALUABLE  | elapsed=0m49s avg=1.91s/img remaining=4 eta=0m07s rss=489MB
+Vignette removed center=(836,626) radius=1044px
+Border irregularity: 0.275 ✔
+Skin color sampled 643885 pixels LAB=(209.0, 129.0, 129.0)
+Skin baseline: L=209 A=129 B=129
+Lesion L: median=159 p10=127 B_p10=135
+Color: CV=0.439 ⚠ | Dangerous: none
+[27/30] ISIC_1923570: 1 instance(s), evaluation_status=SINGLE_LESION_EVALUABLE  | elapsed=0m50s avg=1.86s/img remaining=3 eta=0m05s rss=488MB
+Vignette removed center=(2144,1424) radius=2573px
+Border irregularity: 0.326 ✔
+Skin color sampled 3411706 pixels LAB=(152.0, 137.0, 137.0)
+Skin baseline: L=152 A=137 B=137
+Lesion L: median=112 p10=99 B_p10=144
+Color: CV=0.259 ✔ | Dangerous: none
+[28/30] ISIC_8740695: 1 instance(s), evaluation_status=SINGLE_LESION_EVALUABLE  | elapsed=0m53s avg=1.91s/img remaining=2 eta=0m03s rss=561MB
+Vignette removed center=(300,224) radius=374px
+Border irregularity: 0.309 ✔
+Skin color sampled 82921 pixels LAB=(175.0, 133.0, 128.0)
+Skin baseline: L=175 A=133 B=128
+Lesion L: median=123 p10=100 B_p10=137
+Color: CV=0.353 ⚠ | Dangerous: none
+[29/30] ISIC_0512725: 1 instance(s), evaluation_status=SINGLE_LESION_EVALUABLE  | elapsed=0m53s avg=1.85s/img remaining=1 eta=0m01s rss=437MB
+Vignette removed center=(300,224) radius=374px
+Border irregularity: 0.257 ✔
+Skin color sampled 82921 pixels LAB=(169.0, 129.0, 127.0)
+Skin baseline: L=169 A=129 B=127
+Lesion L: median=94 p10=70 B_p10=141
+Color: CV=0.313 ✔ | Dangerous: none
+[30/30] ISIC_3468757: 1 instance(s), evaluation_status=SINGLE_LESION_EVALUABLE  | elapsed=0m53s avg=1.80s/img remaining=0 eta=0m00s rss=467MB
+
+Done. this_run: processed_ok=26 no_detection=4 failed=0 instances=30 multi_lesion_images=3 runtime=0m53s device=cpu peak_rss_mb=572
+Results: Evaluation_3500\benchmark\results.csv
+Masks: Evaluation_3500\benchmark\masks
+To resume a later run (e.g. after an interruption), re-run this exact command — already-logged images are skipped automatically.

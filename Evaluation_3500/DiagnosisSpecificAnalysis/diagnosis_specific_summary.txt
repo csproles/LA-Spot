@@ -1,0 +1,81 @@
+EVALUATION_3500 — DIAGNOSIS-SPECIFIC ANALYSIS
+================================================
+Read-only join of the existing manifest, Evaluation_3500/full_run/results.csv,
+and the ISIC source metadata.csv by isic_id. No YOLO/ABCD rerun, no mask,
+threshold, or evaluation-policy change.
+
+Population conventions (stated so nothing here is ambiguous):
+  - "total_selected" = every manifest row in that diagnosis category
+  - SINGLE_LESION_EVALUABLE / MULTI_LESION_AMBIGUOUS / NO_DETECTION = per-image
+    evaluation_status counts, every image counted once
+  - TP / FN / sensitivity: SINGLE_LESION_EVALUABLE only, per instruction
+  - All other per-category stats (A/B/C mean/median, concern rates, mask
+    area fraction, large_area_fraction rate, confidence) are ALSO restricted
+    to SINGLE_LESION_EVALUABLE rows only, for internal consistency (one row
+    per image, no double-counting from multi-instance images)
+
+MALIGNANT CATEGORY COMPARISON
+------------------------------
+category                 n_total  evaluable   TP   FN  sensitivity  A_mean  large_area_rate  mask_frac_mean  confidence_mean
+Melanoma                    404       333     134  199   40.2%      0.190       21.9%            0.318            0.745
+Basal cell carcinoma       1069       766     237  529   30.9%      0.144       53.1%            0.558            0.564
+Squamous cell carcinoma     214       175      55  120   31.4%      0.123       73.1%            0.684            0.634
+Other malignant               61        55      14   41   25.5%      0.116       70.9%            0.690            0.708
+Unknown                        2         2       0    2    0.0%      0.185        0.0%            0.110            0.679
+ALL MALIGNANT (combined)    1750      1331     440  891   33.1%      0.151       48.6%            0.519            0.625
+
+(Full table with B/C means, concern rates, medians: malignant_category_comparison.csv)
+
+MELANOMA SUBTYPE BREAKDOWN (within the 404 melanoma cases)
+------------------------------
+subtype              n_total  evaluable   TP   FN  sensitivity
+Melanoma Invasive       184       160      66   94    41.3%
+Melanoma in situ        178       140      57   83    40.7%
+Melanoma, NOS            36        28      11   17    39.3%
+Melanoma metastasis       6         5       0    5     0.0%  (too small to be meaningful)
+
+Invasive and in-situ melanoma — the two subtypes with usable sample sizes —
+perform almost identically to each other (~41% and ~41%), both consistently
+above every other malignant category.
+
+DOES THE AGGREGATE 33.1% REPRESENT MELANOMA PERFORMANCE?
+------------------------------
+No — it understates it. Melanoma-specific sensitivity is 40.2%, about 7
+percentage points HIGHER than the reported aggregate. The aggregate is
+pulled down toward basal cell carcinoma's performance (30.9%) because BCC
+makes up 61% of the malignant sample (1069/1750) — more than twice the size
+of the melanoma group (23%, 404/1750). Squamous cell carcinoma (31.4%) and
+"other malignant" (25.5%, mostly keratoacanthoma) behave similarly to BCC,
+reinforcing the same downward pull.
+
+WHY MIGHT MELANOMA PERFORM BETTER? (associations only, not causal proof)
+------------------------------
+Two patterns line up with the sensitivity difference:
+  1. A (asymmetry) concern fires much more often on melanoma (39.6%) than
+     on BCC (25.7%), SCC (25.7%), or other malignant (21.8%) — consistent
+     with melanomas classically being more irregularly shaped than the
+     rounder, more nodular appearance typical of BCC/SCC/keratoacanthoma.
+  2. The large_area_fraction rate (the "possible over-segmentation" quality
+     flag directly implicated in false negatives by the earlier error
+     analysis) is dramatically lower for melanoma (21.9%) than for BCC
+     (53.1%), SCC (73.1%), or other malignant (70.9%).
+
+A likely contributor to #2, found while checking this: the source
+institution differs sharply by diagnosis type. 97% of BCC, 95% of SCC, and
+98% of "other malignant" images come from the "MILK study team" contributor,
+while melanoma images are split roughly evenly between "Memorial Sloan
+Kettering Cancer Center" (54%) and "MILK study team" (46%). This suggests
+at least part of the large-area-fraction gap — and therefore part of the
+sensitivity gap — may reflect differing photography/framing conventions
+between contributing institutions rather than a pure biological difference
+in how irregular each cancer type looks. This is reported as an
+association worth being aware of, not a proven cause, and no correction
+for it has been made.
+
+C (color) concern is uninformative for distinguishing these categories —
+it fires on 83.5%-100% of cases in every single malignant category,
+including the worst-performing ones, confirming (as in the earlier error
+analysis) that color alone never differentiates a catch from a miss.
+
+No thresholds were tuned and no pipeline changes are suggested based on
+this analysis.

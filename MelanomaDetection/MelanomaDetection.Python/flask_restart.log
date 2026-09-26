@@ -1,0 +1,62 @@
+[2026-09-20 22:36:22,028] WARNING in main: SKINCHECK_INTERNAL_KEY is not set: the X-User-Id header is trusted from any caller. Local development only.
+ * Serving Flask app 'main'
+ * Debug mode: off
+WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5002
+ * Running on http://192.168.4.29:5002
+Press CTRL+C to quit
+127.0.0.1 - - [20/Sep/2026 22:36:51] "GET /health HTTP/1.1" 200 -
+127.0.0.1 - - [21/Sep/2026 15:40:05] "GET /health HTTP/1.1" 200 -
+127.0.0.1 - - [21/Sep/2026 15:41:56] "GET /api/image/history HTTP/1.1" 200 -
+127.0.0.1 - - [21/Sep/2026 15:41:56] "GET /api/profile HTTP/1.1" 200 -
+127.0.0.1 - - [21/Sep/2026 15:41:56] "GET /api/spots HTTP/1.1" 200 -
+127.0.0.1 - - [21/Sep/2026 15:41:58] "GET /api/profile HTTP/1.1" 200 -
+127.0.0.1 - - [21/Sep/2026 15:41:58] "GET /api/image/history HTTP/1.1" 200 -
+127.0.0.1 - - [21/Sep/2026 15:41:58] "GET /api/spots HTTP/1.1" 200 -
+127.0.0.1 - - [21/Sep/2026 15:42:23] "GET /api/spots HTTP/1.1" 200 -
+127.0.0.1 - - [21/Sep/2026 15:42:25] "GET /api/spots HTTP/1.1" 200 -
+127.0.0.1 - - [21/Sep/2026 15:42:31] "POST /api/spots HTTP/1.1" 201 -
+[2026-09-21 15:43:09,811] ERROR in main: Unexpected error while processing image
+Traceback (most recent call last):
+  File "C:\Users\sirjanaa\Documents\huggingface_projects\Advanced-Melanoma-Detection\MelanomaDetection\MelanomaDetection.Python\main.py", line 208, in process_image_endpoint
+  File "C:\Users\sirjanaa\Documents\huggingface_projects\Advanced-Melanoma-Detection\MelanomaDetection\MelanomaDetection.Python\v4_detector.py", line 124, in process_image
+  File "C:\Users\sirjanaa\Documents\huggingface_projects\Advanced-Melanoma-Detection\revised_abcd\pipeline_v2.py", line 97, in process_image
+ModuleNotFoundError: No module named 'revised_abcd.yolo_single_image'
+127.0.0.1 - - [21/Sep/2026 15:43:09] "POST /api/image/process HTTP/1.1" 500 -
+[2026-09-21 15:43:31,069] ERROR in main: Unexpected error while processing image
+Traceback (most recent call last):
+  File "C:\Users\sirjanaa\Documents\huggingface_projects\Advanced-Melanoma-Detection\MelanomaDetection\MelanomaDetection.Python\main.py", line 208, in process_image_endpoint
+  File "C:\Users\sirjanaa\Documents\huggingface_projects\Advanced-Melanoma-Detection\MelanomaDetection\MelanomaDetection.Python\v4_detector.py", line 124, in process_image
+  File "C:\Users\sirjanaa\Documents\huggingface_projects\Advanced-Melanoma-Detection\revised_abcd\pipeline_v2.py", line 97, in process_image
+ModuleNotFoundError: No module named 'revised_abcd.yolo_single_image'
+127.0.0.1 - - [21/Sep/2026 15:43:31] "POST /api/image/process HTTP/1.1" 500 -
+[2026-09-21 15:43:55,592] ERROR in main: Unexpected error while processing image
+Traceback (most recent call last):
+  File "C:\Users\sirjanaa\Documents\huggingface_projects\Advanced-Melanoma-Detection\MelanomaDetection\MelanomaDetection.Python\main.py", line 208, in process_image_endpoint
+  File "C:\Users\sirjanaa\Documents\huggingface_projects\Advanced-Melanoma-Detection\MelanomaDetection\MelanomaDetection.Python\v4_detector.py", line 124, in process_image
+  File "C:\Users\sirjanaa\Documents\huggingface_projects\Advanced-Melanoma-Detection\revised_abcd\pipeline_v2.py", line 97, in process_image
+ModuleNotFoundError: No module named 'revised_abcd.yolo_single_image'
+127.0.0.1 - - [21/Sep/2026 15:43:55] "POST /api/image/process HTTP/1.1" 500 -
+[2026-09-21 15:44:12,012] ERROR in main: Unexpected error while processing image
+Traceback (most recent call last):
+  File "C:\Users\sirjanaa\Documents\huggingface_projects\Advanced-Melanoma-Detection\MelanomaDetection\MelanomaDetection.Python\main.py", line 208, in process_image_endpoint
+  File "C:\Users\sirjanaa\Documents\huggingface_projects\Advanced-Melanoma-Detection\MelanomaDetection\MelanomaDetection.Python\v4_detector.py", line 124, in process_image
+  File "C:\Users\sirjanaa\Documents\huggingface_projects\Advanced-Melanoma-Detection\revised_abcd\pipeline_v2.py", line 97, in process_image
+ModuleNotFoundError: No module named 'revised_abcd.yolo_single_image'
+127.0.0.1 - - [21/Sep/2026 15:44:12] "POST /api/image/process HTTP/1.1" 500 -
+127.0.0.1 - - [21/Sep/2026 15:47:23] "GET /health HTTP/1.1" 200 -
+127.0.0.1 - - [21/Sep/2026 15:47:32] "GET /health HTTP/1.1" 200 -
+[2026-09-21 15:47:40,792] ERROR in main: Unexpected error while processing image
+Traceback (most recent call last):
+  File "C:\Users\sirjanaa\Documents\huggingface_projects\Advanced-Melanoma-Detection\MelanomaDetection\MelanomaDetection.Python\main.py", line 208, in process_image_endpoint
+  File "C:\Users\sirjanaa\Documents\huggingface_projects\Advanced-Melanoma-Detection\MelanomaDetection\MelanomaDetection.Python\v4_detector.py", line 124, in process_image
+  File "C:\Users\sirjanaa\Documents\huggingface_projects\Advanced-Melanoma-Detection\revised_abcd\pipeline_v2.py", line 97, in process_image
+ModuleNotFoundError: No module named 'revised_abcd.yolo_single_image'
+127.0.0.1 - - [21/Sep/2026 15:47:40] "POST /api/image/process HTTP/1.1" 500 -
+127.0.0.1 - - [21/Sep/2026 15:56:21] "GET /api/image/history HTTP/1.1" 200 -
+127.0.0.1 - - [21/Sep/2026 15:56:21] "GET /api/profile HTTP/1.1" 200 -
+127.0.0.1 - - [21/Sep/2026 15:56:21] "GET /api/spots HTTP/1.1" 200 -
+127.0.0.1 - - [21/Sep/2026 15:56:23] "GET /api/spots HTTP/1.1" 200 -
+127.0.0.1 - - [21/Sep/2026 15:56:23] "GET /api/image/history HTTP/1.1" 200 -
+127.0.0.1 - - [21/Sep/2026 15:56:23] "GET /api/profile HTTP/1.1" 200 -

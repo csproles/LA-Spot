@@ -1,0 +1,24 @@
+[image pass 100/2090] ISIC_0540953  elapsed=130s  rate=0.77 img/s  eta=2588s  errors_so_far=0
+[image pass 200/2090] ISIC_1030252  elapsed=247s  rate=0.81 img/s  eta=2336s  errors_so_far=0
+[image pass 300/2090] ISIC_1536397  elapsed=353s  rate=0.85 img/s  eta=2105s  errors_so_far=0
+[image pass 400/2090] ISIC_1995421  elapsed=435s  rate=0.92 img/s  eta=1836s  errors_so_far=0
+[image pass 500/2090] ISIC_2471885  elapsed=541s  rate=0.92 img/s  eta=1721s  errors_so_far=0
+[image pass 600/2090] ISIC_2930366  elapsed=657s  rate=0.91 img/s  eta=1632s  errors_so_far=0
+[image pass 700/2090] ISIC_3431348  elapsed=790s  rate=0.89 img/s  eta=1569s  errors_so_far=0
+[image pass 800/2090] ISIC_3957660  elapsed=877s  rate=0.91 img/s  eta=1414s  errors_so_far=0
+[image pass 900/2090] ISIC_4467312  elapsed=959s  rate=0.94 img/s  eta=1268s  errors_so_far=0
+[image pass 1000/2090] ISIC_4937672  elapsed=1049s  rate=0.95 img/s  eta=1144s  errors_so_far=0
+[image pass 1100/2090] ISIC_5344574  elapsed=1149s  rate=0.96 img/s  eta=1034s  errors_so_far=0
+[image pass 1200/2090] ISIC_5785135  elapsed=1313s  rate=0.91 img/s  eta=974s  errors_so_far=0
+[image pass 1300/2090] ISIC_6207818  elapsed=1474s  rate=0.88 img/s  eta=896s  errors_so_far=0
+[image pass 1400/2090] ISIC_6714325  elapsed=2229s  rate=0.63 img/s  eta=1099s  errors_so_far=0
+[image pass 1500/2090] ISIC_7200761  elapsed=2387s  rate=0.63 img/s  eta=939s  errors_so_far=0
+[image pass 1600/2090] ISIC_7659537  elapsed=2539s  rate=0.63 img/s  eta=778s  errors_so_far=0
+[image pass 1700/2090] ISIC_8098771  elapsed=2643s  rate=0.64 img/s  eta=606s  errors_so_far=0
+[image pass 1800/2090] ISIC_8593738  elapsed=2808s  rate=0.64 img/s  eta=452s  errors_so_far=0
+[image pass 1900/2090] ISIC_8980141  elapsed=2960s  rate=0.64 img/s  eta=296s  errors_so_far=0
+[image pass 2000/2090] ISIC_9535018  elapsed=3102s  rate=0.64 img/s  eta=140s  errors_so_far=0
+[image pass 2090/2090] ISIC_9997614  elapsed=3230s  rate=0.65 img/s  eta=0s  errors_so_far=0
+
+Wrote 2090 rows to C:\Users\sirjanaa\Documents\huggingface_projects\Advanced-Melanoma-Detection\ABCD_Improved_Experimental\_image_features.csv
+Rows with at least one error: 0

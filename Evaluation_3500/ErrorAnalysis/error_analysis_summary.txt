@@ -1,0 +1,172 @@
+EVALUATION_3500 — POST-RUN ERROR ANALYSIS (TP vs FN, TN vs FP)
+================================================================
+Read-only analysis of the already-saved results at
+Evaluation_3500/full_run/results.csv (the request referenced
+"Evaluation_3500/results.csv", which does not exist as a path in this
+project — the actual file lives one level deeper, at full_run/results.csv,
+and that is what was analyzed). No pipeline component, mask, threshold, or
+evaluation-policy code was touched or rerun. The only new computation is
+reading already-saved per-instance mask PNGs to count lesion pixel area,
+since the CSV only stores the relative lesion_fraction, not an absolute
+pixel count.
+
+Counts verified directly from the saved file before any analysis:
+  TP = 440, FN = 891, TN = 997, FP = 308  — all four match exactly.
+
+----------------------------------------------------------------
+1. WHICH A/B/C FEATURES DIFFER MOST BETWEEN TP AND FN MALIGNANT LESIONS?
+----------------------------------------------------------------
+By far the largest, most consistent difference is in A (asymmetry):
+  - TP median A = 0.243, FN median A = 0.104 (TP more than double)
+  - A_concern fired on 81.6% of TP but only 3.0% of FN
+This is also the largest effect size of any feature checked (Mann-Whitney
+p < 0.0001, i.e. p reported as 0.0 to 6 decimal places).
+
+B (circularity) also differs (TP median 0.374 vs FN median 0.233,
+p < 0.0001), but B's concern flag almost never fires either way
+(20.7% of TP, 0% of FN) — B's raw score differs, but it essentially never
+crosses its own 0.50 threshold in this malignant subset, so it isn't doing
+much work in the actual LOW/HIGH decision.
+
+C (color) is the odd one out: its raw value is statistically different
+(p = 0.000019) but in the OPPOSITE direction from A and B — FN cases have
+a slightly HIGHER mean C value (0.528) than TP cases (0.490). C's concern
+flag fires on almost everyone regardless of outcome (98.9% of TP, 89.5% of
+FN) — color concern is nearly universal in this malignant sample, so on
+its own it cannot distinguish caught cases from missed ones.
+
+In plain terms: color alone flags almost every malignant lesion, correctly
+caught or not. What actually separates a catch from a miss is whether
+asymmetry ALSO flags concern.
+
+----------------------------------------------------------------
+2. WHICH CONCERN FLAGS ARE MOST OFTEN ABSENT IN FALSE NEGATIVES?
+----------------------------------------------------------------
+From the concern-combination breakdown (TP_vs_FN_concern_combinations.csv):
+  - 89.5% of FN cases have ONLY the C (color) flag — nothing else.
+  - Another 7.5% of FN cases have NO A/B/C concern at all.
+  - Only 3.0% of FN cases have A alone, and 0% have B alone or any
+    combination that includes A or B alongside C.
+Compare to TP: 64.8% are A+C, 15.7% are A+B+C, 3.9% are B+C, 14.5% are C
+only, and 0% have no concerns at all.
+
+The scoring rule requires 2 or more flagged criteria (or a rare color
+override) to reach HIGH. Since color alone is not enough, the single flag
+missing most often in false negatives is A (asymmetry) — it is present in
+96.9% of TP cases (A alone + every A-combination) but only 3.0% of FN cases.
+
+----------------------------------------------------------------
+3. ARE FALSE NEGATIVES ASSOCIATED WITH LOWER YOLO CONFIDENCE?
+----------------------------------------------------------------
+No. TP mean confidence = 0.617, FN mean confidence = 0.628 — FN is actually
+very slightly HIGHER, not lower. Mann-Whitney p = 0.334 (not significant).
+The low-confidence quality flag also shows no meaningful difference (30.2%
+of TP vs 27.4% of FN, Fisher's exact p = 0.30).
+This is a clear negative result: detection confidence is not what's driving
+missed malignant cases in this dataset.
+
+----------------------------------------------------------------
+4. ARE FALSE NEGATIVES ASSOCIATED WITH LARGE/ABNORMAL MASKS OR OTHER
+   SEGMENTATION-QUALITY FLAGS?
+----------------------------------------------------------------
+Yes, this is the strongest association found, and it lines up closely with
+what A is doing:
+  - mask area fraction: TP median 0.367 vs FN median 0.700 (FN masks cover
+    roughly twice as much of the frame), p < 0.0001
+  - large_area_fraction flag: 34.1% of TP vs 55.8% of FN, p < 0.0001
+  - lesion_pixel_area: FN median (239,584 px) is almost exactly double the
+    TP median (119,981 px), p < 0.0001
+  - D_px (pixel diameter, informational only): FN median 698.7 vs TP median
+    528.5, p < 0.0001 — the same "bigger mask" pattern shows up here too.
+
+This is consistent with the segmentation investigation from earlier in this
+project: an oversized, near-frame-filling mask tends to look more
+circular/symmetric to the A and B math regardless of the lesion's true
+shape, which would mechanically suppress A_concern — matching finding #1
+and #2 above. This is reported as an ASSOCIATION, not a proven cause; this
+analysis does not establish that oversized masks caused these specific
+misses, only that the two are strongly correlated in this data.
+
+One pattern runs the other way and should not be glossed over: FN cases
+are actually LESS fragmented than TP cases (8.3% vs 26.8% flagged
+fragmented; FN has fewer components on average, 1.20 vs 1.70). Fragmented
+masks were shown earlier in this project to artificially inflate A — so it
+is plausible that some TP cases are "helped" across the 2-flag threshold by
+fragmentation-inflated asymmetry, while FN cases, being single coherent
+(often oversized) blobs, do not get that inflation. This is a secondary,
+associative observation, not a causal claim.
+
+----------------------------------------------------------------
+5. DOES THE EVIDENCE SUGGEST WEAK MALIGNANT SENSITIVITY IS MORE ABOUT
+   ABCD BEHAVIOR, SEGMENTATION QUALITY, OR BOTH?
+----------------------------------------------------------------
+Both, and they are intertwined rather than separable in this data. The
+proximate mechanism is an ABCD scoring behavior: color alone is not enough
+to reach HIGH, and asymmetry is the criterion that decides most cases one
+way or the other. But WHY asymmetry so often fails to fire on missed
+malignant lesions is strongly associated with a segmentation-quality
+pattern — oversized masks that mechanically read as more symmetric. Neither
+factor cleanly explains the low sensitivity on its own; the pattern in the
+data is that a segmentation characteristic (mask size) is associated with
+an ABCD outcome (asymmetry concern), which in turn drives the final
+LOW/HIGH decision. No pipeline change or threshold recommendation is being
+made from this — this is a description of what's in the data.
+
+----------------------------------------------------------------
+6. WHAT PATTERNS APPEAR IN BENIGN TN vs FP CASES?
+----------------------------------------------------------------
+The general shape mirrors the malignant analysis in most respects: FP
+(incorrectly flagged benign) cases have higher A (median 0.235 vs 0.128),
+higher B (median 0.344 vs 0.225), higher C (median 0.405 vs 0.346), and
+more A/B concern flags (A_concern 83.8% FP vs 7.7% TN; B_concern 14.0% FP
+vs 0.2% TN) — all p < 0.0001. FP cases are also more often fragmented
+(15.3% vs 4.5%) and slightly more often oversized (16.6% vs 11.8%, weaker
+but still significant at p = 0.033 — a much smaller effect than the
+55.8%-vs-34.1% gap seen for malignant FN).
+
+One notable difference from the malignant side: confidence IS modestly
+lower in FP than TN (0.710 vs 0.738, p = 0.025) — a real but weak effect,
+the opposite of what was found for FN, where confidence showed no
+association at all. Pixel area and D_px show no significant TN/FP
+difference (p = 0.064 and p = 0.64 respectively), unlike the very strong
+size effect seen on the malignant side.
+
+In short: benign false alarms look like "too many ABCD flags fired,"
+largely for the same asymmetry/border reasons as the true positives above
+— these are lesions that legitimately look more irregular by the numbers,
+not obviously a segmentation-artifact story to the same degree as the
+malignant misses.
+
+----------------------------------------------------------------
+7. WHICH FINDINGS ARE DESCRIPTIVE VS STATISTICALLY SUPPORTED?
+----------------------------------------------------------------
+Statistically supported (Mann-Whitney or Fisher's exact p < 0.05, computed
+directly on this saved data, reported in the CSVs):
+  - A, B, C raw-value differences between TP/FN and TN/FP (all p < 0.0001,
+    except TP-vs-FN C which is p = 0.00002 — still significant, smaller
+    effect)
+  - A_concern, B_concern, C_concern differences (all p < 0.0001)
+  - mask area fraction and large_area_fraction flag differences for TP/FN
+    (p < 0.0001) and TN/FP (p < 0.0001 for fraction, p = 0.033 for the flag)
+  - lesion_pixel_area and D_px differences for TP/FN (p < 0.0001)
+  - fragmentation differences for both comparisons (p < 0.0001)
+  - confidence: NOT different for TP/FN (p = 0.33); WEAKLY different for
+    TN/FP (p = 0.025)
+
+Descriptive only (no causal claim, and in some cases no formal test
+performed here beyond the association already listed above):
+  - The specific mechanism ("oversized masks suppress asymmetry, which
+    suppresses the HIGH decision") is a plausible explanation consistent
+    with this project's earlier segmentation investigation, but this
+    analysis only shows correlation between mask size and A/A_concern
+    within the TP/FN groups — it does not prove that mechanism for any
+    individual case.
+  - The fragmentation-helps-TP observation (item 4, second paragraph) is
+    explicitly a secondary, associative read of the numbers, not a tested
+    causal hypothesis.
+  - Any framing of "why" a specific lesion was missed beyond the
+    statistical group differences above is interpretation, not a
+    per-case finding.
+
+No pipeline component, threshold, or scoring rule was changed or
+recommended for change based on this analysis.

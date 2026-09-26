@@ -1,0 +1,5 @@
+attribution,TP,FN,sensitivity
+MILK study team,78,92,0.4588
+Memorial Sloan Kettering Cancer Center,56,107,0.3436
+
+chi2_contingency_p_value,0.042113

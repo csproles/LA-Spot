@@ -1,0 +1,9 @@
+combination,TP_count,TP_pct,FN_count,FN_pct
+A only,0,0.0,17,8.5
+B only,0,0.0,0,0.0
+C only,16,11.9,147,73.9
+A+B,3,2.2,0,0.0
+A+C,86,64.2,0,0.0
+B+C,3,2.2,0,0.0
+A+B+C,26,19.4,0,0.0
+no A/B/C concerns,0,0.0,35,17.6

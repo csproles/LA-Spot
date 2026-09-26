@@ -1,0 +1,18 @@
+Feature,ABCD_Group,FP_Median,TN_Median,TN_vs_FP_AUC_equiv,FP_Unusually_High_Percent,FP_Unusually_Low_Percent,Concern
+lesion_fraction,Other,0.2299,0.0276,0.1095,32.8,0.0,"Near-duplicate of D_px_normalized. Possible photo-framing/zoom confound rather than true lesion size -- a strong-looking pattern may reflect photography, not biology."
+D_px_normalized,D,0.6872,0.2321,0.1105,32.1,0.0,"Near-duplicate of lesion_fraction (rho=0.989, prior audit). Any pattern seen here should be cross-checked against lesion_fraction before treating it as independent evidence."
+turning_angle_std,B,0.3203,0.2164,0.1699,26.3,0.0,
+B_circularity,B,0.31,0.217,0.245,24.8,0.7,"Univariate direction is correct, but the multivariate model coefficient is sign-flipped (multicollinearity with excluded isoperimetric_ratio/solidity). Do not read a raw group difference here as evidence the model 'uses' this feature correctly."
+solidity,B,0.938,0.9694,0.7509,5.8,27.0,
+lab_a_std,C,3.9632,2.874,0.2603,23.4,3.6,
+A_value,A,0.17,0.135,0.3212,24.1,6.6,"Prior audit found segmentation-sensitivity risks (edge-clamped crop, small-mask PCA instability) that a population-level pattern cannot distinguish from genuine asymmetry -- check case-level flags against known small/edge-adjacent lesions."
+color_entropy,C,1.4296,1.2433,0.3492,17.5,4.4,
+C_value,C,0.385,0.3275,0.3618,19.0,0.7,
+lab_b_std,C,5.0309,4.532,0.3984,17.5,4.4,
+red_fraction,C,0.0,0.0,0.4262,19.7,0.0,Both class medians are ~0 in the prior audit; any AUC/percentile signal is concentrated in a sparse minority of cases.
+skin_contrast,C,41.1567,42.2443,0.548,8.8,17.5,"Prior audit found a reproducible but clinically counter-intuitive direction (lower in malignant) across two independent cohorts -- treat direction findings here as confirmatory of a real (if unexplained) pattern, not a new anomaly."
+dark_fraction,C,0.0,0.0,0.459,32.8,0.0,"~90%+ of values are exactly 0 in the prior audit; step-function internal floor (0.12). Any nonzero-driven pattern is likely a handful of cases, not a population-level shift."
+bluegray_fraction,C,0.0,0.0,0.4746,26.3,0.0,Step-function internal floor (0.15); most values are exactly 0. Same outlier-driven risk as dark_fraction.
+D_px,D,506.0,535.55,0.4786,17.5,6.6,"Never a physical measurement (raw pixels, framing/zoom-sensitive) -- an apparent group pattern may reflect image resolution/framing rather than diameter."
+confidence,Other,0.8363,0.8127,0.4815,13.9,12.4,Not a clinical ABCD signal by design (YOLO detection confidence) -- expected to be near-chance; a strong pattern here would itself be noteworthy (e.g. errors concentrated in low-confidence detections).
+eccentricity,Other,0.679,0.6851,0.5087,10.9,11.7,Chance-level univariate signal on both dev and locked cohorts in the prior audit (AUC ~0.50). Any apparent group pattern here is a strong candidate for POSSIBLE_OUTLIER_DRIVEN_PATTERN rather than real signal.

@@ -1,0 +1,23 @@
+{
+  "phase": "Phase 3 - V2 targeted baseline (development set)",
+  "total_development_images": 2696,
+  "coverage": {
+    "SINGLE_LESION_EVALUABLE": 2090,
+    "MULTI_LESION_AMBIGUOUS": 421,
+    "NO_DETECTION": 185,
+    "FAILED": 0
+  },
+  "metrics": {
+    "TP": 262,
+    "TN": 1176,
+    "FP": 275,
+    "FN": 377,
+    "n": 2090,
+    "sensitivity": 0.41001564945226915,
+    "specificity": 0.8104755341144039,
+    "precision": 0.48789571694599626,
+    "f1": 0.44557823129251695,
+    "accuracy": 0.6880382775119617,
+    "balanced_accuracy": 0.6102455917833365
+  }
+}

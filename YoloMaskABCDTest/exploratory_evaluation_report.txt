@@ -1,0 +1,145 @@
+EXPLORATORY PERFORMANCE OF THE EXISTING HEURISTIC ABCD RISK SYSTEM
+using LOW->negative and HIGH->positive. NOT a validated diagnostic accuracy.
+==============================================================================
+
+Evaluated (labeled, processed): 40
+TP=16 TN=7 FP=13 FN=4
+Accuracy=0.575 Sensitivity=0.800 Specificity=0.350 Precision=0.552 F1=0.653
+ROC-AUC (risk_score proxy vs ground truth, n_pos=20, n_neg=20) = 0.603
+
+Distribution stats (benign vs malignant):
+{
+  "A": {
+    "benign": {
+      "count": 20,
+      "missing": 0,
+      "mean": 0.28315,
+      "median": 0.278,
+      "std": 0.16661562288535156,
+      "min": 0.096,
+      "max": 0.63
+    },
+    "malignant": {
+      "count": 20,
+      "missing": 0,
+      "mean": 0.21694999999999998,
+      "median": 0.20750000000000002,
+      "std": 0.1115255340128085,
+      "min": 0.051,
+      "max": 0.492
+    }
+  },
+  "B": {
+    "benign": {
+      "count": 20,
+      "missing": 0,
+      "mean": 0.27615,
+      "median": 0.2725,
+      "std": 0.09816434930097694,
+      "min": 0.146,
+      "max": 0.552
+    },
+    "malignant": {
+      "count": 20,
+      "missing": 0,
+      "mean": 0.27545,
+      "median": 0.2495,
+      "std": 0.11811344903145138,
+      "min": 0.15,
+      "max": 0.615
+    }
+  },
+  "C": {
+    "benign": {
+      "count": 20,
+      "missing": 0,
+      "mean": 0.31744999999999995,
+      "median": 0.298,
+      "std": 0.11602017746472966,
+      "min": 0.158,
+      "max": 0.598
+    },
+    "malignant": {
+      "count": 20,
+      "missing": 0,
+      "mean": 0.4032,
+      "median": 0.4105,
+      "std": 0.14642569518539536,
+      "min": 0.157,
+      "max": 0.664
+    }
+  },
+  "D": {
+    "benign": {
+      "count": 20,
+      "missing": 0,
+      "mean": 12.1325,
+      "median": 7.135,
+      "std": 12.511959279025806,
+      "min": 1.8,
+      "max": 43.4
+    },
+    "malignant": {
+      "count": 20,
+      "missing": 0,
+      "mean": 20.465999999999998,
+      "median": 14.504999999999999,
+      "std": 15.92806672115873,
+      "min": 3.71,
+      "max": 54.28
+    }
+  },
+  "risk_score": {
+    "benign": {
+      "count": 20,
+      "missing": 0,
+      "mean": 42.5,
+      "median": 50.0,
+      "std": 18.317377426626162,
+      "min": 0.0,
+      "max": 75.0
+    },
+    "malignant": {
+      "count": 20,
+      "missing": 0,
+      "mean": 51.25,
+      "median": 50.0,
+      "std": 20.639448687047413,
+      "min": 25.0,
+      "max": 100.0
+    }
+  }
+}
+
+Concern rates (benign vs malignant):
+{
+  "A": {
+    "benign": "12/20 (60%)",
+    "malignant": "10/20 (50%)"
+  },
+  "B": {
+    "benign": "1/20 (5%)",
+    "malignant": "1/20 (5%)"
+  },
+  "C": {
+    "benign": "13/20 (65%)",
+    "malignant": "18/20 (90%)"
+  },
+  "D": {
+    "benign": "8/20 (40%)",
+    "malignant": "12/20 (60%)"
+  }
+}
+
+Runtime:
+{
+  "already_processed_before_this_run": 11,
+  "newly_processed_this_run": 32,
+  "new_processed_ok": 32,
+  "new_no_detection": 0,
+  "new_failed": 0,
+  "total_rows_in_master_csv": 43,
+  "total_runtime_sec": 118.1,
+  "processing_only_sec": 9.5,
+  "avg_sec_per_new_image": 0.3
+}

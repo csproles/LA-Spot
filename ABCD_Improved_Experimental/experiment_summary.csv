@@ -1,0 +1,9 @@
+Experiment,Balanced_Accuracy,ROC_AUC,Feature_Count,What_Changed,What_Happened
+EXP0,0.7222,0.8008,17,"Frozen V5 baseline, 17 original features","Reproduced exactly: ROC-AUC 0.8008, bal_acc 0.7222 -- confirms harness correctness."
+EXP1,0.7244,0.8014,17,Swap A_value + 8 color features for primary-component-consistent (_pc) versions,Balanced accuracy 0.7244 vs EXP0's 0.7222 (delta 0.0022); ROC-AUC 0.8014 vs 0.8008.
+EXP2,0.7297,0.8019,13,"EXP1 minus eccentricity, dark_fraction_pc, bluegray_fraction_pc, D_px",Balanced accuracy 0.7297 vs EXP1's 0.7244 (delta 0.0053); feature count 13 vs 17.
+EXP3 (best=EXP3C),0.7325,0.8031,12,Test lesion_fraction/D_px_normalized redundancy (4 variants: both/lesion_fraction-only/D_px_normalized-only/neither),"Best variant was EXP3C with balanced accuracy 0.7325 (A=0.7297, B=0.726, C=0.7325, D=0.6992)."
+"EXP4 (entropy=EXP4b, fractions=red)",0.7344,0.8016,14,Test channel-specific entropy (3 sub-variants) + re-test red/bluegray/dark_fraction value,"Best entropy sub-variant: EXP4b (bal_acc 0.7344); best fraction subset: 'red'. Combined EXP4 balanced accuracy 0.7344, ROC-AUC 0.8016."
+EXP5 (winner=EXP5_single_A_value_pc),0.7344,0.8016,14,Test single A_value_pc vs separate asymmetry_major_axis + asymmetry_minor_axis,"Winner: EXP5_single_A_value_pc. Single-A_value_pc bal_acc=0.7344, split bal_acc=0.729 (delta -0.0054)."
+EXP6 (winner=EXP6_without_fractal),0.7344,0.8016,14,Test adding border_fractal_dimension,"Winner: EXP6_without_fractal. Without bal_acc=0.7344, with bal_acc=0.7278 (delta -0.0066)."
+FINAL,0.7344,0.8016,14,Cascade of best sub-variants from EXP1-EXP6,"Balanced accuracy 0.7344, ROC-AUC 0.8016, 14 features. NOT run on locked test set."

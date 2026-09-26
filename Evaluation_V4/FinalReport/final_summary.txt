@@ -1,0 +1,137 @@
+LASpot V4 — FINAL OPTIMIZATION ATTEMPT
+=========================================
+Completed 2026-09-20. Reused the EXACT development/locked-test manifests
+from Evaluation_FinalTargeted/ (row counts verified unchanged). V2, V3,
+Evaluation_3500, Evaluation_FinalTargeted's existing results, YOLO,
+segmentation, and source data all verified untouched.
+
+1. FEATURES AVAILABLE (from existing V2 pipeline output only)
+------------------
+A_value, B_circularity, B_experimental, C_value, D_px, lesion_fraction
+(mask area fraction), confidence (YOLO detection confidence). No diagnosis
+fields, patient metadata, institution, filenames/IDs, or anything
+unavailable to a real user were used.
+
+2. FEATURES SELECTED
+------------------
+A_value, B_circularity, C_value, D_px, confidence, lesion_fraction (6
+features). B_experimental was available but not included in the winning
+set (not tested in combination — out of scope for "a small number of
+candidates"; noted as a possible future addition, not evaluated here).
+
+3. DEVELOPMENT CV METHODOLOGY
+------------------
+5-fold GroupKFold, groups = union-find over shared patient_id/lesion_id
+(identical grouping definition used for the original dev/test split),
+restricted to development's 2090 SINGLE_LESION_EVALUABLE rows (1744
+distinct groups). StandardScaler fit per training fold only. Locked test
+never touched.
+
+4. LOGISTIC REGRESSION RESULTS (development CV, out-of-fold)
+------------------
+Feature set                   AUC     BalAcc@0.5
+core ABC                      0.712   0.603
+core ABC + D_px                0.729   0.610
+core ABC + confidence          0.711   0.599
+full (all 6 features)          0.779   0.652   <- selected
+
+5. OTHER SIMPLE MODEL RESULTS (shallow decision tree, max_depth=3)
+------------------
+Feature set                   AUC     BalAcc@0.5
+core ABC                      0.687   0.611
+full (all 6 features)          0.747   0.654
+Comparable balanced accuracy to logistic regression but lower AUC (worse
+ranking quality); logistic regression selected as the required primary
+candidate with the better discrimination measure.
+
+6. SELECTED THRESHOLD AND WHY
+------------------
+0.25 (not the default 0.50). Chosen from a 7-point sweep (0.20-0.50) over
+development CV out-of-fold probabilities using the rule "maximize balanced
+accuracy among thresholds where both sensitivity and specificity are
+>=0.55" — explicitly ruling out reaching high sensitivity by flagging
+nearly every benign lesion. At 0.25: sensitivity=0.745, specificity=0.691.
+
+7. DEVELOPMENT BALANCED ACCURACY
+------------------
+71.8% (sensitivity 74.5%, specificity 69.1%, F1 60.9%) — exceeds the 70%
+aspirational target on cross-validated development data.
+
+8. DID DEVELOPMENT EVIDENCE JUSTIFY LOCKED TESTING?
+------------------
+Yes, clearly. AUC improved from 0.71 (core ABC) to 0.78 (full feature set)
+— a threshold-independent measure, so this is evidence of genuinely more
+separable signal, not just a threshold shift. Balanced accuracy (71.8%) is
+well above the 60-63% "stop" band the project specified.
+
+9. LOCKED V4 METRICS (run once, n=615 evaluable)
+------------------
+TP=95 TN=336 FP=141 FN=43
+Sensitivity=68.8% Specificity=70.4% Precision=40.3% F1=50.8%
+Accuracy=70.1% Balanced accuracy=69.6% ROC-AUC=0.748
+(Coverage: SINGLE_LESION_EVALUABLE=615, MULTI_LESION_AMBIGUOUS=118,
+NO_DETECTION=53, FAILED=0 — none discarded)
+
+10. SIDE-BY-SIDE V2 / V3 / V4 (locked test, n=615)
+------------------
+Model  TP   TN   FP   FN   Sens   Spec   Prec   F1     Acc    BalAcc
+V2     48   391  86   90   0.348  0.820  0.358  0.353  0.714  0.584
+V3     79   293  184  59   0.572  0.614  0.300  0.394  0.605  0.593
+V4     95   336  141  43   0.688  0.704  0.403  0.508  0.701  0.696
+
+11. WAS ~70% BALANCED ACCURACY ACHIEVED?
+------------------
+Development CV: 71.8% — yes. Locked test: 69.6% — essentially at target,
+a small (~2.2pp) and expected generalization gap from threshold selection
+on CV data, not a failure to generalize. Not artificially forced: the
+same small, pre-specified candidate grid (4 feature sets x 2 models x 7
+thresholds) was used throughout; nothing was searched after seeing the
+locked test, and the locked test was touched exactly once.
+
+12. DID THE IMPROVEMENT COME FROM REAL DISCRIMINATION, NOT JUST A SHIFT?
+------------------
+Yes. Two independent pieces of evidence: (a) AUC itself improved
+substantially (0.71 -> 0.78 in CV; 0.748 on the held-out locked test) —
+AUC is threshold-independent, so this cannot come from moving an operating
+point; (b) on the locked test, V4 improved BOTH sensitivity (+11.6pp) AND
+specificity (+9.0pp) over V3 simultaneously — V3's own A-threshold sweep
+proved sensitivity and specificity can only trade off against each other
+within its rule, so simultaneous improvement in both is only possible with
+genuinely more discriminative input, not a threshold move on the same
+decision function.
+
+13. FINAL PIPELINE SELECTED: V4
+------------------
+pipeline_v4/ (decision_model.py, frozen_model.pkl, structured_output.py).
+V3 remains frozen and available at pipeline_v3/ but is superseded.
+
+14. FILES CREATED
+------------------
+pipeline_v4/: decision_model.py, structured_output.py, frozen_model.pkl
+  (fitted scikit-learn Pipeline: StandardScaler + LogisticRegression)
+Evaluation_V4/: build_feature_table_and_cv.py, select_threshold.py,
+  freeze_and_locked_test.py, FeatureTable/development_feature_table.csv,
+  CrossValidation/{cv_summary.json,oof_predictions_full.json},
+  ThresholdSelection/{threshold_sweep_cv.json,selected_threshold.json},
+  LockedTest/locked_test_v2_v3_v4.json, FinalReport/final_summary.txt
+
+15. REMAINING LIMITATIONS
+------------------
+- Precision is still low (40.3%) — most "elevated concern" flags remain
+  false alarms on this cohort composition; expected given the melanoma
+  class's low prevalence (~30% in this curated cohort, almost certainly
+  lower in real-world use), not a flaw specific to V4.
+- The internal logistic-regression score is a decision-support number for
+  thresholding only — it is NOT a calibrated melanoma probability and must
+  never be presented to a user as one.
+- Feature set is intentionally small (6 existing measurements); this was a
+  constrained, interpretable-model experiment, not an open-ended search.
+- Same D_mm/patient_id/A-is-silhouette-only limitations as V3 apply
+  unchanged (see Evaluation_FinalTargeted/FinalReport/final_summary.txt).
+- Locked-test generalization was checked once; real-world images (
+  different cameras, lighting, skin tones, non-dermoscopic photos) were
+  not tested and would likely perform differently.
+
+This remains a research/competition-prototype evaluation on a public
+research dataset. It is not clinically validated and does not diagnose
+melanoma.

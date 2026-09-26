@@ -1,0 +1,10 @@
+{
+  "sensitivity_gain_dev": 0.2019,
+  "sensitivity_gain_locked_test": 0.2246,
+  "specificity_cost_dev": -0.1937,
+  "specificity_cost_locked_test": -0.2055,
+  "balanced_accuracy_change_dev": 0.0041,
+  "balanced_accuracy_change_locked_test": 0.0096,
+  "f1_change_dev": 0.0475,
+  "f1_change_locked_test": 0.0411
+}

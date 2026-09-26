@@ -1,0 +1,398 @@
+Image: ISIC_1776777
+Type: FN
+
+Unusual features:
+  - confidence: 99th percentile among malignant (UNUSUALLY_HIGH)
+  - skin_contrast: 98th percentile among malignant (UNUSUALLY_HIGH)
+  - B_circularity: 8th percentile among malignant (UNUSUALLY_LOW)
+  - A_value: 9th percentile among malignant (UNUSUALLY_LOW)
+
+Image: ISIC_1887299
+Type: FN
+
+Unusual features:
+  - D_px: 1th percentile among malignant (UNUSUALLY_LOW)
+  - bluegray_fraction: 99th percentile among malignant (UNUSUALLY_HIGH)
+  - D_px_normalized: 1th percentile among malignant (UNUSUALLY_LOW)
+  - lesion_fraction: 2th percentile among malignant (UNUSUALLY_LOW)
+  - B_circularity: 4th percentile among malignant (UNUSUALLY_LOW)
+
+Image: ISIC_2077116
+Type: FN
+
+Unusual features:
+  - bluegray_fraction: 99th percentile among malignant (UNUSUALLY_HIGH)
+  - B_circularity: 2th percentile among malignant (UNUSUALLY_LOW)
+  - turning_angle_std: 2th percentile among malignant (UNUSUALLY_LOW)
+  - eccentricity: 3th percentile among malignant (OUTLIER_LOW)
+  - A_value: 6th percentile among malignant (UNUSUALLY_LOW)
+
+Image: ISIC_2185005
+Type: FN
+
+Unusual features:
+  - bluegray_fraction: 99th percentile among malignant (UNUSUALLY_HIGH)
+  - lesion_fraction: 1th percentile among malignant (UNUSUALLY_LOW)
+  - C_value: 2th percentile among malignant (UNUSUALLY_LOW)
+  - D_px_normalized: 2th percentile among malignant (UNUSUALLY_LOW)
+  - lab_a_std: 7th percentile among malignant (UNUSUALLY_LOW)
+
+Image: ISIC_3210975
+Type: FN
+
+Unusual features:
+  - bluegray_fraction: 99th percentile among malignant (UNUSUALLY_HIGH)
+  - D_px: 3th percentile among malignant (UNUSUALLY_LOW)
+  - turning_angle_std: 5th percentile among malignant (UNUSUALLY_LOW)
+  - B_circularity: 7th percentile among malignant (UNUSUALLY_LOW)
+  - skin_contrast: 92th percentile among malignant (UNUSUALLY_HIGH)
+
+Image: ISIC_3511086
+Type: FN
+
+Unusual features:
+  - confidence: 100th percentile among malignant (UNUSUALLY_HIGH)
+  - D_px: 7th percentile among malignant (UNUSUALLY_LOW)
+  - dark_fraction: 91th percentile among malignant (UNUSUALLY_HIGH)
+
+Image: ISIC_4615762
+Type: FN
+
+Unusual features:
+  - lab_a_std: 1th percentile among malignant (UNUSUALLY_LOW)
+  - color_entropy: 4th percentile among malignant (UNUSUALLY_LOW)
+  - turning_angle_std: 95th percentile among malignant (UNUSUALLY_HIGH)
+  - eccentricity: 93th percentile among malignant (UNUSUALLY_HIGH)
+  - B_circularity: 91th percentile among malignant (UNUSUALLY_HIGH)
+
+Image: ISIC_4730066
+Type: FN
+
+Unusual features:
+  - lesion_fraction: 1th percentile among malignant (UNUSUALLY_LOW)
+  - D_px_normalized: 1th percentile among malignant (UNUSUALLY_LOW)
+  - B_circularity: 1th percentile among malignant (UNUSUALLY_LOW)
+  - confidence: 1th percentile among malignant (OUTLIER_LOW)
+  - red_fraction: 96th percentile among malignant (OUTLIER_HIGH)
+
+Image: ISIC_6688417
+Type: FN
+
+Unusual features:
+  - lesion_fraction: 3th percentile among malignant (UNUSUALLY_LOW)
+  - turning_angle_std: 4th percentile among malignant (UNUSUALLY_LOW)
+  - D_px_normalized: 4th percentile among malignant (UNUSUALLY_LOW)
+  - lab_a_std: 4th percentile among malignant (UNUSUALLY_LOW)
+  - B_circularity: 6th percentile among malignant (UNUSUALLY_LOW)
+
+Image: ISIC_6792899
+Type: FN
+
+Unusual features:
+  - bluegray_fraction: 99th percentile among malignant (UNUSUALLY_HIGH)
+  - turning_angle_std: 8th percentile among malignant (UNUSUALLY_LOW)
+  - dark_fraction: 91th percentile among malignant (UNUSUALLY_HIGH)
+
+Image: ISIC_8344345
+Type: FN
+
+Unusual features:
+  - lab_b_std: 7th percentile among malignant (UNUSUALLY_LOW)
+  - color_entropy: 8th percentile among malignant (UNUSUALLY_LOW)
+  - lesion_fraction: 9th percentile among malignant (UNUSUALLY_LOW)
+  - dark_fraction: 91th percentile among malignant (UNUSUALLY_HIGH)
+
+Image: ISIC_9881460
+Type: FN
+
+Unusual features:
+  - lab_a_std: 2th percentile among malignant (UNUSUALLY_LOW)
+  - C_value: 6th percentile among malignant (UNUSUALLY_LOW)
+  - turning_angle_std: 6th percentile among malignant (UNUSUALLY_LOW)
+  - color_entropy: 7th percentile among malignant (UNUSUALLY_LOW)
+  - A_value: 8th percentile among malignant (UNUSUALLY_LOW)
+
+Image: ISIC_2686432
+Type: FP
+
+Unusual features:
+  - solidity: 1th percentile among benign (OUTLIER_LOW)
+  - A_value: 96th percentile among benign (UNUSUALLY_HIGH)
+  - B_circularity: 96th percentile among benign (UNUSUALLY_HIGH)
+  - D_px_normalized: 93th percentile among benign (UNUSUALLY_HIGH)
+  - turning_angle_std: 93th percentile among benign (UNUSUALLY_HIGH)
+
+Image: ISIC_2775534
+Type: FP
+
+Unusual features:
+  - skin_contrast: 1th percentile among benign (UNUSUALLY_LOW)
+  - lesion_fraction: 98th percentile among benign (OUTLIER_HIGH)
+  - red_fraction: 98th percentile among benign (OUTLIER_HIGH)
+  - D_px_normalized: 98th percentile among benign (OUTLIER_HIGH)
+  - lab_a_std: 98th percentile among benign (UNUSUALLY_HIGH)
+
+Image: ISIC_3999304
+Type: FP
+
+Unusual features:
+  - bluegray_fraction: 99th percentile among benign (OUTLIER_HIGH)
+  - confidence: 98th percentile among benign (UNUSUALLY_HIGH)
+  - eccentricity: 3th percentile among benign (UNUSUALLY_LOW)
+  - dark_fraction: 95th percentile among benign (UNUSUALLY_HIGH)
+  - skin_contrast: 93th percentile among benign (UNUSUALLY_HIGH)
+
+Image: ISIC_4969084
+Type: FP
+
+Unusual features:
+  - A_value: 100th percentile among benign (OUTLIER_HIGH)
+  - eccentricity: 100th percentile among benign (UNUSUALLY_HIGH)
+  - solidity: 0th percentile among benign (OUTLIER_LOW)
+  - B_circularity: 100th percentile among benign (OUTLIER_HIGH)
+  - turning_angle_std: 97th percentile among benign (OUTLIER_HIGH)
+
+Image: ISIC_5188621
+Type: FP
+
+Unusual features:
+  - D_px: 5th percentile among benign (UNUSUALLY_LOW)
+  - eccentricity: 15th percentile among benign (notable)
+  - C_value: 82th percentile among benign (notable)
+  - skin_contrast: 21th percentile among benign (notable)
+  - turning_angle_std: 79th percentile among benign (notable)
+
+Image: ISIC_6435029
+Type: FP
+
+Unusual features:
+  - confidence: 0th percentile among benign (OUTLIER_LOW)
+  - A_value: 100th percentile among benign (OUTLIER_HIGH)
+  - C_value: 100th percentile among benign (OUTLIER_HIGH)
+  - turning_angle_std: 99th percentile among benign (OUTLIER_HIGH)
+  - B_circularity: 98th percentile among benign (OUTLIER_HIGH)
+
+Image: ISIC_6583245
+Type: FP
+
+Unusual features:
+  - bluegray_fraction: 99th percentile among benign (OUTLIER_HIGH)
+  - dark_fraction: 97th percentile among benign (OUTLIER_HIGH)
+  - lab_b_std: 97th percentile among benign (UNUSUALLY_HIGH)
+  - skin_contrast: 94th percentile among benign (UNUSUALLY_HIGH)
+  - turning_angle_std: 94th percentile among benign (UNUSUALLY_HIGH)
+
+Image: ISIC_6604109
+Type: FP
+
+Unusual features:
+  - D_px: 99th percentile among benign (OUTLIER_HIGH)
+  - B_circularity: 99th percentile among benign (OUTLIER_HIGH)
+  - D_px_normalized: 99th percentile among benign (OUTLIER_HIGH)
+  - lesion_fraction: 99th percentile among benign (OUTLIER_HIGH)
+  - turning_angle_std: 97th percentile among benign (OUTLIER_HIGH)
+
+Image: ISIC_7476613
+Type: FP
+
+Unusual features:
+  - B_circularity: 100th percentile among benign (OUTLIER_HIGH)
+  - solidity: 0th percentile among benign (OUTLIER_LOW)
+  - A_value: 99th percentile among benign (OUTLIER_HIGH)
+  - D_px: 97th percentile among benign (OUTLIER_HIGH)
+  - red_fraction: 96th percentile among benign (OUTLIER_HIGH)
+
+Image: ISIC_8059373
+Type: FP
+
+Unusual features:
+  - turning_angle_std: 100th percentile among benign (OUTLIER_HIGH)
+  - A_value: 100th percentile among benign (OUTLIER_HIGH)
+  - B_circularity: 99th percentile among benign (OUTLIER_HIGH)
+  - confidence: 1th percentile among benign (OUTLIER_LOW)
+  - D_px: 99th percentile among benign (OUTLIER_HIGH)
+
+Image: ISIC_8152488
+Type: FP
+
+Unusual features:
+  - bluegray_fraction: 99th percentile among benign (OUTLIER_HIGH)
+  - confidence: 93th percentile among benign (UNUSUALLY_HIGH)
+  - A_value: 90th percentile among benign (notable)
+  - lab_b_std: 86th percentile among benign (notable)
+  - D_px: 85th percentile among benign (notable)
+
+Image: ISIC_0786784
+Type: TN
+
+Unusual features:
+  - eccentricity: 99th percentile among benign (UNUSUALLY_HIGH)
+  - lab_a_std: 5th percentile among benign (UNUSUALLY_LOW)
+  - color_entropy: 8th percentile among benign (UNUSUALLY_LOW)
+
+Image: ISIC_1212149
+Type: TN
+
+Unusual features:
+  - eccentricity: 98th percentile among benign (UNUSUALLY_HIGH)
+  - B_circularity: 91th percentile among benign (UNUSUALLY_HIGH)
+  - red_fraction: 90th percentile among benign (OUTLIER_HIGH)
+
+Image: ISIC_3758135
+Type: TN
+
+Unusual features:
+  - D_px: 0th percentile among benign (UNUSUALLY_LOW)
+  - lab_a_std: 10th percentile among benign (UNUSUALLY_LOW)
+  - B_circularity: 17th percentile among benign (notable)
+  - A_value: 18th percentile among benign (notable)
+  - color_entropy: 21th percentile among benign (notable)
+
+Image: ISIC_3831079
+Type: TN
+
+Unusual features:
+  - bluegray_fraction: 99th percentile among benign (OUTLIER_HIGH)
+  - confidence: 92th percentile among benign (UNUSUALLY_HIGH)
+  - eccentricity: 86th percentile among benign (notable)
+  - lab_b_std: 84th percentile among benign (notable)
+  - D_px: 83th percentile among benign (notable)
+
+Image: ISIC_3958338
+Type: TN
+
+Unusual features:
+  - A_value: 2th percentile among benign (UNUSUALLY_LOW)
+  - lab_a_std: 9th percentile among benign (UNUSUALLY_LOW)
+  - color_entropy: 10th percentile among benign (UNUSUALLY_LOW)
+
+Image: ISIC_5118254
+Type: TN
+
+Unusual features:
+  - lab_b_std: 12th percentile among benign (notable)
+  - D_px_normalized: 15th percentile among benign (notable)
+  - lesion_fraction: 15th percentile among benign (notable)
+  - solidity: 19th percentile among benign (notable)
+  - lab_a_std: 81th percentile among benign (notable)
+
+Image: ISIC_5171808
+Type: TN
+
+Unusual features:
+  - D_px: 0th percentile among benign (UNUSUALLY_LOW)
+  - dark_fraction: 99th percentile among benign (OUTLIER_HIGH)
+  - skin_contrast: 99th percentile among benign (UNUSUALLY_HIGH)
+  - D_px_normalized: 4th percentile among benign (UNUSUALLY_LOW)
+  - lesion_fraction: 5th percentile among benign (UNUSUALLY_LOW)
+
+Image: ISIC_5212679
+Type: TN
+
+Unusual features:
+  - confidence: 3th percentile among benign (OUTLIER_LOW)
+  - B_circularity: 96th percentile among benign (UNUSUALLY_HIGH)
+  - turning_angle_std: 95th percentile among benign (UNUSUALLY_HIGH)
+  - skin_contrast: 9th percentile among benign (UNUSUALLY_LOW)
+
+Image: ISIC_6441975
+Type: TN
+
+Unusual features:
+  - eccentricity: 99th percentile among benign (UNUSUALLY_HIGH)
+  - dark_fraction: 93th percentile among benign (UNUSUALLY_HIGH)
+  - B_circularity: 89th percentile among benign (notable)
+  - lab_a_std: 11th percentile among benign (notable)
+  - D_px: 86th percentile among benign (notable)
+
+Image: ISIC_6685424
+Type: TN
+
+Unusual features:
+  - B_circularity: 99th percentile among benign (OUTLIER_HIGH)
+  - turning_angle_std: 97th percentile among benign (UNUSUALLY_HIGH)
+  - color_entropy: 6th percentile among benign (UNUSUALLY_LOW)
+  - eccentricity: 10th percentile among benign (UNUSUALLY_LOW)
+
+Image: ISIC_8003201
+Type: TN
+
+Unusual features:
+  - C_value: 2th percentile among benign (UNUSUALLY_LOW)
+  - color_entropy: 4th percentile among benign (UNUSUALLY_LOW)
+  - turning_angle_std: 4th percentile among benign (UNUSUALLY_LOW)
+  - eccentricity: 93th percentile among benign (UNUSUALLY_HIGH)
+
+Image: ISIC_8431340
+Type: TN
+
+Unusual features:
+  - turning_angle_std: 2th percentile among benign (UNUSUALLY_LOW)
+  - red_fraction: 94th percentile among benign (OUTLIER_HIGH)
+  - B_circularity: 7th percentile among benign (UNUSUALLY_LOW)
+
+Image: ISIC_8544988
+Type: TN
+
+Unusual features:
+  - bluegray_fraction: 99th percentile among benign (OUTLIER_HIGH)
+  - D_px: 1th percentile among benign (UNUSUALLY_LOW)
+  - solidity: 10th percentile among benign (UNUSUALLY_LOW)
+  - color_entropy: 90th percentile among benign (UNUSUALLY_HIGH)
+
+Image: ISIC_1605945
+Type: TP
+
+Unusual features:
+  - skin_contrast: 2th percentile among malignant (UNUSUALLY_LOW)
+  - C_value: 98th percentile among malignant (UNUSUALLY_HIGH)
+  - D_px: 97th percentile among malignant (OUTLIER_HIGH)
+  - lab_b_std: 97th percentile among malignant (UNUSUALLY_HIGH)
+  - solidity: 96th percentile among malignant (UNUSUALLY_HIGH)
+
+Image: ISIC_4296407
+Type: TP
+
+Unusual features:
+  - eccentricity: 6th percentile among malignant (UNUSUALLY_LOW)
+  - dark_fraction: 91th percentile among malignant (UNUSUALLY_HIGH)
+  - confidence: 90th percentile among malignant (notable)
+  - lesion_fraction: 87th percentile among malignant (notable)
+  - skin_contrast: 85th percentile among malignant (notable)
+
+Image: ISIC_6212007
+Type: TP
+
+Unusual features:
+  - color_entropy: 100th percentile among malignant (UNUSUALLY_HIGH)
+  - lab_a_std: 100th percentile among malignant (OUTLIER_HIGH)
+  - C_value: 99th percentile among malignant (UNUSUALLY_HIGH)
+  - lab_b_std: 99th percentile among malignant (OUTLIER_HIGH)
+  - dark_fraction: 96th percentile among malignant (UNUSUALLY_HIGH)
+
+Image: ISIC_7092052
+Type: TP
+
+Unusual features:
+  - A_value: 100th percentile among malignant (OUTLIER_HIGH)
+  - B_circularity: 100th percentile among malignant (OUTLIER_HIGH)
+  - turning_angle_std: 100th percentile among malignant (OUTLIER_HIGH)
+  - solidity: 1th percentile among malignant (OUTLIER_LOW)
+  - skin_contrast: 3th percentile among malignant (UNUSUALLY_LOW)
+
+Image: ISIC_7181296
+Type: TP
+
+Unusual features:
+  - bluegray_fraction: 99th percentile among malignant (UNUSUALLY_HIGH)
+  - red_fraction: 93th percentile among malignant (OUTLIER_HIGH)
+  - skin_contrast: 7th percentile among malignant (UNUSUALLY_LOW)
+  - confidence: 9th percentile among malignant (UNUSUALLY_LOW)
+
+Image: ISIC_7662910
+Type: TP
+
+Unusual features:
+  - A_value: 98th percentile among malignant (UNUSUALLY_HIGH)
+  - confidence: 8th percentile among malignant (UNUSUALLY_LOW)
+  - solidity: 9th percentile among malignant (UNUSUALLY_LOW)

@@ -1,0 +1,116 @@
+LASpot CV PIPELINE — FINAL TARGETED EVALUATION AND V3 SELECTION
+==================================================================
+Completed 2026-09-20. Full reproducible pipeline under Evaluation_FinalTargeted/.
+Evaluation_3500/, V2 code, YOLO weights, and source ISIC data verified untouched.
+
+1. TARGET COHORT
+------------------
+Positive: diagnosis_2="Malignant melanocytic proliferations (Melanoma)" AND
+  diagnosis_3 in {Melanoma Invasive, Melanoma in situ, Melanoma NOS, Melanoma metastasis}
+Negative: diagnosis_2="Benign melanocytic proliferations" AND
+  diagnosis_3 in {Nevus, Lentigo simplex}
+Both require melanocytic=True, image_type=dermoscopic (100% true already, not
+an active filter). All 8277 source rows are histopathology-confirmed.
+BCC, SCC, keratoacanthoma, Paget disease, and all other diagnoses excluded.
+2 ambiguous "Collision" malignant cases excluded (no specific subtype given).
+
+Melanoma: 973  |  Benign melanocytic/nevus: 2509  |  Total cohort: 3482
+Excluded (all other diagnoses / missing files): 4795
+patient_id populated: melanoma 42.0%, benign 47.1% (fallback: singleton grouping)
+lesion_id populated: melanoma 88.0%, benign 72.3%
+
+2. DEVELOPMENT / LOCKED-TEST SPLIT (patient+lesion-level, seed 20260918)
+------------------
+Grouping: union-find over shared patient_id OR lesion_id; ungrouped images
+treated as unique singletons (2339/2690 groups are singletons).
+Development: 2696 (77.4%) — malignant 797, benign 1899
+Locked test:  786 (22.6%) — malignant 176, benign 610
+Integrity verified: 0 image/patient/lesion_id overlap between the two sets.
+
+3. V2 TARGETED BASELINE (development, n=2090 evaluable)
+------------------
+TP=262 TN=1176 FP=275 FN=377
+Sensitivity=41.0% Specificity=81.0% Precision=48.8% F1=44.6% Accuracy=68.8% BalAcc=61.0%
+(Coverage: SINGLE_LESION_EVALUABLE=2090, MULTI_LESION_AMBIGUOUS=421, NO_DETECTION=185, FAILED=0)
+Consistent with the earlier melanoma-only finding in Evaluation_3500 (40.2%
+sensitivity on a smaller, differently-sourced sample) — confirms the
+targeted cohort behaves as expected, not an artifact of a new sample.
+
+4. A-THRESHOLD SWEEP (development only)
+------------------
+Threshold  Sens   Spec   BalAcc  F1
+0.20(cur)  0.410  0.815  0.612   0.448
+0.18       0.460  0.762  0.611   0.460
+0.16       0.540  0.689  0.615   0.481
+0.14       0.612  0.617  0.614   0.493  <- selected
+0.12       0.657  0.522  0.590   0.480
+0.10       0.712  0.436  0.574   0.476
+0.08       0.761  0.358  0.560   0.473
+
+Balanced accuracy is essentially FLAT (0.610-0.615) across the entire
+range — lowering the threshold trades sensitivity for specificity roughly
+1-for-1 along the existing separation, it does not create new
+discriminative power. 0.14 sits at the sweep's balanced-accuracy/F1 peak.
+
+5. DECISION-LAYER CANDIDATES (development only)
+------------------
+Candidate                       Sens   Spec   BalAcc  F1
+A: current (A>0.20)             0.410  0.815  0.612   0.448
+B: revised A>0.14                0.612  0.617  0.614   0.493
+C: continuous score, cutoff 2.0  0.901  0.292  0.597   0.514
+C: continuous score, cutoff 1.8  0.962  0.170  0.566   0.500
+C: continuous score, cutoff 1.6  0.986  0.076  0.531   0.483
+
+Continuous-score candidates post higher raw sensitivity/F1 but collapse
+specificity to 7.6-29.2% — flagging most benign nevi as elevated concern.
+This is the explicit "sensitivity by letting specificity collapse" failure
+mode the project rules rule out, so none were selected despite F1.
+
+6. V3 SELECTED: binary concern-count rule, A threshold lowered to 0.14
+------------------
+Everything else (B threshold 0.50, C scoring, "2-of-3" rule, critical-color
+override) UNCHANGED from V2. Simplest candidate that produced a real,
+balanced improvement; fully frozen in pipeline_v3/decision.py before the
+locked test was run.
+
+7-9. LOCKED TEST (run once, n=615 evaluable; 118 MULTI_LESION_AMBIGUOUS,
+53 NO_DETECTION, 0 FAILED — none discarded)
+------------------
+              TP  TN   FP   FN   Sens   Spec   Prec   F1     Acc    BalAcc
+V2            48  391  86   90   0.348  0.820  0.358  0.353  0.714  0.584
+V3            79  293  184  59   0.572  0.614  0.300  0.394  0.605  0.593
+
+Generalization (locked test vs development):
+  sensitivity gain:      dev +20.2pp   locked-test +22.5pp
+  specificity cost:      dev -19.4pp   locked-test -20.5pp
+  balanced accuracy:     dev +0.4pp    locked-test +1.0pp
+  F1:                    dev +4.8pp    locked-test +4.1pp
+V3's improvement direction and magnitude on the locked test closely track
+what development predicted — no overfitting collapse, no reversal.
+
+10. PIPELINE COVERAGE (both sets combined, informational)
+------------------
+No pipeline failures anywhere in this entire experiment (0/3482 FAILED).
+NO_DETECTION and MULTI_LESION_AMBIGUOUS rates are non-trivial (roughly
+7-15% each depending on split) and are reported, never hidden, in every
+phase above.
+
+11. LIMITATIONS
+------------------
+- Sensitivity remains well under 100% even for V3 (57.2% on locked test) —
+  this is a visual-concern screening aid, not a diagnostic tool, and should
+  never be presented as one.
+- Precision is low (30-36%) at every configuration tested — most
+  "elevated concern" flags will be false alarms on this cohort composition.
+- patient_id is missing for over half the cohort; the singleton fallback is
+  a reasonable, documented compromise, not a guarantee of zero leakage for
+  those rows.
+- D_mm remains unavailable (no physical calibration); D_px only.
+- No internal color/pigment-asymmetry measurement exists; A is silhouette-
+  only, a documented, deliberate scope decision, not a bug.
+- V3 was selected and frozen before the locked test was run and was not
+  retuned afterward, per the project's own rule — its real-world
+  generalization beyond this dataset is untested.
+
+This is a research/competition-prototype evaluation on a public research
+dataset. It is not clinically validated and does not diagnose melanoma.

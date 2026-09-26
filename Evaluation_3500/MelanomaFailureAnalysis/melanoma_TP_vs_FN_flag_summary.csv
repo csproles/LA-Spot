@@ -1,0 +1,9 @@
+flag,TP_count,TP_pct,FN_count,FN_pct,fisher_p,odds_ratio
+A_concern,115,85.8,17,8.5,0.0,64.7988
+B_circularity_concern,32,23.9,0,0.0,0.0,inf
+C_concern,131,97.8,147,73.9,0.0,15.4467
+flag_fragmented,24,17.9,19,9.5,0.030413,2.067
+flag_large_area,30,22.4,43,21.6,0.893039,1.0465
+flag_low_confidence,23,17.2,24,12.1,0.20207,1.5109
+flag_tiny_artifact_ignored,14,10.4,7,3.5,0.019338,3.2
+flag_any_quality_issue,55,41.0,64,32.2,0.103761,1.4686

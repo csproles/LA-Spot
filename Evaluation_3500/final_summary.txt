@@ -1,0 +1,104 @@
+EVALUATION_3500 — FINAL SUMMARY
+================================
+Fixed evaluation set, seed 20260918. No YOLO retraining, no confidence tuning,
+no ABCD formula/threshold changes, no evaluation-policy changes, no resampling
+after seeing results. Source dataset (Downloads/ISIC-images) untouched
+(verified: 8280 top-level entries before and after, matching the original
+8277 images + metadata.csv + attribution.txt + licenses/).
+
+1. DATASET / SAMPLE COMPOSITION
+--------------------------------
+Full source dataset:        8277 images, 4028 benign / 4249 malignant, 0 indeterminate
+Duplicates found:           0 duplicate isic_id, 0 duplicate image content (MD5)
+Evaluation manifest:        3500 images (1750 benign / 1750 malignant), seed 20260918
+Manifest file:               Evaluation_3500/evaluation_manifest_3500.csv (permanent, unchanged)
+
+2. HARDWARE AND BENCHMARK
+--------------------------------
+CPU:                 Intel(R) Core(TM) 5 210H, 8 cores / 12 logical processors
+RAM:                 15.5 GB total
+Device used:          CPU (CUDA not available; torch 2.13.0+cpu build)
+Benchmark (90 images across 3 batches): 1.80-2.17s/image, 0 failures, peak RSS ~590MB
+Estimated full-run time (from benchmark): ~1.9 hours
+Actual full-run time:   55m27s (faster than estimated — average per-image time
+                        dropped from ~1.86s/img early in the run to ~0.48s/img
+                        by the end; likely smaller average image size and/or
+                        warm OS file-cache in the back half of the manifest)
+Peak RSS during full run: 740 MB
+
+3. PROCESSING SUCCESS/FAILURE
+--------------------------------
+Total images in manifest:        3500
+Successfully processed (>=1 lesion instance): 3080
+No detection:                     420
+Failed (pipeline error):          0
+Total runtime:                    55m27s
+Average time/image:               0.48-1.9s/img (dropped over the course of the run, see above)
+
+4. SEGMENTATION / DETECTION BEHAVIOR
+--------------------------------
+Total YOLO lesion instances (all detections, all images): 3630
+Multi-lesion images:                444 / 3500 (12.7%)
+Evaluation-status breakdown (every image accounted for):
+  SINGLE_LESION_EVALUABLE:   2636 (75.3%)
+  MULTI_LESION_AMBIGUOUS:     444 (12.7%)
+  NO_DETECTION:                420 (12.0%)
+  FAILED:                        0 (0.0%)
+  UNLABELED:                     0 (all 3500 are labeled by construction)
+
+NO_DETECTION by ground truth:        196 benign / 224 malignant
+MULTI_LESION_AMBIGUOUS by ground truth: 249 benign / 195 malignant
+
+Confidence distribution (all 3630 instances): min=0.250 max=0.942 mean=0.631 median=0.654
+Low-confidence-flagged instances (<0.5, reporting-only, none excluded): 1107 / 3630 (30.5%)
+Quality-flagged instances (any non-"ok" flag):  1810 / 3630 (49.9%)
+  - fragmented (>1 meaningful component):        384 / 3630 (10.6%)
+  - large_area_fraction (possible over-segmentation): 940 / 3630 (25.9%)
+  - tiny rasterization artifacts ignored (not counted as fragmentation): 230 instances
+
+D-field policy verification (must hold for every processed instance):
+  D_mm populated:      0 / 3630  (correct — always None)
+  D_concern = True:    0 / 3630  (correct — never contributes a concern)
+  D_px missing:        0 / 3630  (correct — always recorded)
+
+5/6. ABCD CLASSIFICATION RESULTS — CONFUSION MATRIX AND METRICS
+--------------------------------
+Computed ONLY on SINGLE_LESION_EVALUABLE images (n=2636). MULTI_LESION_AMBIGUOUS,
+NO_DETECTION, and FAILED images are excluded from these metrics but are fully
+reported above, not discarded.
+
+Mapping: LOW->negative->predicted benign(0), HIGH->positive->predicted malignant(1)
+Ground truth: benign=0, malignant=1
+
+TP = 440   (malignant, correctly predicted HIGH)
+TN = 997   (benign, correctly predicted LOW)
+FP = 308   (benign, incorrectly predicted HIGH)
+FN = 891   (malignant, incorrectly predicted LOW)
+
+Accuracy    = 0.5451
+Sensitivity = 0.3306
+Specificity = 0.7640
+Precision   = 0.5882
+F1          = 0.4233
+
+This is an EXPLORATORY, non-diagnostic evaluation of the existing heuristic ABCD
+risk system using a provisional LOW/HIGH -> negative/positive mapping. It is not
+a validated diagnostic accuracy claim.
+
+7. NOTABLE ANOMALIES / LIMITATIONS SURFACED AT THIS SCALE
+--------------------------------
+- large_area_fraction flag rate jumped from ~5% (43-image test set) to 25.9%
+  here. Not something to act on within this fixed evaluation run, but a strong
+  signal that oversized-mask segmentation behavior is far more common at scale
+  than the small test set suggested, and needs its own investigation before
+  any future run.
+- low_confidence (<0.5) rate is 30.5%, also much higher than the small test
+  set. Mean/median confidence (0.63/0.65) is noticeably lower than typically
+  seen on the smaller, more curated demo dataset.
+- clin_size_long_diam_mm exists in this larger dataset's metadata (23% of all
+  8277 images) even though it does not exist in the smaller project dataset
+  used for all prior steps. It was NOT used here, per the fixed, unmodified
+  D_mm=None policy — flagged for future consideration only.
+- No FAILED rows at all across all 3500 images — the pipeline's error handling
+  was never exercised by a real failure in this run; robustness under actual
+  failure conditions remains unverified beyond the deliberate try/except design.

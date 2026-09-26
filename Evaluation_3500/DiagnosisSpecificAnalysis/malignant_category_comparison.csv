@@ -1,0 +1,7 @@
+category,total_selected,SINGLE_LESION_EVALUABLE,MULTI_LESION_AMBIGUOUS,NO_DETECTION,FAILED,MISSING_FROM_RESULTS,TP,FN,sensitivity,A_mean,A_median,A_concern_rate,B_mean,B_median,B_concern_rate,C_mean,C_median,C_concern_rate,mask_area_fraction_mean,mask_area_fraction_median,large_area_fraction_rate,confidence_mean
+Melanoma,404,333,46,25,0,0,134,199,0.4024,0.1898,0.178,39.6,0.3241,0.313,9.6,0.417,0.387,83.5,0.3181,0.2669,21.9,0.745
+Basal cell carcinoma,1069,766,123,180,0,0,237,529,0.3094,0.1435,0.1335,25.7,0.2914,0.244,6.1,0.5441,0.553,94.6,0.5578,0.5772,53.1,0.5638
+Squamous cell carcinoma,214,175,23,16,0,0,55,120,0.3143,0.1231,0.111,25.7,0.2885,0.238,4.6,0.5499,0.56,98.9,0.6843,0.8189,73.1,0.634
+Other malignant,61,55,3,3,0,0,14,41,0.2545,0.1155,0.071,21.8,0.2986,0.236,7.3,0.6049,0.593,100.0,0.6904,0.9022,70.9,0.7079
+Unknown,2,2,0,0,0,0,0,2,0.0,0.185,0.185,0.0,0.304,0.304,0.0,0.3155,0.3155,50.0,0.11,0.11,0.0,0.679
+ALL MALIGNANT (combined),1750,1331,195,224,0,0,440,891,0.3306,0.1513,0.146,29.0,0.2995,0.256,6.8,0.5152,0.522,92.6,0.5193,0.4753,48.6,0.6245

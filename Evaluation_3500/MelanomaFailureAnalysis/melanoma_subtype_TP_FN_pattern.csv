@@ -1,0 +1,5 @@
+subtype,TP,FN,sensitivity,A_mean_TP,A_mean_FN,large_area_rate_TP_pct,large_area_rate_FN_pct
+Melanoma Invasive,66,94,0.4125,0.2517,0.1446,21.2,23.4
+Melanoma in situ,57,83,0.4071,0.2665,0.1513,19.3,19.3
+Melanoma metastasis,0,5,,,0.1398,,0.0
+"Melanoma, NOS",11,17,0.3929,0.2487,0.1066,45.5,29.4

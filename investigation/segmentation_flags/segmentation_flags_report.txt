@@ -1,0 +1,45 @@
+
+=== ISIC_0000006 ===
+  image size: 1022x767 (783874 px total)
+  mask area: 52100 px = 6.6% of frame
+  connected components: 2
+    #1: 52091px (100.0% of mask, bbox 244x302); #2: 9px (0.0% of mask, bbox 9x1)
+  A_original=0.304 -> A_revised(aligned)=0.2
+  B_circularity=0.552 B_experimental=0.5879 (n_defects=7)
+  segmentation_quality_flags: fragmented(2_blobs)
+
+=== ISIC_0000069 ===
+  image size: 1022x767 (783874 px total)
+  mask area: 122156 px = 15.6% of frame
+  connected components: 3
+    #2: 94535px (77.4% of mask, bbox 452x306); #1: 21917px (17.9% of mask, bbox 126x234); #3: 5704px (4.7% of mask, bbox 117x60)
+  A_original=0.512 -> A_revised(aligned)=0.618
+  B_circularity=0.274 B_experimental=0.2658 (n_defects=13)
+  segmentation_quality_flags: fragmented(3_blobs)
+
+=== ISIC_0000072 ===
+  image size: 1022x767 (783874 px total)
+  mask area: 128356 px = 16.4% of frame
+  connected components: 2
+    #2: 77579px (60.4% of mask, bbox 309x377); #1: 50777px (39.6% of mask, bbox 291x224)
+  A_original=0.561 -> A_revised(aligned)=0.379
+  B_circularity=0.299 B_experimental=0.376 (n_defects=9)
+  segmentation_quality_flags: fragmented(2_blobs)
+
+=== ISIC_0000075 ===
+  image size: 1022x767 (783874 px total)
+  mask area: 477576 px = 60.9% of frame
+  connected components: 1
+    #1: 477576px (100.0% of mask, bbox 868x744)
+  A_original=0.106 -> A_revised(aligned)=0.096
+  B_circularity=0.186 B_experimental=0.2451 (n_defects=29)
+  segmentation_quality_flags: large_area_fraction(61%)_possible_over_segmentation
+
+=== ISIC_0000076 ===
+  image size: 1504x1129 (1698016 px total)
+  mask area: 1437039 px = 84.6% of frame
+  connected components: 1
+    #1: 1437039px (100.0% of mask, bbox 1469x1120)
+  A_original=0.074 -> A_revised(aligned)=0.083
+  B_circularity=0.204 B_experimental=0.1328 (n_defects=22)
+  segmentation_quality_flags: large_area_fraction(85%)_possible_over_segmentation

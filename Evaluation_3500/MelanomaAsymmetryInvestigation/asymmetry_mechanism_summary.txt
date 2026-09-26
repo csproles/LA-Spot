@@ -1,0 +1,116 @@
+EVALUATION_3500 — WHY DOES A FAIL TO TRIGGER ON MELANOMA FALSE NEGATIVES?
+============================================================================
+Read-only mechanism investigation. Reproduces revised_abcd/revised_asymmetry.py
+(the code that actually produced every saved A_value/A_concern in
+Evaluation_3500) step by step, verified against the saved results: all 20
+reproductions matched the saved A_value exactly (0 mismatches). No YOLO,
+ABCD, threshold, mask, or scoring code was modified or rerun.
+
+Selection: 10 melanoma FN and 10 melanoma TP, both restricted to cases
+WITHOUT the large_area_fraction flag, fixed seed 20260918.
+
+Selected FN IDs: ISIC_0406149, ISIC_3210975, ISIC_4552372, ISIC_4953281,
+  ISIC_4311112, ISIC_9111814, ISIC_4874581, ISIC_2867998, ISIC_9957368,
+  ISIC_1887299
+Selected TP IDs: ISIC_9276896, ISIC_7801345, ISIC_1220536, ISIC_2149878,
+  ISIC_7454892, ISIC_2717192, ISIC_0866872, ISIC_4203842, ISIC_3486312,
+  ISIC_8899125
+
+All 20 panels (7 images + full numeric readout each) are in panels/, and
+every intermediate value is in asymmetry_investigation_manifest.csv.
+
+DIRECT OBSERVATIONS (measured directly from the saved masks, not inferred)
+----------------------------------------------------------------------------
+  Group   h-IoU range        h-IoU mean   v-IoU range        v-IoU mean   A range          A mean
+  FN      [0.809, 0.901]     0.859        [0.777, 0.930]     0.866        [0.115, 0.186]   0.138
+  TP      [0.594, 0.834]     0.752        [0.535, 0.811]     0.722        [0.179, 0.399]   0.263
+
+- All 10 FN masks have BOTH horizontal and vertical IoU above 0.777 — every
+  single one. None come close to the 0.20 concern threshold on A (the
+  highest FN value was 0.186).
+- TP masks are both lower on average AND far more spread out (h-IoU down to
+  0.594, v-IoU down to 0.535). 8 of 10 TP cases reach A_concern=True; the
+  other 2 (A=0.185, A=0.179) do NOT — those two TP outcomes were driven by
+  something other than A (B and/or C, or the critical-color override), not
+  by asymmetry.
+- Visually (see panels), the 10 FN masks are consistently round-to-oval,
+  gently and fairly evenly scalloped shapes — no single dominant protrusion
+  or lopsided extension. Their overlap/disagreement panels are dominated by
+  green (agreement), with only thin, evenly-distributed red/blue slivers at
+  the scalloped edges.
+- Visually, the TP masks consistently show one or more distinct, uneven
+  protrusions, "legs," or lopsided bulges without a mirrored counterpart —
+  their overlap/disagreement panels show large, concentrated red/blue
+  regions at specific spots, not a thin even rim.
+- PCA alignment does not appear to be distorting these particular masks:
+  none of the 20 raw masks are strongly elongated to begin with, so the
+  rotation step barely changes their apparent shape in panel 3 versus panel
+  2. The alignment step is not observed to be "hiding" asymmetry in this
+  sample — the masks look about equally round/irregular before and after
+  alignment.
+
+ANSWERS TO THE SPECIFIC QUESTIONS ASKED
+----------------------------------------------------------------------------
+Q: Do FN masks genuinely appear relatively symmetric?
+A: Yes, consistently, in this sample of 10 — both by eye and by IoU. This is
+   a direct observation, not a hypothesis: every FN mask examined has a
+   compact, round-ish outline with only mild, evenly-distributed edge
+   texture.
+
+Q: Does PCA alignment make an asymmetric lesion appear more symmetric?
+A: Not observed in this sample. None of the 20 selected masks are elongated
+   enough for alignment to matter much — alignment mainly changes outcomes
+   for elongated shapes (as shown in the earlier investigation/
+   investigate_asymmetry.py work), and these particular FN masks aren't
+   elongated to begin with. This does not rule out alignment mattering for
+   OTHER melanoma cases not in this 20-case sample; it simply wasn't
+   observed here.
+
+Q: Is horizontal/vertical IoU insensitive to important irregularities?
+A: Partially, and this is where observation gives way to hypothesis.
+   Directly observed: IoU clearly DOES respond to large, uneven protrusions
+   (the TP cases prove this — real lopsided bulges drove IoU down to
+   0.53-0.71). Hypothesis, not directly tested here: IoU-on-a-silhouette can
+   only ever measure asymmetry of SHAPE. It has no way to detect asymmetry
+   of color or internal structure (e.g. pigment concentrated on one side of
+   an otherwise round lesion) because it never looks inside the mask, only
+   at its outline. Since the clinical ABCD "asymmetry" concept traditionally
+   includes asymmetry of color/structure as well as shape, a shape-only
+   measure would systematically miss that category of case. This analysis
+   did not examine internal color distribution, so this remains a
+   hypothesis for a possible follow-up, not a confirmed finding.
+   Also a secondary, directly observed pattern: IoU is forgiving of mild,
+   evenly-spread scalloping (a bumpy-but-round edge, like a gear or flower
+   shape) because the bumps roughly mirror each other in aggregate — this
+   is visually distinct from a single large uneven protrusion, and the
+   current calculation cannot and does not try to distinguish "evenly
+   textured" from "genuinely smooth," only whether the OVERALL silhouette
+   folds onto itself.
+
+Q: Why do good-looking FN masks frequently produce A<0.20?
+A: Direct observation: because their silhouettes genuinely are close to
+   round/compact by the numbers (IoU consistently >=0.777) as well as by
+   eye. The calculation is behaving as designed on the mask it was given.
+   Whether the ORIGINAL LESION is truly "not asymmetric" by a dermatologist's
+   full clinical definition (which can include color/structure asymmetry
+   this measure cannot see) is a separate question this analysis does not
+   answer.
+
+Q: What differs geometrically from TP masks where A>0.20?
+A: Direct observation: TP masks have one or more distinct, uneven
+   protrusions or extensions without a mirrored counterpart, visible both by
+   eye and in the lower/more-variable IoU values. This is the geometric
+   difference the calculation is actually detecting.
+
+WHAT THIS DOES NOT SHOW
+----------------------------------------------------------------------------
+This 20-case sample only covers melanoma FN/TP WITHOUT the large_area_fraction
+flag, per instruction. It says nothing about the large_area_fraction FN
+cases (already separately visually reviewed by the user, with mixed
+results — some genuinely poor masks, some reasonable ones). It also does
+not test the color/internal-structure-asymmetry hypothesis above; that
+would require a different kind of measurement than what this script (or the
+existing A calculation) computes. No alternative asymmetry algorithm was
+implemented or is being proposed here.
+
+No thresholds were changed, tuned, or recommended based on this analysis.

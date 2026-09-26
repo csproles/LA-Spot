@@ -1,0 +1,164 @@
+{
+  "development_coverage": {
+    "SINGLE_LESION_EVALUABLE": 2090,
+    "MULTI_LESION_AMBIGUOUS": 421,
+    "NO_DETECTION": 185,
+    "FAILED": 0
+  },
+  "candidates": {
+    "core_ABC__logistic_regression": {
+      "feature_set": "core_ABC",
+      "features": [
+        "A_value",
+        "B_circularity",
+        "C_value"
+      ],
+      "model": "logistic_regression",
+      "n_rows_used": 2090,
+      "n_dropped_missing": 0,
+      "oof_roc_auc": 0.7116,
+      "cv_sensitivity_mean_at_0.5": 0.2742,
+      "cv_sensitivity_std_at_0.5": 0.0472,
+      "cv_specificity_mean_at_0.5": 0.9312,
+      "cv_specificity_std_at_0.5": 0.015,
+      "cv_balanced_accuracy_mean_at_0.5": 0.6027,
+      "cv_balanced_accuracy_std_at_0.5": 0.0212
+    },
+    "core_ABC__shallow_decision_tree": {
+      "feature_set": "core_ABC",
+      "features": [
+        "A_value",
+        "B_circularity",
+        "C_value"
+      ],
+      "model": "shallow_decision_tree",
+      "n_rows_used": 2090,
+      "n_dropped_missing": 0,
+      "oof_roc_auc": 0.6872,
+      "cv_sensitivity_mean_at_0.5": 0.3419,
+      "cv_sensitivity_std_at_0.5": 0.1275,
+      "cv_specificity_mean_at_0.5": 0.8808,
+      "cv_specificity_std_at_0.5": 0.0397,
+      "cv_balanced_accuracy_mean_at_0.5": 0.6113,
+      "cv_balanced_accuracy_std_at_0.5": 0.048
+    },
+    "core_ABC_plus_D__logistic_regression": {
+      "feature_set": "core_ABC_plus_D",
+      "features": [
+        "A_value",
+        "B_circularity",
+        "C_value",
+        "D_px"
+      ],
+      "model": "logistic_regression",
+      "n_rows_used": 2090,
+      "n_dropped_missing": 0,
+      "oof_roc_auc": 0.7289,
+      "cv_sensitivity_mean_at_0.5": 0.2962,
+      "cv_sensitivity_std_at_0.5": 0.0613,
+      "cv_specificity_mean_at_0.5": 0.9237,
+      "cv_specificity_std_at_0.5": 0.018,
+      "cv_balanced_accuracy_mean_at_0.5": 0.61,
+      "cv_balanced_accuracy_std_at_0.5": 0.0314
+    },
+    "core_ABC_plus_D__shallow_decision_tree": {
+      "feature_set": "core_ABC_plus_D",
+      "features": [
+        "A_value",
+        "B_circularity",
+        "C_value",
+        "D_px"
+      ],
+      "model": "shallow_decision_tree",
+      "n_rows_used": 2090,
+      "n_dropped_missing": 0,
+      "oof_roc_auc": 0.69,
+      "cv_sensitivity_mean_at_0.5": 0.3536,
+      "cv_sensitivity_std_at_0.5": 0.1112,
+      "cv_specificity_mean_at_0.5": 0.8772,
+      "cv_specificity_std_at_0.5": 0.0454,
+      "cv_balanced_accuracy_mean_at_0.5": 0.6154,
+      "cv_balanced_accuracy_std_at_0.5": 0.0426
+    },
+    "core_ABC_plus_confidence__logistic_regression": {
+      "feature_set": "core_ABC_plus_confidence",
+      "features": [
+        "A_value",
+        "B_circularity",
+        "C_value",
+        "confidence"
+      ],
+      "model": "logistic_regression",
+      "n_rows_used": 2090,
+      "n_dropped_missing": 0,
+      "oof_roc_auc": 0.7111,
+      "cv_sensitivity_mean_at_0.5": 0.2695,
+      "cv_sensitivity_std_at_0.5": 0.0471,
+      "cv_specificity_mean_at_0.5": 0.9291,
+      "cv_specificity_std_at_0.5": 0.0184,
+      "cv_balanced_accuracy_mean_at_0.5": 0.5993,
+      "cv_balanced_accuracy_std_at_0.5": 0.0207
+    },
+    "core_ABC_plus_confidence__shallow_decision_tree": {
+      "feature_set": "core_ABC_plus_confidence",
+      "features": [
+        "A_value",
+        "B_circularity",
+        "C_value",
+        "confidence"
+      ],
+      "model": "shallow_decision_tree",
+      "n_rows_used": 2090,
+      "n_dropped_missing": 0,
+      "oof_roc_auc": 0.6916,
+      "cv_sensitivity_mean_at_0.5": 0.3405,
+      "cv_sensitivity_std_at_0.5": 0.1329,
+      "cv_specificity_mean_at_0.5": 0.8835,
+      "cv_specificity_std_at_0.5": 0.0407,
+      "cv_balanced_accuracy_mean_at_0.5": 0.612,
+      "cv_balanced_accuracy_std_at_0.5": 0.05
+    },
+    "full_ABC_D_conf_fraction__logistic_regression": {
+      "feature_set": "full_ABC_D_conf_fraction",
+      "features": [
+        "A_value",
+        "B_circularity",
+        "C_value",
+        "D_px",
+        "confidence",
+        "lesion_fraction"
+      ],
+      "model": "logistic_regression",
+      "n_rows_used": 2090,
+      "n_dropped_missing": 0,
+      "oof_roc_auc": 0.7787,
+      "cv_sensitivity_mean_at_0.5": 0.3897,
+      "cv_sensitivity_std_at_0.5": 0.0589,
+      "cv_specificity_mean_at_0.5": 0.9146,
+      "cv_specificity_std_at_0.5": 0.0097,
+      "cv_balanced_accuracy_mean_at_0.5": 0.6521,
+      "cv_balanced_accuracy_std_at_0.5": 0.0329
+    },
+    "full_ABC_D_conf_fraction__shallow_decision_tree": {
+      "feature_set": "full_ABC_D_conf_fraction",
+      "features": [
+        "A_value",
+        "B_circularity",
+        "C_value",
+        "D_px",
+        "confidence",
+        "lesion_fraction"
+      ],
+      "model": "shallow_decision_tree",
+      "n_rows_used": 2090,
+      "n_dropped_missing": 0,
+      "oof_roc_auc": 0.7468,
+      "cv_sensitivity_mean_at_0.5": 0.4174,
+      "cv_sensitivity_std_at_0.5": 0.0556,
+      "cv_specificity_mean_at_0.5": 0.8898,
+      "cv_specificity_std_at_0.5": 0.0328,
+      "cv_balanced_accuracy_mean_at_0.5": 0.6536,
+      "cv_balanced_accuracy_std_at_0.5": 0.0156
+    }
+  }
+}

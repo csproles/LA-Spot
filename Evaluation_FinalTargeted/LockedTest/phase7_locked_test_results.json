@@ -1,0 +1,36 @@
+{
+  "phase": "Phase 7 - Locked test (run once)",
+  "total_locked_test_images": 786,
+  "coverage": {
+    "SINGLE_LESION_EVALUABLE": 615,
+    "MULTI_LESION_AMBIGUOUS": 118,
+    "NO_DETECTION": 53,
+    "FAILED": 0
+  },
+  "V2": {
+    "TP": 48,
+    "TN": 391,
+    "FP": 86,
+    "FN": 90,
+    "n": 615,
+    "sensitivity": 0.34782608695652173,
+    "specificity": 0.8197064989517819,
+    "precision": 0.3582089552238806,
+    "f1": 0.35294117647058826,
+    "accuracy": 0.7138211382113822,
+    "balanced_accuracy": 0.5837662929541518
+  },
+  "V3": {
+    "TP": 79,
+    "TN": 293,
+    "FP": 184,
+    "FN": 59,
+    "n": 615,
+    "sensitivity": 0.572463768115942,
+    "specificity": 0.6142557651991615,
+    "precision": 0.30038022813688214,
+    "f1": 0.3940149625935162,
+    "accuracy": 0.6048780487804878,
+    "balanced_accuracy": 0.5933597666575517
+  }
+}

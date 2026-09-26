@@ -1,0 +1,9 @@
+flag,TP_count,TP_pct,FN_count,FN_pct,fisher_exact_p_value
+A_concern,359,81.6,27,3.0,0.0
+B_circularity_concern,91,20.7,0,0.0,0.0
+C_concern,435,98.9,797,89.5,0.0
+flag_fragmented,118,26.8,74,8.3,0.0
+flag_large_area,150,34.1,497,55.8,0.0
+flag_low_confidence,133,30.2,244,27.4,0.300889
+flag_tiny_artifact_ignored,76,17.3,58,6.5,0.0
+flag_any_quality_issue,259,58.9,597,67.0,0.004231

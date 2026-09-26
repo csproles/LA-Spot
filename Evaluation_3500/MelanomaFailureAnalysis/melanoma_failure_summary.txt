@@ -1,0 +1,102 @@
+EVALUATION_3500 — MELANOMA-SPECIFIC TP vs FN FAILURE ANALYSIS
+================================================================
+Read-only analysis of the 333 SINGLE_LESION_EVALUABLE melanoma cases
+(134 TP, 199 FN) — counts verified exactly against the request before
+analysis began. No YOLO/ABCD/mask/threshold/policy change.
+
+1. WHAT CONCERN COMBINATIONS PRODUCE THE 199 MELANOMA FALSE NEGATIVES?
+------------------------------------------------------------------
+  C only (color concern, nothing else):    147 / 199  (73.9%)
+  No A/B/C concern at all:                  35 / 199  (17.6%)
+  A only (asymmetry concern, nothing else): 17 / 199  (8.5%)
+  Any combination with B, or A+C, A+B+C:     0 / 199  (0.0%)
+
+Every FN has at most one concern flag — consistent with the scoring rule
+(2+ needed for HIGH, absent a color override). Three-quarters of misses are
+"color flagged it, nothing else did."
+
+2. HOW MANY FN HAVE C CONCERN BUT NO A/B CONCERN?
+------------------------------------------------------------------
+147 / 199 (73.9%) — this is the single largest failure pattern by far.
+
+3. IS A STILL THE MAIN DIFFERENCE BETWEEN MELANOMA TP AND FN?
+------------------------------------------------------------------
+Yes, clearly, and more so than for malignancy overall:
+  A_value:    TP mean 0.258 vs FN mean 0.144  (p<0.0001, rank-biserial r=-0.81)
+  A_concern:  85.8% of TP vs 8.5% of FN        (Fisher p<0.0001, OR=64.8)
+This is the largest effect size of any feature checked, larger than the
+combined-malignant effect size seen earlier. B differs too (p<0.0001,
+r=-0.67) but almost never fires either way (23.9% TP, 0% FN) so it isn't
+doing the discriminating work. C differs statistically (p=0.0023) but the
+effect is small (r=-0.20) and C fires on most cases regardless of outcome
+(97.8% TP, 73.9% FN) — consistent with question 1/2 above.
+
+4. IS large_area_fraction STILL ASSOCIATED WITH FN WITHIN MELANOMA ONLY?
+------------------------------------------------------------------
+No — and this is the most important correction to the earlier, broader
+malignant-level finding. Within melanoma alone:
+  large_area_fraction rate: 22.4% of TP vs 21.6% of FN (Fisher p=0.893)
+  lesion_fraction (raw):    TP median 0.319 vs FN median 0.203 (p=0.082,
+                             not significant at the conventional 0.05 level)
+  lesion_pixel_area:        p=0.311 (not significant)
+  D_px:                     p=0.921 (not significant)
+The strong mask-size/FN association found in the all-malignant analysis was
+being driven by basal cell carcinoma and squamous cell carcinoma (which have
+much higher large-area rates overall), not by melanoma. For melanoma
+specifically, an oversized mask is not a meaningfully different risk factor
+for being missed than for being caught.
+
+One weaker, secondary pattern: fragmentation is somewhat more common in TP
+(17.9%) than FN (9.5%), Fisher p=0.030, and TP lesions have marginally more
+components on average (p=0.003-0.023, small effect sizes ~0.09-0.12) —
+consistent with the earlier observation that fragmentation can inflate A
+and incidentally help cross the 2-flag threshold. This is a weak,
+secondary, associative pattern, not a primary driver.
+
+5. DOES INSTITUTION/SOURCE REMAIN ASSOCIATED WITH TP/FN WITHIN MELANOMA?
+------------------------------------------------------------------
+Yes, modestly:
+  MILK study team:                        sensitivity 45.9% (78 TP / 92 FN)
+  Memorial Sloan Kettering Cancer Center:  sensitivity 34.4% (56 TP / 107 FN)
+  chi-square p = 0.042 (significant at the conventional 0.05 level, but a
+  modest effect, and only two source categories with unbalanced group sizes)
+This runs counter to a naive assumption that a single specialized cancer
+center's images would be "easier" — here the multi-site MILK study team
+images show somewhat HIGHER melanoma sensitivity. Reported as an
+association only; no explanation for the direction is established by this
+analysis (imaging equipment, patient population, and lesion severity mix
+could all differ between sources and were not examined here).
+
+6. ARE INVASIVE AND IN-SITU MELANOMA FAILURE PATTERNS SIMILAR?
+------------------------------------------------------------------
+Yes, closely:
+  Melanoma Invasive:  sensitivity 41.3% (66 TP / 94 FN), A_mean TP=0.252 vs FN=0.145,
+                       large_area rate TP=21.2% vs FN=23.4%
+  Melanoma in situ:   sensitivity 40.7% (57 TP / 83 FN), A_mean TP=0.267 vs FN=0.151,
+                       large_area rate TP=19.3% vs FN=19.3% (identical)
+Both subtypes show the same core pattern: a large A gap between TP and FN,
+and no meaningful large-area-fraction gap. Melanoma, NOS (n=28) shows a
+larger large-area gap (45.5% TP vs 29.4% FN) but the sample is too small to
+draw a reliable conclusion from. Melanoma metastasis (n=5, all but 0 FN) is
+too small to interpret at all.
+
+STATISTICAL VS DESCRIPTIVE
+------------------------------------------------------------------
+Statistically supported (p<0.05, computed directly on this data):
+  - A raw value and A_concern differences (TP vs FN) — large effect
+  - B raw value difference (but B_concern too rare to matter practically)
+  - C raw value difference — small effect
+  - fragmentation and component-count differences — small effects
+  - institution/source association with sensitivity — modest effect,
+    two-category comparison only
+Not statistically supported within melanoma (despite being significant for
+malignancy overall):
+  - mask area fraction / large_area_fraction / pixel area / D_px — none
+    reach conventional significance for melanoma specifically
+Descriptive only, no test performed or no causal claim made:
+  - invasive vs in-situ pattern similarity (based on side-by-side numbers,
+    not a formal interaction test between subtype and TP/FN)
+  - any explanation for WHY the institution effect runs in this direction
+
+No pipeline component, threshold, or scoring rule was changed or
+recommended for change based on this analysis.

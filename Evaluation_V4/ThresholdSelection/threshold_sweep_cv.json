@@ -1,0 +1,89 @@
+{
+  "winning_candidate": "full_ABC_D_conf_fraction__logistic_regression",
+  "sweep": [
+    {
+      "threshold": 0.2,
+      "TP": 532,
+      "TN": 802,
+      "FP": 649,
+      "FN": 107,
+      "sensitivity": 0.8326,
+      "specificity": 0.5527,
+      "precision": 0.4505,
+      "f1": 0.5846,
+      "balanced_accuracy": 0.6926
+    },
+    {
+      "threshold": 0.25,
+      "TP": 476,
+      "TN": 1003,
+      "FP": 448,
+      "FN": 163,
+      "sensitivity": 0.7449,
+      "specificity": 0.6912,
+      "precision": 0.5152,
+      "f1": 0.6091,
+      "balanced_accuracy": 0.7181
+    },
+    {
+      "threshold": 0.3,
+      "TP": 424,
+      "TN": 1100,
+      "FP": 351,
+      "FN": 215,
+      "sensitivity": 0.6635,
+      "specificity": 0.7581,
+      "precision": 0.5471,
+      "f1": 0.5997,
+      "balanced_accuracy": 0.7108
+    },
+    {
+      "threshold": 0.35,
+      "TP": 371,
+      "TN": 1178,
+      "FP": 273,
+      "FN": 268,
+      "sensitivity": 0.5806,
+      "specificity": 0.8119,
+      "precision": 0.5761,
+      "f1": 0.5783,
+      "balanced_accuracy": 0.6962
+    },
+    {
+      "threshold": 0.4,
+      "TP": 328,
+      "TN": 1244,
+      "FP": 207,
+      "FN": 311,
+      "sensitivity": 0.5133,
+      "specificity": 0.8573,
+      "precision": 0.6131,
+      "f1": 0.5588,
+      "balanced_accuracy": 0.6853
+    },
+    {
+      "threshold": 0.45,
+      "TP": 291,
+      "TN": 1289,
+      "FP": 162,
+      "FN": 348,
+      "sensitivity": 0.4554,
+      "specificity": 0.8884,
+      "precision": 0.6424,
+      "f1": 0.533,
+      "balanced_accuracy": 0.6719
+    },
+    {
+      "threshold": 0.5,
+      "TP": 248,
+      "TN": 1327,
+      "FP": 124,
+      "FN": 391,
+      "sensitivity": 0.3881,
+      "specificity": 0.9145,
+      "precision": 0.6667,
+      "f1": 0.4906,
+      "balanced_accuracy": 0.6513
+    }
+  ]
+}

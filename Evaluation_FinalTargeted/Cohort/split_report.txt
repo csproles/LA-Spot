@@ -1,0 +1,13 @@
+PHASE 2 — DEVELOPMENT / LOCKED-TEST SPLIT REPORT
+==================================================
+Seed: 20260918   Target test fraction: 22.5%
+Grouping: union of shared patient_id and/or lesion_id; missing identifiers treated as unique singleton groups (2339/2690 groups are singletons)
+
+Total cohort: 3482
+Development: 2696 (77.4%)  — malignant=797, benign=1899
+Locked test: 786 (22.6%)  — malignant=176, benign=610
+
+INTEGRITY CHECKS:
+  image_id overlap between dev/test:   0 (must be 0)
+  patient_id overlap between dev/test:  0 (must be 0)
+  lesion_id overlap between dev/test:   0 (must be 0)
