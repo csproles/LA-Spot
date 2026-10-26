@@ -177,6 +177,12 @@ python train_catboost.py
 # modality split + population-level feature importance), per fold.
 # Writes outputs/shap_fold_{0..4}_{per_image,modality_split,feature_importance}.csv.
 python explain.py
+
+# Stage 6: accuracy / precision / recall / specificity / F1 / ROC-AUC / pAUC
+# for CNN-only vs ABCD-only vs fusion on the same OOF folds and images.
+# Loads catboost_fold_{k}.cbm (or retrains it identically if missing).
+# Writes outputs/metrics_report.json and outputs/oof_predictions.csv.
+python evaluate_metrics.py
 ```
 
 Each stage reads only what the previous stage wrote to `outputs/`. Re-run any

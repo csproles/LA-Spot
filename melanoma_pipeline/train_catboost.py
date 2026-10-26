@@ -79,6 +79,26 @@ def fit_transform_pca(train_embeddings: np.ndarray, val_embeddings: np.ndarray) 
     return train_reduced, val_reduced, pca
 
 
+def build_catboost(y_train: np.ndarray) -> tuple[CatBoostClassifier, float]:
+    """Returns (unfitted CatBoostClassifier, scale_pos_weight) configured
+    from config.CATBOOST_* with class weighting derived from `y_train`.
+    Shared with evaluate_metrics.py so its ABCD-only baseline is trained
+    with exactly the same settings as the fusion model."""
+    n_pos, n_neg = int(y_train.sum()), int((y_train == 0).sum())
+    scale_pos_weight = (n_neg / n_pos) if n_pos > 0 else 1.0
+    model = CatBoostClassifier(
+        iterations=config.CATBOOST_ITERATIONS,
+        learning_rate=config.CATBOOST_LR,
+        depth=config.CATBOOST_DEPTH,
+        loss_function="Logloss",
+        eval_metric="AUC",
+        scale_pos_weight=scale_pos_weight,
+        random_seed=config.SEED,
+        verbose=False,
+    )
+    return model, scale_pos_weight
+
+
 def main() -> None:
     config.ensure_dirs()
     seed_everything(config.SEED)
@@ -121,19 +141,7 @@ def main() -> None:
         X_train = np.concatenate([train_emb_reduced, train_abcd], axis=1)
         X_val = np.concatenate([val_emb_reduced, val_abcd], axis=1)
 
-        n_pos, n_neg = int(y_train.sum()), int((y_train == 0).sum())
-        scale_pos_weight = (n_neg / n_pos) if n_pos > 0 else 1.0
-
-        model = CatBoostClassifier(
-            iterations=config.CATBOOST_ITERATIONS,
-            learning_rate=config.CATBOOST_LR,
-            depth=config.CATBOOST_DEPTH,
-            loss_function="Logloss",
-            eval_metric="AUC",
-            scale_pos_weight=scale_pos_weight,
-            random_seed=config.SEED,
-            verbose=False,
-        )
+        model, scale_pos_weight = build_catboost(y_train)
         model.fit(X_train, y_train, eval_set=(X_val, y_val), use_best_model=True)
 
         val_scores = model.predict_proba(X_val)[:, 1]
